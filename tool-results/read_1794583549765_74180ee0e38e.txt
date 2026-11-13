@@ -1,0 +1,648 @@
+     1→"use client";
+     2→// FEATURE: Therapy Sessions — list + filters + stats + new-session dialog + documentation view
+     3→import { useEffect, useMemo, useState } from "react";
+     4→import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+     5→import { apiFetch } from "@/lib/api-client";
+     6→import { toast } from "sonner";
+     7→import { formatDate, minutesToTime, timeToMinutes, ymd } from "@/lib/format";
+     8→import { PERMS, SESSION_STATUSES, labelize } from "@/lib/constants";
+     9→import { hasPermission, useAuthStore, useUIStore, type NavigateOpts } from "@/stores/app-store";
+    10→import { PageHeader } from "@/components/molecules/page-header";
+    11→import { StatCard } from "@/components/molecules/stat-card";
+    12→import { SectionCard } from "@/components/molecules/section-card";
+    13→import { DataToolbar } from "@/components/molecules/data-toolbar";
+    14→import { TablePagination } from "@/components/molecules/table-pagination";
+    15→import { EmptyState } from "@/components/molecules/empty-state";
+    16→import { StatusBadge } from "@/components/atoms/status-badge";
+    17→import { AtomIcon } from "@/components/atoms/icon";
+    18→import { Button } from "@/components/ui/button";
+    19→import { Input } from "@/components/ui/input";
+    20→import { Label } from "@/components/ui/label";
+    21→import { Badge } from "@/components/ui/badge";
+    22→import { Progress } from "@/components/ui/progress";
+    23→import { Skeleton } from "@/components/ui/skeleton";
+    24→import {
+    25→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    26→} from "@/components/ui/select";
+    27→import {
+    28→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    29→} from "@/components/ui/table";
+    30→import {
+    31→  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    32→} from "@/components/ui/dialog";
+    33→import { cn } from "@/lib/utils";
+    34→import SessionDocumentView from "./SessionDocumentView";
+    35→
+    36→// ---- Types ----
+    37→interface SessionListItem {
+    38→  id: string;
+    39→  episodeId: string;
+    40→  patientId: string;
+    41→  therapistId: string;
+    42→  appointmentId: string | null;
+    43→  date: string;
+    44→  timeMin: number | null;
+    45→  durationMin: number | null;
+    46→  status: string;
+    47→  painLevel: number | null;
+    48→  episode: {
+    49→    id: string;
+    50→    title: string;
+    51→    status: string;
+    52→    sessionsSinceReview: number;
+    53→    reviewThreshold: number;
+    54→    reviewDue: boolean;
+    55→    patient: { patientCode: string; firstName: string; lastName: string };
+    56→  };
+    57→  therapist: { firstName: string; lastName: string } | null;
+    58→  interventions: { id: string; name: string; details: string | null }[];
+    59→  appointment: { id: string; date: string; startMin: number } | null;
+    60→}
+    61→
+    62→interface SessionsListResponse {
+    63→  items: SessionListItem[];
+    64→  total: number;
+    65→  page: number;
+    66→  pageSize: number;
+    67→  stats: { completed: number; planned: number; today: number };
+    68→}
+    69→
+    70→interface TherapistOption {
+    71→  id: string;
+    72→  name: string;
+    73→  isTherapist: boolean;
+    74→}
+    75→
+    76→interface PatientOption {
+    77→  id: string;
+    78→  patientCode: string;
+    79→  firstName: string;
+    80→  lastName: string;
+    81→  currentStatus?: string | null;
+    82→}
+    83→
+    84→interface EpisodeOption {
+    85→  id: string;
+    86→  title: string;
+    87→  status: string;
+    88→  episodeNumber?: number;
+    89→  therapistId?: string | null;
+    90→}
+    91→
+    92→// ---- Shared hooks ----
+    93→function useTherapists() {
+    94→  return useQuery({
+    95→    queryKey: ["sessions-therapists"],
+    96→    queryFn: async (): Promise<TherapistOption[]> => {
+    97→      try {
+    98→        const data = await apiFetch<unknown>("/api/staff?pageSize=200");
+    99→        const raw = Array.isArray(data)
+   100→          ? data
+   101→          : ((data as { items?: Record<string, unknown>[] })?.items ?? []);
+   102→        const mapped = (raw as Record<string, unknown>[])
+   103→          .map((s) => ({
+   104→            id: String(s.id ?? ""),
+   105→            name: [s.firstName, s.lastName].filter(Boolean).join(" "),
+   106→            isTherapist:
+   107→              s.isTherapist === true ||
+   108→              s.staffRole === "PHYSIOTHERAPIST" ||
+   109→              (s.isTherapist === undefined && s.staffRole === undefined),
+   110→          }))
+   111→          .filter((t) => t.id && t.name);
+   112→        const therapists = mapped.filter((t) => t.isTherapist);
+   113→        return therapists.length ? therapists : mapped;
+   114→      } catch {
+   115→        // Staff module may not be available — degrade gracefully
+   116→        return [];
+   117→      }
+   118→    },
+   119→    staleTime: 60_000,
+   120→  });
+   121→}
+   122→
+   123→function PainBadge({ level }: { level: number | null }) {
+   124→  if (level === null || level === undefined) return <span className="text-xs text-muted-foreground">—</span>;
+   125→  const tone =
+   126→    level <= 3
+   127→      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+   128→      : level <= 6
+   129→        ? "bg-amber-50 text-amber-700 border-amber-200"
+   130→        : "bg-rose-50 text-rose-700 border-rose-200";
+   131→  return (
+   132→    <Badge variant="outline" className={cn("font-medium", tone)}>
+   133→      {level}/10
+   134→    </Badge>
+   135→  );
+   136→}
+   137→
+   138→function ReviewProgress({ since, threshold, due }: { since: number; threshold: number; due: boolean }) {
+   139→  const pct = threshold > 0 ? Math.min(100, Math.round((since / threshold) * 100)) : 0;
+   140→  return (
+   141→    <div className="flex items-center gap-2">
+   142→      <Progress value={pct} className="h-1.5 w-14" />
+   143→      <span className={cn("text-xs tabular-nums", due ? "font-semibold text-amber-600" : "text-muted-foreground")}>
+   144→        {since}/{threshold}
+   145→      </span>
+   146→      {due ? <AtomIcon name="AlertTriangle" className="h-3.5 w-3.5 text-amber-500" /> : null}
+   147→    </div>
+   148→  );
+   149→}
+   150→
+   151→// ---- New session dialog ----
+   152→function NewSessionDialog({ open, onOpenChange, onCreated }: {
+   153→  open: boolean;
+   154→  onOpenChange: (v: boolean) => void;
+   155→  onCreated: (sessionId: string) => void;
+   156→}) {
+   157→  const qc = useQueryClient();
+   158→  const [patientQuery, setPatientQuery] = useState("");
+   159→  const [searching, setSearching] = useState(false);
+   160→  const [patients, setPatients] = useState<PatientOption[]>([]);
+   161→  const [patientError, setPatientError] = useState<string | null>(null);
+   162→  const [selectedPatient, setSelectedPatient] = useState<PatientOption | null>(null);
+   163→  const [episodeId, setEpisodeId] = useState("none");
+   164→  const [date, setDate] = useState(ymd(new Date()));
+   165→  const [time, setTime] = useState("09:00");
+   166→  const [duration, setDuration] = useState("45");
+   167→  const [therapistId, setTherapistId] = useState("auto");
+   168→  const [status, setStatus] = useState("PLANNED");
+   169→
+   170→  const therapistsQuery = useTherapists();
+   171→
+   172→  const episodesQuery = useQuery({
+   173→    queryKey: ["sessions-episodes", selectedPatient?.id],
+   174→    queryFn: () => apiFetch<{ items: EpisodeOption[] }>(`/api/episodes?patientId=${selectedPatient!.id}&pageSize=50`),
+   175→    enabled: !!selectedPatient,
+   176→  });
+   177→
+   178→  const openEpisodes = useMemo(() => {
+   179→    const all = episodesQuery.data?.items ?? [];
+   180→    return all.filter((e) => e.status !== "DISCHARGED" && e.status !== "DISCONTINUED");
+   181→  }, [episodesQuery.data]);
+   182→
+   183→  const reset = () => {
+   184→    setPatientQuery("");
+   185→    setPatients([]);
+   186→    setPatientError(null);
+   187→    setSelectedPatient(null);
+   188→    setEpisodeId("none");
+   189→    setDate(ymd(new Date()));
+   190→    setTime("09:00");
+   191→    setDuration("45");
+   192→    setTherapistId("auto");
+   193→    setStatus("PLANNED");
+   194→  };
+   195→
+   196→  const searchPatients = async () => {
+   197→    const q = patientQuery.trim();
+   198→    if (!q) return;
+   199→    setSearching(true);
+   200→    setPatientError(null);
+   201→    try {
+   202→      const data = await apiFetch<{ items?: PatientOption[] } | PatientOption[]>(
+   203→        `/api/patients?search=${encodeURIComponent(q)}&pageSize=20`
+   204→      );
+   205→      const items = Array.isArray(data) ? data : (data.items ?? []);
+   206→      setPatients(items);
+   207→      if (!items.length) setPatientError("No patients matched that search.");
+   208→    } catch {
+   209→      setPatientError("Patient directory is unavailable right now.");
+   210→    } finally {
+   211→      setSearching(false);
+   212→    }
+   213→  };
+   214→
+   215→  const createMutation = useMutation({
+   216→    mutationFn: (payload: Record<string, unknown>) =>
+   217→      apiFetch<SessionListItem>("/api/sessions", { method: "POST", json: payload }),
+   218→    onSuccess: (created) => {
+   219→      toast.success("Session created", {
+   220→        description: `${created.episode.patient.firstName} ${created.episode.patient.lastName} · ${formatDate(created.date)}`,
+   221→        action: { label: "Document now", onClick: () => onCreated(created.id) },
+   222→      });
+   223→      qc.invalidateQueries({ queryKey: ["sessions"] });
+   224→      onOpenChange(false);
+   225→      reset();
+   226→    },
+   227→    onError: (err: Error) => toast.error("Could not create session", { description: err.message }),
+   228→  });
+   229→
+   230→  const handleCreate = () => {
+   231→    if (!selectedPatient) return toast.error("Select a patient first");
+   232→    if (episodeId === "none") return toast.error("Select a treatment episode");
+   233→    const payload: Record<string, unknown> = {
+   234→      episodeId,
+   235→      date,
+   236→      status,
+   237→    };
+   238→    if (time) payload.timeMin = timeToMinutes(time);
+   239→    if (duration && Number(duration) > 0) payload.durationMin = Number(duration);
+   240→    if (therapistId !== "auto") payload.therapistId = therapistId;
+   241→    createMutation.mutate(payload);
+   242→  };
+   243→
+   244→  const chosenEpisode = openEpisodes.find((e) => e.id === episodeId);
+   245→
+   246→  return (
+   247→    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
+   248→      <DialogContent className="max-w-lg">
+   249→        <DialogHeader>
+   250→          <DialogTitle className="flex items-center gap-2">
+   251→            <AtomIcon name="PlusCircle" className="h-4 w-4 text-teal-600" />
+   252→            New therapy session
+   253→          </DialogTitle>
+   254→          <DialogDescription>
+   255→            Create a session manually — e.g. a walk-in treatment without an appointment.
+   256→          </DialogDescription>
+   257→        </DialogHeader>
+   258→
+   259→        {!selectedPatient ? (
+   260→          <div className="space-y-3">
+   261→            <div className="flex gap-2">
+   262→              <Input
+   263→                value={patientQuery}
+   264→                onChange={(e) => setPatientQuery(e.target.value)}
+   265→                placeholder="Search patient by name or code…"
+   266→                onKeyDown={(e) => { if (e.key === "Enter") searchPatients(); }}
+   267→              />
+   268→              <Button variant="outline" onClick={searchPatients} disabled={searching || !patientQuery.trim()}>
+   269→                {searching ? <AtomIcon name="Loader2" className="h-4 w-4 animate-spin" /> : <AtomIcon name="Search" className="h-4 w-4" />}
+   270→              </Button>
+   271→            </div>
+   272→            {patientError ? <p className="text-xs text-muted-foreground">{patientError}</p> : null}
+   273→            <div className="max-h-56 space-y-1 overflow-y-auto custom-scrollbar">
+   274→              {patients.map((p) => (
+   275→                <button
+   276→                  key={p.id}
+   277→                  className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors hover:bg-teal-50/60"
+   278→                  onClick={() => { setSelectedPatient(p); setEpisodeId("none"); }}
+   279→                >
+   280→                  <span className="font-medium">{p.firstName} {p.lastName}</span>
+   281→                  <span className="flex items-center gap-2">
+   282→                    <Badge variant="outline" className="font-mono text-xs">{p.patientCode}</Badge>
+   283→                    {p.currentStatus ? <StatusBadge status={p.currentStatus} /> : null}
+   284→                  </span>
+   285→                </button>
+   286→              ))}
+   287→            </div>
+   288→          </div>
+   289→        ) : (
+   290→          <div className="space-y-4">
+   291→            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+   292→              <div className="flex items-center gap-2">
+   293→                <span className="text-sm font-medium">{selectedPatient.firstName} {selectedPatient.lastName}</span>
+   294→                <Badge variant="outline" className="font-mono text-xs">{selectedPatient.patientCode}</Badge>
+   295→              </div>
+   296→              <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(null); setEpisodeId("none"); }}>
+   297→                Change
+   298→              </Button>
+   299→            </div>
+   300→
+   301→            <div className="space-y-1.5">
+   302→              <Label>Episode</Label>
+   303→              {episodesQuery.isLoading ? (
+   304→                <Skeleton className="h-9 w-full" />
+   305→              ) : openEpisodes.length === 0 ? (
+   306→                <p className="text-xs text-muted-foreground">
+   307→                  {episodesQuery.isError
+   308→                    ? "Episode list is unavailable right now."
+   309→                    : "No open treatment episodes for this patient (discharged/discontinued episodes cannot receive sessions)."}
+   310→                </p>
+   311→              ) : (
+   312→                <Select value={episodeId} onValueChange={setEpisodeId}>
+   313→                  <SelectTrigger><SelectValue placeholder="Select episode" /></SelectTrigger>
+   314→                  <SelectContent>
+   315→                    {openEpisodes.map((e) => (
+   316→                      <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
+   317→                    ))}
+   318→                  </SelectContent>
+   319→                </Select>
+   320→              )}
+   321→            </div>
+   322→
+   323→            <div className="grid grid-cols-2 gap-3">
+   324→              <div className="space-y-1.5">
+   325→                <Label htmlFor="ns-date">Date</Label>
+   326→                <Input id="ns-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+   327→              </div>
+   328→              <div className="space-y-1.5">
+   329→                <Label htmlFor="ns-time">Time</Label>
+   330→                <Input id="ns-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+   331→              </div>
+   332→              <div className="space-y-1.5">
+   333→                <Label htmlFor="ns-duration">Duration (min)</Label>
+   334→                <Input id="ns-duration" type="number" min={1} max={600} value={duration} onChange={(e) => setDuration(e.target.value)} />
+   335→              </div>
+   336→              <div className="space-y-1.5">
+   337→                <Label>Status</Label>
+   338→                <Select value={status} onValueChange={setStatus}>
+   339→                  <SelectTrigger><SelectValue /></SelectTrigger>
+   340→                  <SelectContent>
+   341→                    <SelectItem value="PLANNED">Planned</SelectItem>
+   342→                    <SelectItem value="IN_PROGRESS">In progress</SelectItem>
+   343→                  </SelectContent>
+   344→                </Select>
+   345→              </div>
+   346→            </div>
+   347→
+   348→            <div className="space-y-1.5">
+   349→              <Label>Therapist</Label>
+   350→              <Select value={therapistId} onValueChange={setTherapistId}>
+   351→                <SelectTrigger><SelectValue /></SelectTrigger>
+   352→                <SelectContent>
+   353→                  <SelectItem value="auto">
+   354→                    Auto{chosenEpisode ? " (episode therapist)" : " — episode therapist"}
+   355→                  </SelectItem>
+   356→                  {(therapistsQuery.data ?? []).map((t) => (
+   357→                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+   358→                  ))}
+   359→                </SelectContent>
+   360→              </Select>
+   361→            </div>
+   362→          </div>
+   363→        )}
+   364→
+   365→        <DialogFooter>
+   366→          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+   367→          <Button
+   368→            onClick={handleCreate}
+   369→            disabled={createMutation.isPending || !selectedPatient || episodeId === "none"}
+   370→            className="bg-teal-600 hover:bg-teal-700"
+   371→          >
+   372→            {createMutation.isPending ? <AtomIcon name="Loader2" className="h-4 w-4 animate-spin" /> : <AtomIcon name="Plus" className="h-4 w-4" />}
+   373→            Create session
+   374→          </Button>
+   375→        </DialogFooter>
+   376→      </DialogContent>
+   377→    </Dialog>
+   378→  );
+   379→}
+   380→
+   381→// ---- Sessions list ----
+   382→function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
+   383→  onOpen: (sessionId: string) => void;
+   384→  episodeFilter: string | null;
+   385→  onClearEpisodeFilter: () => void;
+   386→}) {
+   387→  const qc = useQueryClient();
+   388→  const user = useAuthStore((s) => s.user);
+   389→  const canManage = hasPermission(user, PERMS.clinicalManage);
+   390→
+   391→  const [status, setStatus] = useState("all");
+   392→  const [therapistId, setTherapistId] = useState("all");
+   393→  const [from, setFrom] = useState("");
+   394→  const [to, setTo] = useState("");
+   395→  const [search, setSearch] = useState("");
+   396→  const [page, setPage] = useState(1);
+   397→  const [pageSize, setPageSize] = useState(10);
+   398→  const [createOpen, setCreateOpen] = useState(false);
+   399→
+   400→  const therapistsQuery = useTherapists();
+   401→
+   402→  const params = new URLSearchParams();
+   403→  params.set("page", String(page));
+   404→  params.set("pageSize", String(pageSize));
+   405→  if (status !== "all") params.set("status", status);
+   406→  if (therapistId !== "all") params.set("therapistId", therapistId);
+   407→  if (from) params.set("from", from);
+   408→  if (to) params.set("to", to);
+   409→  if (episodeFilter) params.set("episodeId", episodeFilter);
+   410→
+   411→  const listQuery = useQuery({
+   412→    queryKey: ["sessions", status, therapistId, from, to, episodeFilter, page, pageSize],
+   413→    queryFn: () => apiFetch<SessionsListResponse>(`/api/sessions?${params.toString()}`),
+   414→    placeholderData: (prev) => prev,
+   415→  });
+   416→
+   417→  const items = useMemo(() => {
+   418→    const raw = listQuery.data?.items ?? [];
+   419→    const q = search.trim().toLowerCase();
+   420→    if (!q) return raw;
+   421→    return raw.filter((s) => {
+   422→      const p = s.episode.patient;
+   423→      return `${p.firstName} ${p.lastName} ${p.patientCode}`.toLowerCase().includes(q);
+   424→    });
+   425→  }, [listQuery.data, search]);
+   426→
+   427→  const stats = listQuery.data?.stats;
+   428→
+   429→  return (
+   430→    <div>
+   431→      <PageHeader
+   432→        title="Therapy Sessions"
+   433→        description="Document delivered treatments, track progress-review counters and package deductions."
+   434→        icon="Activity"
+   435→        actions={
+   436→          canManage ? (
+   437→            <Button onClick={() => setCreateOpen(true)} className="bg-teal-600 hover:bg-teal-700">
+   438→              <AtomIcon name="Plus" className="h-4 w-4" /> New session
+   439→            </Button>
+   440→          ) : null
+   441→        }
+   442→      />
+   443→
+   444→      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+   445→        <StatCard label="Completed (filtered range)" value={stats?.completed ?? 0} icon="CheckCircle2" tone="emerald" loading={!listQuery.data} />
+   446→        <StatCard label="Planned / active" value={stats?.planned ?? 0} icon="CalendarClock" tone="sky" loading={!listQuery.data} />
+   447→        <StatCard label="Today" value={stats?.today ?? 0} icon="Clock" tone="teal" loading={!listQuery.data} hint="Excludes cancellations & no-shows" />
+   448→      </div>
+   449→
+   450→      {episodeFilter ? (
+   451→        <div className="mb-3 flex items-center gap-2 text-sm">
+   452→          <span className="text-muted-foreground">Filtered by episode</span>
+   453→          <Badge variant="outline" className="gap-1 bg-teal-50 text-teal-700">
+   454→            <AtomIcon name="Layers" className="h-3 w-3" /> {episodeFilter.slice(0, 10)}…
+   455→          </Badge>
+   456→          <Button variant="ghost" size="sm" onClick={onClearEpisodeFilter}>
+   457→            <AtomIcon name="X" className="h-3.5 w-3.5" /> Clear
+   458→          </Button>
+   459→        </div>
+   460→      ) : null}
+   461→
+   462→      <SectionCard
+   463→        title="All sessions"
+   464→        icon="ListChecks"
+   465→        description="Most recent first — click a row to document or review the session."
+   466→        noPadding
+   467→        contentClassName="px-0"
+   468→      >
+   469→        <div className="px-4 pb-3 pt-1">
+   470→          <DataToolbar
+   471→            search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search patient name / code…" }}
+   472→            onRefresh={() => qc.invalidateQueries({ queryKey: ["sessions"] })}
+   473→            refreshing={listQuery.isFetching}
+   474→            filters={
+   475→              <>
+   476→                <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+   477→                  <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+   478→                  <SelectContent>
+   479→                    <SelectItem value="all">All statuses</SelectItem>
+   480→                    {SESSION_STATUSES.map((s) => (
+   481→                      <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
+   482→                    ))}
+   483→                  </SelectContent>
+   484→                </Select>
+   485→                <Select value={therapistId} onValueChange={(v) => { setTherapistId(v); setPage(1); }}>
+   486→                  <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+   487→                  <SelectContent>
+   488→                    <SelectItem value="all">All therapists</SelectItem>
+   489→                    {(therapistsQuery.data ?? []).map((t) => (
+   490→                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+   491→                    ))}
+   492→                  </SelectContent>
+   493→                </Select>
+   494→                <div className="flex items-center gap-1.5">
+   495→                  <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-[140px]" aria-label="From date" />
+   496→                  <span className="text-xs text-muted-foreground">→</span>
+   497→                  <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-[140px]" aria-label="To date" />
+   498→                </div>
+   499→              </>
+   500→            }
+   501→          />
+   502→        </div>
+   503→
+   504→        {listQuery.isLoading ? (
+   505→          <div className="space-y-2 px-4 pb-4">
+   506→            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-11 w-full" />)}
+   507→          </div>
+   508→        ) : listQuery.isError ? (
+   509→          <EmptyState
+   510→            icon="AlertTriangle"
+   511→            title="Could not load sessions"
+   512→            description={(listQuery.error as Error)?.message || "Please try again."}
+   513→            action={<Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["sessions"] })}>Retry</Button>}
+   514→          />
+   515→        ) : items.length === 0 ? (
+   516→          <EmptyState
+   517→            icon="Activity"
+   518→            title="No sessions found"
+   519→            description="Sessions appear here once scheduled or created manually. Adjust the filters to widen your search."
+   520→            action={canManage ? <Button variant="outline" onClick={() => setCreateOpen(true)}>Create a session</Button> : undefined}
+   521→          />
+   522→        ) : (
+   523→          <>
+   524→            <Table>
+   525→              <TableHeader>
+   526→                <TableRow className="hover:bg-transparent">
+   527→                  <TableHead>Date / time</TableHead>
+   528→                  <TableHead>Patient</TableHead>
+   529→                  <TableHead className="hidden md:table-cell">Episode</TableHead>
+   530→                  <TableHead className="hidden lg:table-cell">Therapist</TableHead>
+   531→                  <TableHead className="hidden sm:table-cell">Pain</TableHead>
+   532→                  <TableHead className="hidden sm:table-cell">Duration</TableHead>
+   533→                  <TableHead className="hidden xl:table-cell">Review progress</TableHead>
+   534→                  <TableHead>Status</TableHead>
+   535→                  <TableHead className="text-right">Actions</TableHead>
+   536→                </TableRow>
+   537→              </TableHeader>
+   538→              <TableBody>
+   539→                {items.map((s) => {
+   540→                  const p = s.episode.patient;
+   541→                  const active = s.status === "PLANNED" || s.status === "IN_PROGRESS";
+   542→                  return (
+   543→                    <TableRow
+   544→                      key={s.id}
+   545→                      className="cursor-pointer"
+   546→                      onClick={() => onOpen(s.id)}
+   547→                    >
+   548→                      <TableCell>
+   549→                        <p className="text-sm font-medium">{formatDate(s.date)}</p>
+   550→                        <p className="text-xs text-muted-foreground">{minutesToTime(s.timeMin)}</p>
+   551→                      </TableCell>
+   552→                      <TableCell>
+   553→                        <p className="text-sm font-medium">{p.firstName} {p.lastName}</p>
+   554→                        <p className="font-mono text-xs text-muted-foreground">{p.patientCode}</p>
+   555→                      </TableCell>
+   556→                      <TableCell className="hidden max-w-[220px] md:table-cell">
+   557→                        <p className="truncate text-sm" title={s.episode.title}>{s.episode.title}</p>
+   558→                        {s.interventions.length ? (
+   559→                          <p className="truncate text-xs text-muted-foreground">
+   560→                            {s.interventions.map((i) => i.name).join(", ")}
+   561→                          </p>
+   562→                        ) : null}
+   563→                      </TableCell>
+   564→                      <TableCell className="hidden text-sm lg:table-cell">
+   565→                        {s.therapist ? `${s.therapist.firstName} ${s.therapist.lastName}` : "—"}
+   566→                      </TableCell>
+   567→                      <TableCell className="hidden sm:table-cell"><PainBadge level={s.painLevel} /></TableCell>
+   568→                      <TableCell className="hidden text-sm sm:table-cell">
+   569→                        {s.durationMin ? `${s.durationMin} min` : "—"}
+   570→                      </TableCell>
+   571→                      <TableCell className="hidden xl:table-cell">
+   572→                        <ReviewProgress since={s.episode.sessionsSinceReview} threshold={s.episode.reviewThreshold} due={s.episode.reviewDue} />
+   573→                      </TableCell>
+   574→                      <TableCell><StatusBadge status={s.status} /></TableCell>
+   575→                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   576→                        {active ? (
+   577→                          <Button size="sm" variant="outline" onClick={() => onOpen(s.id)}>
+   578→                            <AtomIcon name="PenLine" className="h-3.5 w-3.5" /> Document
+   579→                          </Button>
+   580→                        ) : (
+   581→                          <Button size="sm" variant="ghost" onClick={() => onOpen(s.id)}>
+   582→                            <AtomIcon name="Eye" className="h-3.5 w-3.5" /> View
+   583→                          </Button>
+   584→                        )}
+   585→                      </TableCell>
+   586→                    </TableRow>
+   587→                  );
+   588→                })}
+   589→              </TableBody>
+   590→            </Table>
+   591→            <TablePagination
+   592→              page={listQuery.data?.page ?? page}
+   593→              pageSize={pageSize}
+   594→              total={listQuery.data?.total ?? 0}
+   595→              onPageChange={setPage}
+   596→              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+   597→            />
+   598→          </>
+   599→        )}
+   600→      </SectionCard>
+   601→
+   602→      <NewSessionDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onOpen} />
+   603→    </div>
+   604→  );
+   605→}
+   606→
+   607→// ---- Page root: list ↔ documentation view ----
+   608→export default function TherapySessionsPage() {
+   609→  const [docSessionId, setDocSessionId] = useState<string | null>(null);
+   610→  const [episodeFilter, setEpisodeFilter] = useState<string | null>(null);
+   611→  const clearOpts = useUIStore((s) => s.clearOpts);
+   612→
+   613→  // Consume navOpts (sessionId / episodeId) via a store subscription so cross-module
+   614→  // navigation links open the right view; appointmentId opts are left for the
+   615→  // appointments module.
+   616→  useEffect(() => {
+   617→    const consume = (opts: NavigateOpts | null) => {
+   618→      if (!opts) return;
+   619→      if (opts.sessionId) setDocSessionId(opts.sessionId);
+   620→      else if (opts.episodeId) setEpisodeFilter(opts.episodeId);
+   621→      else return;
+   622→      clearOpts();
+   623→    };
+   624→    consume(useUIStore.getState().navOpts);
+   625→    return useUIStore.subscribe((s, prev) => {
+   626→      if (s.navOpts !== prev.navOpts) consume(s.navOpts);
+   627→    });
+   628→  }, [clearOpts]);
+   629→
+   630→  if (docSessionId) {
+   631→    return (
+   632→      <SessionDocumentView
+   633→        key={docSessionId}
+   634→        sessionId={docSessionId}
+   635→        onBack={() => setDocSessionId(null)}
+   636→      />
+   637→    );
+   638→  }
+   639→
+   640→  return (
+   641→    <SessionsList
+   642→      onOpen={(id) => setDocSessionId(id)}
+   643→      episodeFilter={episodeFilter}
+   644→      onClearEpisodeFilter={() => setEpisodeFilter(null)}
+   645→    />
+   646→  );
+   647→}
+   648→

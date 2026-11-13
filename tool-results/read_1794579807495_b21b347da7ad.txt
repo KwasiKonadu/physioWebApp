@@ -1,0 +1,1405 @@
+     1→MASTER DEVELOPMENT PROMPT
+     2→Physiotherapy Clinic Management System: GMRS
+     3→1. Project Overview
+     4→Build a modern, professional, full-stack Physiotherapy Clinic Management System designed to manage the daily operations and clinical workflows of a physiotherapy clinic.
+     5→The application must manage the complete patient journey, starting from patient registration and appointment booking through clinical assessment, diagnosis, treatment planning, therapy sessions, progress reviews, billing, and eventual discharge.
+     6→The system must also support staff management, clinic administration, insurance configuration, packages, reporting and operational dashboards.
+     7→This is a real clinic management application, not a static UI prototype. All screens, forms, navigation, business rules, database relationships and backend operations must be implemented and connected.
+     8→The application should be designed with future multi-clinic support in mind, even if the initial deployment serves one clinic.
+     9→Primary objectives
+    10→* Centralize patient records.
+    11→* Manage appointments and therapist availability.
+    12→* Maintain structured clinical documentation.
+    13→* Track patient treatment journeys.
+    14→* Manage therapy sessions and rehabilitation progress.
+    15→* Support PAYG, package and private insurance billing.
+    16→* Track clinic revenue and outstanding balances.
+    17→* Monitor therapist performance and workload.
+    18→* Provide management with operational and clinical reports.
+    19→* Maintain secure, auditable patient and financial records.
+    20→
+    21→2. Technology Stack
+    22→Use the following technology stack.
+    23→Frontend
+    24→* Next.js.
+    25→* React.
+    26→* TypeScript.
+    27→* Next.js App Router.
+    28→* Tailwind CSS.
+    29→* shadcn/ui for reusable interface components where appropriate.
+    30→* Lucide React for icons.
+    31→* React Hook Form for form handling.
+    32→* Zod for frontend validation.
+    33→* TanStack Query for server-state management.
+    34→* Zustand where shared client-side state is required.
+    35→* Recharts for charts and data visualization.
+    36→Backend
+    37→* NestJS.
+    38→* TypeScript.
+    39→* REST API architecture.
+    40→* Modular monolith architecture.
+    41→* Prisma ORM.
+    42→* DTO-based validation.
+    43→* class-validator and class-transformer.
+    44→* Swagger / OpenAPI documentation.
+    45→Database
+    46→* PostgreSQL.
+    47→Authentication
+    48→* JWT access tokens.
+    49→* Refresh tokens with rotation.
+    50→* Role-based access control.
+    51→* Permission-based authorization.
+    52→* Secure password hashing.
+    53→Architecture principles
+    54→* Keep the frontend and backend as separate applications.
+    55→* All business rules must be implemented and enforced in NestJS.
+    56→* The frontend must communicate with the backend through documented REST APIs.
+    57→* Do not connect the frontend directly to PostgreSQL.
+    58→* Use Prisma for database access.
+    59→* Use database transactions for operations involving multiple related records.
+    60→* Use reusable frontend components.
+    61→* Organize both applications by feature/module.
+    62→* Keep business logic separate from controllers and UI components.
+    63→* Use environment variables for application configuration.
+    64→* Implement centralized error handling and consistent API responses.
+    65→* Document APIs using Swagger.
+    66→Do not make a final decision about file storage providers or deployment infrastructure yet. Keep those areas abstracted so they can be configured later.
+    67→
+    68→3. Application Design and UI/UX
+    69→Design reference
+    70→Use the uploaded Innovamd dashboard screenshot as the primary visual reference.
+    71→The application should have a polished, modern healthcare SaaS appearance.
+    72→The design should communicate:
+    73→* Professionalism.
+    74→* Simplicity.
+    75→* Trust.
+    76→* Clinical precision.
+    77→* Ease of navigation.
+    78→* Efficient daily operations.
+    79→General visual direction
+    80→Use:
+    81→* Deep navy as the primary colour.
+    82→* Teal and blue accents.
+    83→* Light blue-grey workspace background.
+    84→* White content surfaces.
+    85→* Rounded cards and panels.
+    86→* Subtle borders.
+    87→* Soft shadows.
+    88→* Clean typography.
+    89→* Consistent spacing.
+    90→* Minimal visual clutter.
+    91→Avoid:
+    92→* Excessive gradients.
+    93→* Oversized headings.
+    94→* Too many colours.
+    95→* Unnecessary animations.
+    96→* Dense interfaces.
+    97→* Excessive use of cards for simple information.
+    98→* Generic medical stock imagery.
+    99→* Unnecessary dropdown navigation.
+   100→The interface should feel like a premium enterprise SaaS product.
+   101→Sidebar design — Important
+   102→Recreate the sidebar structure from the Innovamd reference while following these exact requirements.
+   103→The sidebar must consist of:
+   104→1. One dark navy icon rail.
+   105→2. One adjacent white navigation drawer containing menu names only.
+   106→3. Exactly one set of icons, located inside the navy rail.
+   107→4. No repeated icons beside menu labels.
+   108→5. No chevrons beside menu items.
+   109→6. No dropdown menus.
+   110→7. No expandable navigation groups.
+   111→8. Rounded outer corners around the entire sidebar.
+   112→9. Floating appearance with spacing around the edges and a subtle shadow.
+   113→Expanded state
+   114→When expanded:
+   115→* Show the dark navy icon rail.
+   116→* Show the adjacent white navigation drawer.
+   117→* Display all menu names beside their corresponding icons.
+   118→* Highlight the currently active page.
+   119→* Keep the icon and its menu name aligned horizontally.
+   120→Collapsed state
+   121→When collapsed:
+   122→* Hide the white navigation drawer.
+   123→* Display only the dark navy icon rail.
+   124→* Keep the icons vertically aligned.
+   125→* Show a tooltip with the page name when hovering over an icon.
+   126→* Clicking an icon should navigate directly to the relevant page.
+   127→The sidebar should retain its rounded floating appearance in both expanded and collapsed states.
+   128→The sidebar must be consistent across every module.
+   129→Top navigation
+   130→Include:
+   131→* Global search.
+   132→* Notification icon.
+   133→* User profile.
+   134→* User name and role where appropriate.
+   135→* Profile/account menu.
+   136→* Logout action.
+   137→The top navigation should remain consistent across the application.
+   138→Main workspace
+   139→Each page should have:
+   140→* Page title.
+   141→* Short description where useful.
+   142→* Breadcrumb navigation where appropriate.
+   143→* Primary action buttons.
+   144→* Filters and search where required.
+   145→* Consistent content spacing.
+   146→* Responsive data tables.
+   147→* Empty states.
+   148→* Loading states.
+   149→* Error states.
+   150→* Confirmation dialogs for destructive or sensitive operations.
+   151→Use a responsive desktop-first layout, while ensuring the application remains usable on tablets and smaller screens.
+   152→
+   153→4. Main Application Navigation
+   154→Use the following flat sidebar menu:
+   155→1. Dashboard
+   156→2. Patients
+   157→3. Appointments
+   158→4. Assessments
+   159→5. Treatment Plans
+   160→6. Therapy Sessions
+   161→7. Progress Reviews
+   162→8. Discharges
+   163→9. Billing & Payments
+   164→10. Reports
+   165→11. Staff
+   166→12. Settings
+   167→Every item must be directly accessible from the sidebar.
+   168→Do not put these modules inside dropdown groups.
+   169→Additional configuration pages for Services & Treatments, Insurance Providers and Packages can be accessible from their appropriate sections or Settings.
+   170→
+   171→5. Dashboard
+   172→Create an operational dashboard that provides a clear overview of clinic activity.
+   173→Summary metrics
+   174→Display:
+   175→* Total registered patients.
+   176→* New patients.
+   177→* Active treatment episodes.
+   178→* Today's appointments.
+   179→* Completed therapy sessions.
+   180→* Progress reviews due.
+   181→* Outstanding invoices.
+   182→* Revenue collected.
+   183→Dashboard sections
+   184→Appointment overview
+   185→* Today's appointments.
+   186→* Upcoming appointments.
+   187→* Appointment status.
+   188→* Assigned therapists.
+   189→* Appointment time.
+   190→Clinical overview
+   191→* Active treatment episodes.
+   192→* Patients currently undergoing treatment.
+   193→* Progress reviews approaching their threshold.
+   194→* Patients overdue for review.
+   195→* Recently discharged patients.
+   196→Financial overview
+   197→* Revenue collected.
+   198→* Outstanding balances.
+   199→* PAYG revenue.
+   200→* Package revenue.
+   201→* Insurance revenue.
+   202→Activity overview
+   203→* Recent registrations.
+   204→* Recent appointments.
+   205→* Recently completed sessions.
+   206→* Recent payments.
+   207→* Recent clinical activities.
+   208→Dashboard filters
+   209→Allow users to filter relevant metrics by:
+   210→* Today.
+   211→* This week.
+   212→* This month.
+   213→* Custom date range.
+   214→* Branch, where applicable.
+   215→Use realistic sample data during development, but ensure dashboard metrics are eventually calculated from actual database records.
+   216→
+   217→6. Patient Management
+   218→Patient Management is the central part of the application.
+   219→Build a patient directory and detailed patient profile.
+   220→Patient directory
+   221→Display:
+   222→* Patient ID.
+   223→* Patient name.
+   224→* Phone number.
+   225→* Gender.
+   226→* Age.
+   227→* Registration date.
+   228→* Payment arrangement.
+   229→* Current treatment status.
+   230→* Assigned therapist, where applicable.
+   231→Features:
+   232→* Search.
+   233→* Pagination.
+   234→* Sorting.
+   235→* Filtering.
+   236→* Patient registration.
+   237→* Patient profile access.
+   238→* Returning patient identification.
+   239→* Duplicate detection.
+   240→Patient registration
+   241→Use a structured form divided into sections.
+   242→A. Personal information
+   243→Fields:
+   244→* Automatically generated patient ID, e.g. PT-000001.
+   245→* First name.
+   246→* Middle name.
+   247→* Last name.
+   248→* Date of birth.
+   249→* Automatically calculated age.
+   250→* Gender.
+   251→* Phone number.
+   252→* Alternative phone number.
+   253→* Email.
+   254→* Residential address.
+   255→* Occupation.
+   256→* Marital status.
+   257→* Nationality.
+   258→* Optional profile photograph.
+   259→Do not ask the user to enter age separately when date of birth is available.
+   260→B. Emergency contact
+   261→Fields:
+   262→* Full name.
+   263→* Relationship.
+   264→* Phone number.
+   265→* Alternative phone number.
+   266→* Address.
+   267→Allow emergency contact and next of kin to be recorded separately where necessary.
+   268→C. Medical background
+   269→Capture:
+   270→* Existing medical conditions.
+   271→* Previous surgeries.
+   272→* Previous injuries.
+   273→* Current medications.
+   274→* Allergies.
+   275→* Previous physiotherapy.
+   276→* Other relevant medical history.
+   277→Allow multiple selections and additional descriptions.
+   278→Allow patients to declare:
+   279→* No relevant medical history.
+   280→* Information unknown.
+   281→D. Referral information
+   282→Referral sources:
+   283→* Doctor.
+   284→* Hospital.
+   285→* Healthcare professional.
+   286→* Existing patient.
+   287→* Family or friend.
+   288→* Social media.
+   289→* Website.
+   290→* Walk-in.
+   291→* Other.
+   292→Additional fields:
+   293→* Referring person or organization.
+   294→* Contact details.
+   295→* Referral date.
+   296→* Referral letter or document.
+   297→E. Payment arrangement
+   298→Allow the patient to be registered under:
+   299→1. Pay As You Go.
+   300→2. Package.
+   301→3. Private Insurance.
+   302→If Private Insurance is selected, capture:
+   303→* Insurance provider.
+   304→* Membership number.
+   305→* Policy number.
+   306→* Validity date.
+   307→* Expiry date.
+   308→* Principal member.
+   309→* Relationship to principal member.
+   310→* Supporting documents.
+   311→Do not create payment transactions or deduct package sessions during patient registration.
+   312→F. Consent
+   313→Capture:
+   314→* Treatment consent.
+   315→* Data collection and storage consent.
+   316→* Patient signature.
+   317→* Consent date.
+   318→* Supporting document where applicable.
+   319→For minors, capture guardian information and consent.
+   320→Patient profile
+   321→Create a detailed patient profile with:
+   322→* Overview.
+   323→* Personal information.
+   324→* Medical history.
+   325→* Emergency contacts.
+   326→* Referrals.
+   327→* Treatment episodes.
+   328→* Appointments.
+   329→* Assessments.
+   330→* Diagnoses.
+   331→* Treatment plans.
+   332→* Therapy sessions.
+   333→* Progress reviews.
+   334→* Discharges.
+   335→* Billing and payments.
+   336→* Documents.
+   337→Use tabs or a clear sub-navigation inside the patient profile.
+   338→The patient profile must remain available even when all treatment episodes are closed.
+   339→
+   340→7. Treatment Episode Management
+   341→A Treatment Episode represents a specific condition, injury or rehabilitation journey.
+   342→A patient can have multiple treatment episodes over time.
+   343→Example:
+   344→Patient: John Mensah.
+   345→Episode 1: Knee injury. Episode 2: Lower back pain.
+   346→Each episode must maintain its own:
+   347→* Initial assessment.
+   348→* Diagnosis.
+   349→* Treatment plan.
+   350→* Therapy sessions.
+   351→* Progress reviews.
+   352→* Discharge record.
+   353→Do not combine clinical records from separate episodes.
+   354→Episode statuses
+   355→* Awaiting Assessment.
+   356→* Assessment in Progress.
+   357→* Awaiting Treatment Plan.
+   358→* Active Treatment.
+   359→* On Hold.
+   360→* Under Review.
+   361→* Discharged.
+   362→* Discontinued.
+   363→Allow an episode to be placed on hold due to travel, illness, financial circumstances or other valid reasons.
+   364→Discharging an episode must not deactivate the patient's main profile.
+   365→
+   366→8. Appointment Management
+   367→Create a comprehensive appointment management module.
+   368→Appointment calendar
+   369→Provide:
+   370→* Daily view.
+   371→* Weekly view.
+   372→* Monthly view.
+   373→* Calendar navigation.
+   374→* Therapist filtering.
+   375→* Branch filtering where applicable.
+   376→* Appointment status indicators.
+   377→Appointment booking
+   378→Fields:
+   379→* Patient.
+   380→* Treatment episode.
+   381→* Appointment date.
+   382→* Start time.
+   383→* End time or duration.
+   384→* Assigned therapist.
+   385→* Branch.
+   386→* Appointment purpose.
+   387→* Additional notes.
+   388→Prevent conflicting appointments for the same therapist.
+   389→Check therapist availability before confirming a booking.
+   390→Allow authorized users to:
+   391→* Create appointments.
+   392→* Reschedule appointments.
+   393→* Cancel appointments.
+   394→* Confirm appointments.
+   395→* Record attendance.
+   396→Appointment statuses
+   397→* Scheduled.
+   398→* Confirmed.
+   399→* Completed.
+   400→* Cancelled.
+   401→* No-show.
+   402→* Rescheduled.
+   403→Also support the attendance outcome:
+   404→Attended – No Treatment.
+   405→This distinguishes patients who came to the clinic but did not receive treatment from patients who did not attend.
+   406→Appointment workflow
+   407→When a patient attends:
+   408→1. Open the appointment.
+   409→2. Confirm patient attendance.
+   410→3. Select Start Therapy Session.
+   411→4. Automatically create a linked therapy session.
+   412→5. Prepopulate patient, appointment, therapist and episode information.
+   413→A patient who walks into the clinic without a prior booking should be supported through a walk-in appointment workflow.
+   414→
+   415→9. Clinical Assessment
+   416→Create a structured clinical assessment module.
+   417→The initial assessment is completed before the treatment plan is activated.
+   418→Use a multi-section form with:
+   419→* Left-side section navigation.
+   420→* Right-side form content.
+   421→* Patient information header.
+   422→* Progress indicator.
+   423→* Save Draft.
+   424→* Previous and Continue controls.
+   425→* Review and Complete action.
+   426→Assessment sections
+   427→A. Patient and visit information
+   428→Automatically populate:
+   429→* Patient.
+   430→* Patient ID.
+   431→* Treatment episode.
+   432→* Assessment date.
+   433→* Assigned therapist.
+   434→B. Presenting complaint
+   435→Fields:
+   436→* Primary complaint.
+   437→* Body part.
+   438→* Affected side.
+   439→* Duration.
+   440→* Onset.
+   441→* Cause or mechanism of injury.
+   442→* Aggravating factors.
+   443→* Relieving factors.
+   444→* Previous treatment.
+   445→* Additional clinical history.
+   446→C. Pain assessment
+   447→Fields:
+   448→* Current pain score.
+   449→* Worst pain score.
+   450→* Lowest pain score.
+   451→* Pain location.
+   452→* Pain type.
+   453→* Pain frequency.
+   454→* Additional notes.
+   455→Use a 0–10 pain scale.
+   456→D. Physical examination
+   457→Observation:
+   458→* Posture.
+   459→* Swelling.
+   460→* Deformity.
+   461→* Skin condition.
+   462→* Muscle wasting.
+   463→* Gait.
+   464→Range of Motion:
+   465→* Body part.
+   466→* Movement.
+   467→* Side.
+   468→* Active ROM.
+   469→* Passive ROM.
+   470→* Normal/reference value where appropriate.
+   471→* Notes.
+   472→Support dynamic measurement rows.
+   473→Muscle strength:
+   474→* Body part.
+   475→* Muscle group.
+   476→* Side.
+   477→* Strength grade.
+   478→Use the MRC 0–5 grading scale.
+   479→E. Functional assessment
+   480→Do not force the therapist to complete a fixed list of activities.
+   481→The section should initially be blank.
+   482→Provide a dropdown containing predefined activities:
+   483→* Walking.
+   484→* Standing.
+   485→* Sitting.
+   486→* Climbing stairs.
+   487→* Lifting.
+   488→* Bending.
+   489→* Sleeping.
+   490→* Dressing.
+   491→* Bathing.
+   492→* Running.
+   493→Allow therapists to add custom activities.
+   494→For each selected activity, capture a difficulty rating:
+   495→0 – No difficulty. 1 – Mild difficulty. 2 – Moderate difficulty. 3 – Severe difficulty. 4 – Unable to perform.
+   496→Preserve selected activities and measurements for comparison during progress reviews.
+   497→F. Vital signs
+   498→Fields:
+   499→* Blood pressure.
+   500→* Heart rate.
+   501→* Respiratory rate.
+   502→* Temperature.
+   503→* Oxygen saturation.
+   504→* Weight.
+   505→* Height.
+   506→Not all fields should be mandatory.
+   507→G. Clinical findings
+   508→Fields:
+   509→* Clinical findings.
+   510→* Identified impairments.
+   511→* Functional limitations.
+   512→* Clinical impression.
+   513→* Precautions.
+   514→* Additional notes.
+   515→* Supporting attachments.
+   516→* Therapist signature.
+   517→H. Review and complete
+   518→Display a summary of the assessment.
+   519→Allow the therapist to save as Draft or complete the assessment.
+   520→Completed assessments must be preserved and corrections must be traceable.
+   521→
+   522→10. Diagnosis Management
+   523→Diagnosis must be linked to a treatment episode.
+   524→Support:
+   525→* Primary diagnosis.
+   526→* Secondary diagnoses.
+   527→* Diagnosis category.
+   528→* Body part.
+   529→* Affected side.
+   530→* Severity.
+   531→* Clinical explanation.
+   532→* Diagnosis date.
+   533→* Diagnosing therapist.
+   534→* Provisional diagnosis status.
+   535→Diagnosis categories may include:
+   536→* Musculoskeletal.
+   537→* Neurological.
+   538→* Sports injury.
+   539→* Post-surgical.
+   540→* Other.
+   541→Support provisional diagnoses where further investigation is required.
+   542→Do not require therapists to re-enter diagnoses for every therapy session.
+   543→Diagnosis changes must be clinically justified and recorded with historical information.
+   544→
+   545→11. Treatment Plan Management
+   546→A treatment plan describes the intended rehabilitation approach for a treatment episode.
+   547→Create the treatment plan after initial assessment and diagnosis.
+   548→Treatment plan sections
+   549→A. Treatment objectives
+   550→Allow therapists to create measurable objectives.
+   551→Examples:
+   552→* Reduce pain from 8/10 to 3/10.
+   553→* Improve knee flexion from 90° to 120°.
+   554→* Improve independent walking.
+   555→Fields:
+   556→* Objective description.
+   557→* Baseline value.
+   558→* Target value.
+   559→* Unit of measurement.
+   560→* Priority.
+   561→* Expected completion date.
+   562→B. Rehabilitation milestones
+   563→Milestones represent smaller stages towards achieving treatment objectives.
+   564→Fields:
+   565→* Milestone description.
+   566→* Related objective.
+   567→* Expected date.
+   568→* Status.
+   569→* Notes.
+   570→Statuses:
+   571→* Pending.
+   572→* In Progress.
+   573→* Achieved.
+   574→* Not Achieved.
+   575→C. Treatment interventions
+   576→Provide common interventions:
+   577→* Manual therapy.
+   578→* Therapeutic exercises.
+   579→* Electrotherapy.
+   580→* Ultrasound.
+   581→* Heat therapy.
+   582→* Cold therapy.
+   583→* Stretching.
+   584→* Strengthening.
+   585→* Gait training.
+   586→* Balance training.
+   587→* Postural correction.
+   588→Allow custom interventions.
+   589→Fields:
+   590→* Intervention.
+   591→* Description.
+   592→* Frequency.
+   593→* Duration.
+   594→* Instructions.
+   595→* Notes.
+   596→D. Session schedule
+   597→Fields:
+   598→* Sessions per week.
+   599→* Expected total sessions.
+   600→* Proposed treatment start date.
+   601→* Expected end date.
+   602→* Session duration.
+   603→E. Review schedule
+   604→Default review threshold: every 15 completed therapy sessions.
+   605→Allow earlier reviews when clinically necessary.
+   606→F. Precautions and recommendations
+   607→Fields:
+   608→* Contraindications.
+   609→* Restrictions.
+   610→* Activities to avoid.
+   611→* Special precautions.
+   612→* Patient recommendations.
+   613→* Referral instructions.
+   614→G. Review and activate
+   615→Display a full treatment plan summary.
+   616→Allow the therapist to:
+   617→* Save Draft.
+   618→* Activate Plan.
+   619→* Revise Plan.
+   620→* Discontinue Plan.
+   621→Treatment plan versioning
+   622→Do not overwrite existing treatment plans.
+   623→When a plan is revised, create a new version.
+   624→Example:
+   625→* Version 1: Initial treatment plan.
+   626→* Version 2: Updated treatment interventions.
+   627→* Version 3: Revised objectives.
+   628→Maintain the full history of each version.
+   629→Statuses:
+   630→* Draft.
+   631→* Active.
+   632→* Under Review.
+   633→* Revised.
+   634→* Completed.
+   635→* Discontinued.
+   636→For the initial implementation, support one active treatment plan version per episode at a time.
+   637→
+   638→12. Therapy Session Management
+   639→Therapy sessions represent the actual treatment delivered to the patient.
+   640→They are separate from appointments.
+   641→One appointment can generate one therapy session for the initial implementation.
+   642→Session creation
+   643→Therapy sessions should normally be created from attended appointments.
+   644→Automatically populate:
+   645→* Patient.
+   646→* Treatment episode.
+   647→* Appointment.
+   648→* Assigned therapist.
+   649→* Session date.
+   650→Session documentation
+   651→Capture:
+   652→* Session date.
+   653→* Pain level.
+   654→* Blood pressure.
+   655→* Other relevant vital signs.
+   656→* Interventions delivered.
+   657→* Treatment duration.
+   658→* Patient response.
+   659→* Clinical observations.
+   660→* Additional notes.
+   661→* Therapist signature.
+   662→The therapist should document what actually happened, not simply copy the planned treatment interventions.
+   663→Session statuses
+   664→* Planned.
+   665→* In Progress.
+   666→* Completed.
+   667→* Cancelled.
+   668→* No-show.
+   669→Allow the therapist to save an incomplete session as a draft or in-progress record.
+   670→Only completed therapy sessions should count towards progress review thresholds and therapist completed-session statistics.
+   671→Important distinction
+   672→An appointment may be completed without a therapy session being completed.
+   673→Examples:
+   674→* Patient attended and received treatment: completed appointment and completed therapy session.
+   675→* Patient did not attend: appointment marked no-show, no completed therapy session.
+   676→* Patient attended but treatment was postponed: attended/no treatment, no completed therapy session.
+   677→* Patient cancelled: cancelled appointment, no completed therapy session.
+   678→
+   679→13. Progress Review Management
+   680→Progress reviews evaluate patient improvement and treatment effectiveness.
+   681→The default review threshold is every 15 completed therapy sessions.
+   682→A therapist can initiate an earlier review at any time.
+   683→The session count must reset for the next review cycle after a completed formal review.
+   684→Only completed therapy sessions count. Booked, cancelled, missed and incomplete sessions must not count.
+   685→Progress review sections
+   686→A. Previous clinical information
+   687→Display:
+   688→* Initial assessment.
+   689→* Baseline measurements.
+   690→* Diagnosis.
+   691→* Treatment objectives.
+   692→* Rehabilitation milestones.
+   693→* Previous treatment plan.
+   694→B. Updated clinical assessment
+   695→Capture:
+   696→* Current pain levels.
+   697→* Current ROM.
+   698→* Muscle strength.
+   699→* Functional ability.
+   700→* Vital signs where relevant.
+   701→* New clinical findings.
+   702→C. Baseline comparison
+   703→Display original measurements beside current measurements.
+   704→Examples:
+   705→* Pain: 8/10 → 4/10.
+   706→* Knee flexion: 90° → 115°.
+   707→* Muscle strength: 2/5 → 4/5.
+   708→* Walking difficulty: Severe → Mild.
+   709→D. Objective and milestone evaluation
+   710→Evaluate every objective and milestone.
+   711→Statuses:
+   712→* Achieved.
+   713→* Partially Achieved.
+   714→* Not Achieved.
+   715→* No Longer Applicable.
+   716→E. Therapist summary
+   717→Capture:
+   718→* Improvements.
+   719→* Deterioration.
+   720→* Patient response.
+   721→* Clinical observations.
+   722→* Recommendations.
+   723→F. Review decision
+   724→Allow the therapist to:
+   725→* Continue existing plan.
+   726→* Modify treatment interventions.
+   727→* Modify objectives.
+   728→* Adjust session frequency.
+   729→* Revise diagnosis where clinically justified.
+   730→* Refer for further investigation.
+   731→* Discharge the patient.
+   732→When the treatment plan changes, create a new version.
+   733→Do not overwrite historical plans or reviews.
+   734→
+   735→14. Discharge Management
+   736→Discharge must be therapist-led.
+   737→The system may identify patients who appear ready for discharge, but must not automatically discharge them.
+   738→Discharge reasons
+   739→* Treatment objectives achieved.
+   740→* Significant improvement.
+   741→* Patient requested to stop.
+   742→* Referral to another healthcare provider.
+   743→* Treatment no longer clinically indicated.
+   744→* Patient unable or unwilling to continue.
+   745→* Other.
+   746→A patient request to stop treatment should initiate a clinical review rather than automatically closing the episode.
+   747→Patients who stop attending must not be classified as successfully recovered.
+   748→Discharge workflow
+   749→1. Therapist initiates discharge.
+   750→2. Complete final clinical assessment.
+   751→3. Compare baseline and final measurements.
+   752→4. Evaluate objectives.
+   753→5. Evaluate rehabilitation milestones.
+   754→6. Select discharge reason.
+   755→7. Prepare discharge summary.
+   756→8. Enter home exercise recommendations.
+   757→9. Add follow-up or referral arrangements.
+   758→10. Therapist signs off.
+   759→11. Close the treatment episode.
+   760→Discharge information
+   761→Capture:
+   762→* Patient.
+   763→* Treatment episode.
+   764→* Diagnosis.
+   765→* Assigned therapist.
+   766→* Discharge date.
+   767→* Discharge reason.
+   768→* Final clinical assessment.
+   769→* Baseline comparison.
+   770→* Objective outcomes.
+   771→* Remaining limitations.
+   772→* Discharge summary.
+   773→* Follow-up arrangements.
+   774→* Therapist signature.
+   775→Home exercise recommendations
+   776→Do not implement an exercise library or predefined exercise templates in the initial version.
+   777→Allow the therapist to enter recommendations manually.
+   778→Fields:
+   779→* Exercise or activity name.
+   780→* Instructions.
+   781→* Frequency.
+   782→* Duration.
+   783→* Repetitions where applicable.
+   784→* Precautions.
+   785→* Notes.
+   786→Follow-up
+   787→Support:
+   788→* Further physiotherapy.
+   789→* Clinic follow-up.
+   790→* Telephone follow-up.
+   791→* Medical referral.
+   792→* Other arrangements.
+   793→Follow-up is optional.
+   794→Discharge statuses:
+   795→* Draft.
+   796→* Pending Sign-off.
+   797→* Completed.
+   798→Closing an episode must not deactivate the patient's main profile.
+   799→Outstanding payments must not prevent clinical discharge.
+   800→
+   801→15. Billing and Payments
+   802→Implement a billing system supporting three payment arrangements.
+   803→A. Pay As You Go
+   804→Features:
+   805→* Charge patients per service or session.
+   806→* Generate invoices.
+   807→* Record full payments.
+   808→* Record partial payments.
+   809→* Track outstanding balances.
+   810→* View payment history.
+   811→* Handle refunds and reversals.
+   812→B. Therapy Packages
+   813→Create configurable therapy packages.
+   814→Package configuration:
+   815→* Package name.
+   816→* Description.
+   817→* Number of sessions.
+   818→* Package price.
+   819→* Validity period.
+   820→* Applicable services.
+   821→* Active/inactive status.
+   822→Patient package records should include:
+   823→* Patient.
+   824→* Package.
+   825→* Purchase date.
+   826→* Expiry date.
+   827→* Total sessions.
+   828→* Used sessions.
+   829→* Remaining sessions.
+   830→* Amount paid.
+   831→* Outstanding amount.
+   832→* Status.
+   833→Package statuses:
+   834→* Active.
+   835→* Exhausted.
+   836→* Expired.
+   837→* Cancelled.
+   838→Package deduction rules
+   839→Deduct a session only when a qualifying linked therapy session is completed.
+   840→Do not deduct sessions for:
+   841→* Cancelled appointments.
+   842→* No-shows.
+   843→* Attended appointments without treatment.
+   844→* Incomplete therapy sessions.
+   845→Use a package transaction ledger.
+   846→Transactions should include:
+   847→* Package purchase.
+   848→* Session deduction.
+   849→* Reversal.
+   850→* Refund.
+   851→* Manual adjustment.
+   852→* Expiry.
+   853→Never rely solely on a manually edited remaining-session value.
+   854→Prevent duplicate deductions if a completed session is submitted more than once.
+   855→C. Private Insurance
+   856→Support multiple insurance providers.
+   857→Insurance provider configuration:
+   858→* Provider name.
+   859→* Contact details.
+   860→* Provider code.
+   861→* Status.
+   862→* Billing arrangements.
+   863→Insurance rates must be configurable separately for each provider.
+   864→Support:
+   865→* Provider-specific service rates.
+   866→* Insurance invoices.
+   867→* Claims.
+   868→* Claim submission dates.
+   869→* Claim status.
+   870→* Approved amounts.
+   871→* Rejected amounts.
+   872→* Outstanding claims.
+   873→* Payments received.
+   874→Do not hardcode insurance rates.
+   875→Store the rate applied to each transaction so historical billing does not change when a provider updates its rates.
+   876→Financial records
+   877→Support:
+   878→* Invoices.
+   879→* Invoice items.
+   880→* Payments.
+   881→* Partial payments.
+   882→* Refunds.
+   883→* Payment methods.
+   884→* Outstanding balances.
+   885→* Financial transaction history.
+   886→All financial operations must be traceable.
+   887→Do not delete historical financial transactions to correct errors.
+   888→Use reversals and refund records.
+   889→
+   890→16. Services and Treatments
+   891→Create a configurable service catalogue.
+   892→Each service should contain:
+   893→* Service name.
+   894→* Description.
+   895→* Category.
+   896→* Standard price.
+   897→* Default duration.
+   898→* Status.
+   899→* Applicable payment arrangements.
+   900→Allow authorized administrators to add, edit and deactivate services.
+   901→Service pricing should be configurable.
+   902→Historical invoices must retain the original price applied at the time of billing.
+   903→
+   904→17. Staff Management
+   905→Create staff profiles for clinic employees.
+   906→Fields:
+   907→* Staff ID.
+   908→* First name.
+   909→* Last name.
+   910→* Email.
+   911→* Phone.
+   912→* Job title.
+   913→* Department or designation.
+   914→* Employment date.
+   915→* Employment status.
+   916→* Assigned branch.
+   917→* User account association.
+   918→Support staff roles including:
+   919→* Clinic Administrator.
+   920→* Receptionist.
+   921→* Physiotherapist.
+   922→* Management.
+   923→Do not assume every staff member is a therapist.
+   924→Therapist-specific information
+   925→Capture:
+   926→* Professional designation.
+   927→* Specialization.
+   928→* Qualifications.
+   929→* Assigned services.
+   930→* Availability.
+   931→* Employment status.
+   932→Therapist remuneration
+   933→Some therapists may be remunerated based on patients or sessions handled per month.
+   934→Support configurable remuneration methods for each therapist.
+   935→Distinguish:
+   936→* Unique patients seen.
+   937→* Total completed therapy sessions.
+   938→A patient attending ten sessions is one unique patient but ten completed sessions.
+   939→Do not hardcode one remuneration method for all therapists.
+   940→
+   941→18. Reports and Analytics
+   942→Create a reporting module with date filters, branch filters and export functionality where appropriate.
+   943→Patient reports
+   944→* Total registered patients.
+   945→* New patients.
+   946→* Returning patients.
+   947→* Active treatment episodes.
+   948→* Discharged patients.
+   949→* Patient referral sources.
+   950→Appointment reports
+   951→* Total appointments.
+   952→* Completed appointments.
+   953→* Cancelled appointments.
+   954→* No-shows.
+   955→* Attended without treatment.
+   956→* Therapist schedules.
+   957→Clinical reports
+   958→* Completed therapy sessions.
+   959→* Active treatment episodes.
+   960→* Progress reviews due.
+   961→* Patients overdue for review.
+   962→* Treatment outcomes.
+   963→* Discharge statistics.
+   964→* Improvement trends.
+   965→Financial reports
+   966→* Total revenue.
+   967→* Revenue collected.
+   968→* Outstanding invoices.
+   969→* PAYG revenue.
+   970→* Package revenue.
+   971→* Insurance revenue.
+   972→* Refunds.
+   973→* Outstanding insurance claims.
+   974→* Package utilisation.
+   975→Staff reports
+   976→* Therapist workload.
+   977→* Unique patients seen.
+   978→* Completed therapy sessions.
+   979→* Therapist performance.
+   980→* Remuneration calculations.
+   981→Ensure that reports use consistent date definitions and distinguish appointments from completed therapy sessions.
+   982→
+   983→19. Settings and Configuration
+   984→Create a settings area for clinic-level configuration.
+   985→Include:
+   986→Clinic information
+   987→* Clinic name.
+   988→* Logo.
+   989→* Address.
+   990→* Contact details.
+   991→* Branches.
+   992→User management
+   993→* User accounts.
+   994→* Roles.
+   995→* Permissions.
+   996→* Account status.
+   997→Clinical configuration
+   998→* Assessment options.
+   999→* Diagnosis categories.
+  1000→* Functional assessment activities.
+  1001→* Treatment interventions.
+  1002→* Session settings.
+  1003→* Review thresholds.
+  1004→Business configuration
+  1005→* Services.
+  1006→* Pricing.
+  1007→* Insurance providers.
+  1008→* Insurance rates.
+  1009→* Packages.
+  1010→* Payment methods.
+  1011→* Therapist remuneration methods.
+  1012→General configuration
+  1013→* Appointment defaults.
+  1014→* Clinic working hours.
+  1015→* Time zone.
+  1016→* Currency.
+  1017→* General preferences.
+  1018→The 15-session progress review threshold should be configurable at clinic level, with 15 as the initial default.
+  1019→
+  1020→20. Notifications
+  1021→Implement an internal notification system.
+  1022→Generate notifications for relevant events such as:
+  1023→* New appointment.
+  1024→* Appointment rescheduled.
+  1025→* Appointment cancelled.
+  1026→* Upcoming appointment.
+  1027→* Progress review due.
+  1028→* Package nearing exhaustion.
+  1029→* Package expiry approaching.
+  1030→* Outstanding payment.
+  1031→* Insurance claim update.
+  1032→* Discharge completed.
+  1033→Notifications should respect user permissions.
+  1034→Support read/unread states.
+  1035→Do not implement external SMS, WhatsApp or email notification integrations as mandatory initial features. Keep the architecture extensible for future integrations.
+  1036→
+  1037→21. Audit Logs and Data Integrity
+  1038→Clinical and financial records require a reliable audit trail.
+  1039→Track:
+  1040→* User who created a record.
+  1041→* User who modified a record.
+  1042→* Creation date.
+  1043→* Modification date.
+  1044→* Record status changes.
+  1045→* Previous and updated values where appropriate.
+  1046→* Reason for important clinical corrections.
+  1047→Clinical records must not be silently overwritten.
+  1048→Completed assessments, sessions, reviews, discharges and financial transactions must retain historical information.
+  1049→Use database transactions for:
+  1050→* Completing therapy sessions.
+  1051→* Deducting package sessions.
+  1052→* Recording payments.
+  1053→* Processing refunds.
+  1054→* Revising treatment plans.
+  1055→* Completing discharges.
+  1056→Prevent duplicate operations through unique constraints and idempotency where appropriate.
+  1057→
+  1058→22. User Roles and Permissions
+  1059→Implement configurable role-based and permission-based access control.
+  1060→Initial roles:
+  1061→Clinic Administrator
+  1062→* Full access to clinic configuration.
+  1063→* User management.
+  1064→* Staff management.
+  1065→* Patient management.
+  1066→* Appointment management.
+  1067→* Billing management.
+  1068→* Reports.
+  1069→* Clinical access according to assigned permissions.
+  1070→Receptionist
+  1071→* Patient registration.
+  1072→* Patient directory.
+  1073→* Appointment booking.
+  1074→* Appointment rescheduling.
+  1075→* Attendance recording.
+  1076→* Permitted billing operations.
+  1077→Do not grant unrestricted access to detailed clinical notes by default.
+  1078→Physiotherapist
+  1079→* Assigned patient records.
+  1080→* Initial assessments.
+  1081→* Diagnoses.
+  1082→* Treatment plans.
+  1083→* Therapy sessions.
+  1084→* Progress reviews.
+  1085→* Discharges.
+  1086→Management
+  1087→* Dashboard.
+  1088→* Operational reports.
+  1089→* Financial reports.
+  1090→* Staff performance.
+  1091→* Appropriate patient and clinical summaries.
+  1092→Permissions should be independently configurable.
+  1093→A role should not be the only determinant of access.
+  1094→
+  1095→23. Multi-Clinic and Multi-Branch Readiness
+  1096→Design the database to support multiple clinics.
+  1097→Every clinic-owned business record must be associated with a clinic.
+  1098→Where applicable, records should also reference a branch.
+  1099→Enforce clinic-level data isolation in the backend.
+  1100→Do not trust a clinic ID supplied by the frontend without validating the authenticated user's access.
+  1101→Users should only access the clinics and branches they are authorized to manage.
+  1102→Do not implement complex cross-clinic administration unless required, but ensure the database architecture supports future expansion.
+  1103→
+  1104→24. Core Database Entities
+  1105→Design the PostgreSQL schema using Prisma.
+  1106→The initial database should include the following entities.
+  1107→Organization
+  1108→* clinics.
+  1109→* branches.
+  1110→Authentication and access
+  1111→* users.
+  1112→* roles.
+  1113→* permissions.
+  1114→* user_roles.
+  1115→* role_permissions.
+  1116→* refresh_tokens.
+  1117→Patient management
+  1118→* patients.
+  1119→* emergency_contacts.
+  1120→* next_of_kin.
+  1121→* medical_histories.
+  1122→* patient_medications.
+  1123→* patient_allergies.
+  1124→* patient_consents.
+  1125→* patient_referrals.
+  1126→* patient_documents.
+  1127→Clinical
+  1128→* treatment_episodes.
+  1129→* assessments.
+  1130→* pain_assessments.
+  1131→* physical_examinations.
+  1132→* rom_measurements.
+  1133→* strength_measurements.
+  1134→* functional_assessments.
+  1135→* functional_assessment_items.
+  1136→* vital_signs.
+  1137→* diagnoses.
+  1138→Treatment planning
+  1139→* treatment_plans.
+  1140→* treatment_plan_versions.
+  1141→* plan_objectives.
+  1142→* rehabilitation_milestones.
+  1143→* plan_interventions.
+  1144→* treatment_precautions.
+  1145→Appointments and sessions
+  1146→* appointments.
+  1147→* therapist_availability.
+  1148→* therapy_sessions.
+  1149→* session_interventions.
+  1150→* session_observations.
+  1151→Progress and discharge
+  1152→* progress_reviews.
+  1153→* review_measurements.
+  1154→* review_objective_results.
+  1155→* discharges.
+  1156→* discharge_recommendations.
+  1157→* follow_up_arrangements.
+  1158→Billing
+  1159→* invoices.
+  1160→* invoice_items.
+  1161→* payments.
+  1162→* refunds.
+  1163→* payment_methods.
+  1164→* financial_transactions.
+  1165→Packages
+  1166→* package_definitions.
+  1167→* patient_packages.
+  1168→* package_transactions.
+  1169→Insurance
+  1170→* insurance_providers.
+  1171→* insurance_rate_cards.
+  1172→* insurance_rate_items.
+  1173→* insurance_claims.
+  1174→* insurance_claim_items.
+  1175→Staff
+  1176→* staff_profiles.
+  1177→* therapist_remuneration_rules.
+  1178→General
+  1179→* services.
+  1180→* service_prices.
+  1181→* notifications.
+  1182→* documents.
+  1183→* audit_logs.
+  1184→Use proper foreign keys, indexes, unique constraints, enums and timestamps.
+  1185→Use decimal types for monetary values. Do not use floating-point types for money.
+  1186→Use appropriate date and timestamp types.
+  1187→Store timestamps consistently and display them in the clinic's configured time zone.
+  1188→Use soft deletion only for records where it is appropriate. Do not soft-delete clinical or financial history in a way that makes it appear that the record never existed.
+  1189→
+  1190→25. Important Business Rules
+  1191→The following rules are mandatory.
+  1192→1. One patient can have multiple treatment episodes.
+  1193→2. Each treatment episode maintains its own clinical records.
+  1194→3. Appointments and therapy sessions are separate entities.
+  1195→4. A completed appointment does not automatically mean a completed therapy session.
+  1196→5. Only completed therapy sessions count towards progress review thresholds.
+  1197→6. Cancelled appointments and no-shows must not count.
+  1198→7. Attended appointments without treatment must not count.
+  1199→8. Progress reviews default to every 15 completed sessions.
+  1200→9. The review counter resets after each completed formal review.
+  1201→10. Early progress reviews must be supported.
+  1202→11. Treatment plans must have version history.
+  1203→12. Historical diagnoses must be retained when diagnoses change.
+  1204→13. Completed clinical records must not be silently overwritten.
+  1205→14. Discharge is therapist-led.
+  1206→15. Discharge closes a treatment episode, not the patient.
+  1207→16. Outstanding payments must not block clinical discharge.
+  1208→17. Package sessions are deducted only after qualifying completed therapy sessions.
+  1209→18. Package deductions must be reversible through auditable transactions.
+  1210→19. Insurance rates must be configurable by provider.
+  1211→20. Historical invoices must preserve the rates originally applied.
+  1212→21. Therapist remuneration rules must be configurable.
+  1213→22. Reports must distinguish unique patients from total completed sessions.
+  1214→23. Every protected backend operation must validate the user's permissions and clinic access.
+  1215→24. Financial transactions must be protected against duplicate processing.
+  1216→25. Clinical and financial history must remain auditable.
+  1217→
+  1218→26. Clinical Workflow
+  1219→Implement the following end-to-end workflow.
+  1220→Patient Registration ↓ Appointment Booking ↓ Patient Attendance ↓ Initial Clinical Assessment ↓ Diagnosis ↓ Treatment Plan Creation ↓ Treatment Plan Activation ↓ Therapy Sessions ↓ Progress Review after every 15 completed sessions ↓ Clinical Decision ↓ Continue / Modify / Refer / Discharge ↓ Discharge Summary ↓ Close Treatment Episode
+  1221→Support these alternative paths:
+  1222→* A patient can be placed on hold.
+  1223→* A therapist can initiate an early progress review.
+  1224→* A diagnosis can be provisional.
+  1225→* A treatment plan can be revised.
+  1226→* A patient can be referred for further investigation.
+  1227→* A patient can request to stop treatment.
+  1228→* A patient can discontinue treatment.
+  1229→* A patient can return later for a new treatment episode.
+  1230→
+  1231→27. Required Application Quality
+  1232→Do not build the application as a static mockup.
+  1233→Every major screen must have working functionality.
+  1234→Frontend requirements
+  1235→* Functional navigation.
+  1236→* Working forms.
+  1237→* Working validation.
+  1238→* Working filters.
+  1239→* Working search.
+  1240→* Working pagination.
+  1241→* Working table actions.
+  1242→* Functional dialogs.
+  1243→* Responsive layouts.
+  1244→* Loading indicators.
+  1245→* Empty states.
+  1246→* Error handling.
+  1247→* Permission-based visibility.
+  1248→Backend requirements
+  1249→* Functional REST APIs.
+  1250→* Prisma database integration.
+  1251→* Request validation.
+  1252→* Authentication.
+  1253→* Authorization.
+  1254→* Consistent error handling.
+  1255→* Database migrations.
+  1256→* Seed data.
+  1257→* Business rule enforcement.
+  1258→* Transaction safety.
+  1259→* Audit logging.
+  1260→Testing requirements
+  1261→Implement tests for critical business rules.
+  1262→Prioritize:
+  1263→* Appointment conflict detection.
+  1264→* Appointment-to-session linking.
+  1265→* Completed-session counting.
+  1266→* Progress review threshold.
+  1267→* Progress review counter reset.
+  1268→* Treatment plan versioning.
+  1269→* Package deduction.
+  1270→* Duplicate deduction prevention.
+  1271→* Payment recording.
+  1272→* Refund processing.
+  1273→* Discharge workflow.
+  1274→* Clinic data isolation.
+  1275→* Permission enforcement.
+  1276→
+  1277→28. Development Approach
+  1278→Build the system incrementally.
+  1279→Do not attempt to create every module in one unstructured implementation.
+  1280→Follow this development order:
+  1281→Phase 1 — Foundation
+  1282→* Project setup.
+  1283→* Next.js application.
+  1284→* NestJS application.
+  1285→* PostgreSQL.
+  1286→* Prisma.
+  1287→* Authentication.
+  1288→* Roles and permissions.
+  1289→* Clinic and branch structure.
+  1290→* Shared layout and navigation.
+  1291→Phase 2 — Patient Management
+  1292→* Patient registration.
+  1293→* Patient directory.
+  1294→* Patient profile.
+  1295→* Medical history.
+  1296→* Emergency contacts.
+  1297→* Consent management.
+  1298→* Referral information.
+  1299→Phase 3 — Treatment Episodes and Appointments
+  1300→* Episode creation.
+  1301→* Episode history.
+  1302→* Appointment calendar.
+  1303→* Booking.
+  1304→* Therapist availability.
+  1305→* Attendance tracking.
+  1306→* Walk-in appointments.
+  1307→Phase 4 — Clinical Assessment and Diagnosis
+  1308→* Assessment forms.
+  1309→* Pain assessment.
+  1310→* Physical examination.
+  1311→* Functional assessment.
+  1312→* Vital signs.
+  1313→* Clinical findings.
+  1314→* Diagnosis.
+  1315→Phase 5 — Treatment Planning
+  1316→* Treatment objectives.
+  1317→* Rehabilitation milestones.
+  1318→* Interventions.
+  1319→* Treatment frequency.
+  1320→* Review schedule.
+  1321→* Treatment plan activation.
+  1322→* Version history.
+  1323→Phase 6 — Therapy Sessions
+  1324→* Session creation.
+  1325→* Session documentation.
+  1326→* Session completion.
+  1327→* Session history.
+  1328→* Completed-session tracking.
+  1329→Phase 7 — Progress Reviews and Discharges
+  1330→* Progress review triggers.
+  1331→* Clinical reassessment.
+  1332→* Baseline comparisons.
+  1333→* Objective evaluation.
+  1334→* Treatment plan revision.
+  1335→* Discharge workflow.
+  1336→Phase 8 — Billing and Payments
+  1337→* Services.
+  1338→* Invoices.
+  1339→* PAYG.
+  1340→* Packages.
+  1341→* Payments.
+  1342→* Refunds.
+  1343→* Insurance.
+  1344→* Claims.
+  1345→Phase 9 — Staff and Reports
+  1346→* Staff profiles.
+  1347→* Therapist remuneration.
+  1348→* Operational reports.
+  1349→* Clinical reports.
+  1350→* Financial reports.
+  1351→Phase 10 — Finalization
+  1352→* Notifications.
+  1353→* Audit logs.
+  1354→* Security review.
+  1355→* Testing.
+  1356→* Performance improvements.
+  1357→* Documentation.
+  1358→At the end of each phase, verify that its frontend, backend and database functionality work together before proceeding.
+  1359→
+  1360→29. Development Instructions to the AI
+  1361→Follow these instructions throughout development.
+  1362→1. First inspect and establish the project structure.
+  1363→2. Do not skip database design.
+  1364→3. Do not create placeholder screens that merely look functional.
+  1365→4. Do not hardcode business data that should be configurable.
+  1366→5. Do not place important business logic in React components.
+  1367→6. Do not allow the frontend to bypass backend validation.
+  1368→7. Reuse shared components and design tokens.
+  1369→8. Maintain consistent UI styling across all modules.
+  1370→9. Use realistic development seed data.
+  1371→10. Keep the code modular and maintainable.
+  1372→11. Avoid unnecessary dependencies.
+  1373→12. Do not invent additional business workflows without considering the existing requirements.
+  1374→13. Where requirements are unclear, use the recommended defaults in this specification.
+  1375→14. Preserve historical clinical and financial data.
+  1376→15. Do not implement file storage or deployment infrastructure decisions until they are separately specified.
+  1377→16. Keep all modules integrated with the central patient and treatment episode records.
+  1378→17. Ensure all implemented features are functional before declaring a phase complete.
+  1379→The final application should feel like a polished commercial physiotherapy clinic management product, not an experimental prototype.
+  1380→30. Expected Final Product
+  1381→Deliver a complete, responsive physiotherapy clinic management system with:
+  1382→* Modern Innovamd-inspired UI.
+  1383→* Next.js frontend.
+  1384→* NestJS backend.
+  1385→* PostgreSQL database.
+  1386→* Prisma ORM.
+  1387→* Secure authentication and permissions.
+  1388→* Patient management.
+  1389→* Treatment episode management.
+  1390→* Appointment scheduling.
+  1391→* Clinical assessments.
+  1392→* Diagnosis management.
+  1393→* Treatment planning.
+  1394→* Therapy session management.
+  1395→* Progress reviews.
+  1396→* Discharge management.
+  1397→* Billing and payments.
+  1398→* Package management.
+  1399→* Private insurance management.
+  1400→* Staff management.
+  1401→* Reports and dashboards.
+  1402→* Configurable clinic settings.
+  1403→* Audit logging.
+  1404→The most important architectural principle is that the patient record is the central identity, while the treatment episode is the central clinical workflow entity.
+  1405→All clinical and financial operations must be linked appropriately, auditable and governed by the business rules defined in this specification.

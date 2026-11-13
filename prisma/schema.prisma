@@ -1,0 +1,994 @@
+// GMRS Physiotherapy Clinic Management System
+// SQLite adaptation: no native enums (string fields + TS constants), money stored as integer pesewas (GHS cents)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== ORGANIZATION =====================
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  address   String?
+  phone     String?
+  email     String?
+  logoUrl   String?
+  timezone  String   @default("Africa/Accra")
+  currency  String   @default("GHS")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  patients  Patient[]
+  roles     Role[]
+  settings  Setting[]
+  staffProfiles StaffProfile[] @relation("ClinicStaff")
+}
+
+model Branch {
+  id       String  @id @default(cuid())
+  clinicId String
+  name     String
+  address  String?
+  phone    String?
+  active   Boolean @default(true)
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  @@index([clinicId])
+}
+
+// ===================== AUTH & ACCESS =====================
+
+model User {
+  id           String   @id @default(cuid())
+  clinicId     String
+  email        String   @unique
+  passwordHash String
+  name         String
+  roleId       String
+  staffId      String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  role         Role          @relation(fields: [roleId], references: [id])
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+
+  @@index([clinicId])
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  clinicId    String
+  name        String
+  description String?
+  // JSON array of permission keys, e.g. ["patients.view","patients.manage"]
+  permissions String  @default("[]")
+  system      Boolean @default(false)
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+  users  User[]
+
+  @@unique([clinicId, name])
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ===================== PATIENT MANAGEMENT =====================
+
+model Patient {
+  id             String    @id @default(cuid())
+  clinicId       String
+  branchId       String?
+  patientCode    String    @unique // PT-000001
+  firstName      String
+  middleName     String?
+  lastName       String
+  dateOfBirth    DateTime?
+  gender         String? // MALE | FEMALE | OTHER
+  phone          String
+  altPhone       String?
+  email          String?
+  address        String?
+  occupation     String?
+  maritalStatus  String?
+  nationality    String?
+  photoUrl       String?
+  // Payment arrangement: PAYG | PACKAGE | INSURANCE
+  paymentArrangement String @default("PAYG")
+  currentStatus  String    @default("NO_EPISODE") // NO_EPISODE | AWAITING_ASSESSMENT | IN_TREATMENT | ON_HOLD | UNDER_REVIEW | DISCHARGED
+  assignedTherapistId String?
+  registeredById String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  discharges Discharge[]
+  sessionsAsPatient TherapySession[] @relation("SessionPatient")
+
+  clinic            Clinic              @relation(fields: [clinicId], references: [id])
+  emergencyContacts EmergencyContact[]
+  medicalHistory    MedicalHistoryEntry[]
+  consents          PatientConsent[]
+  referrals         PatientReferral[]
+  insurances        PatientInsurance[]
+  episodes          TreatmentEpisode[]
+  appointments      Appointment[]
+  patientPackages   PatientPackage[]
+  invoices          Invoice[]
+  assignedTherapist StaffProfile?       @relation("PatientTherapist", fields: [assignedTherapistId], references: [id])
+
+  @@index([clinicId, lastName])
+  @@index([clinicId, phone])
+  @@index([clinicId, currentStatus])
+}
+
+model EmergencyContact {
+  id        String  @id @default(cuid())
+  patientId String
+  fullName  String
+  relationship String
+  phone     String
+  altPhone  String?
+  address   String?
+  isNextOfKin Boolean @default(false)
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+}
+
+// TYPE: CONDITION | SURGERY | INJURY | MEDICATION | ALLERGY | OTHER
+model MedicalHistoryEntry {
+  id        String  @id @default(cuid())
+  patientId String
+  type      String
+  name      String
+  details   String?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId, type])
+}
+
+model PatientConsent {
+  id          String   @id @default(cuid())
+  patientId   String
+  treatmentConsent  Boolean @default(false)
+  dataConsent       Boolean @default(false)
+  signatureName     String?
+  consentDate       DateTime?
+  guardianName      String?
+  guardianRelationship String?
+  documentRef       String?
+  createdAt   DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+// SOURCE: DOCTOR | HOSPITAL | PROFESSIONAL | PATIENT | FAMILY_FRIEND | SOCIAL_MEDIA | WEBSITE | WALK_IN | OTHER
+// Private insurance membership captured at registration
+model PatientInsurance {
+  id            String   @id @default(cuid())
+  patientId     String
+  providerId    String
+  membershipNumber String
+  policyNumber  String?
+  validFrom     DateTime?
+  validTo       DateTime?
+  principalMember  String?
+  relationshipToPrincipal String?
+  documentRef   String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+
+  patient  Patient           @relation(fields: [patientId], references: [id])
+  provider InsuranceProvider @relation(fields: [providerId], references: [id])
+
+  @@index([patientId])
+}
+
+model PatientReferral {
+  id        String   @id @default(cuid())
+  patientId String
+  source    String
+  referrerName    String?
+  referrerContact String?
+  referralDate    DateTime?
+  letterRef       String?
+  notes           String?
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+}
+
+// ===================== SERVICES / PACKAGES / INSURANCE =====================
+
+model Service {
+  id          String   @id @default(cuid())
+  clinicId    String
+  name        String
+  description String?
+  category    String   @default("GENERAL")
+  standardPriceCents Int
+  defaultDurationMin Int @default(30)
+  active      Boolean  @default(true)
+  // JSON array of applicable arrangements: ["PAYG","PACKAGE","INSURANCE"]
+  arrangements String  @default("[\"PAYG\"]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rates InsuranceRate[]
+
+  @@index([clinicId])
+}
+
+model PackageDefinition {
+  id          String  @id @default(cuid())
+  clinicId    String
+  name        String
+  description String?
+  sessions    Int
+  priceCents  Int
+  validityDays Int
+  // JSON array of service ids included
+  serviceIds  String  @default("[]")
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+
+  patientPackages PatientPackage[]
+
+  @@index([clinicId])
+}
+
+model PatientPackage {
+  id         String   @id @default(cuid())
+  clinicId   String
+  patientId  String
+  packageId  String
+  purchaseDate DateTime @default(now())
+  expiryDate DateTime
+  totalSessions Int
+  usedSessions  Int    @default(0)
+  amountPaidCents Int @default(0)
+  // STATUS: ACTIVE | EXHAUSTED | EXPIRED | CANCELLED
+  status     String   @default("ACTIVE")
+
+  patient   Patient           @relation(fields: [patientId], references: [id])
+  package   PackageDefinition @relation(fields: [packageId], references: [id])
+  transactions PackageTransaction[]
+
+  @@index([patientId, status])
+  @@index([clinicId])
+}
+
+// TYPE: PURCHASE | DEDUCTION | REVERSAL | REFUND | ADJUSTMENT | EXPIRY
+model PackageTransaction {
+  id               String   @id @default(cuid())
+  patientPackageId String
+  type             String
+  sessions         Int      // positive or negative
+  // unique per session to guarantee idempotent deductions
+  sessionId        String?
+  amountCents      Int?
+  description      String?
+  performedById    String?
+  createdAt        DateTime @default(now())
+
+  patientPackage PatientPackage @relation(fields: [patientPackageId], references: [id])
+
+  @@unique([sessionId, type])
+  @@index([patientPackageId])
+}
+
+model InsuranceProvider {
+  id       String  @id @default(cuid())
+  clinicId String
+  name     String
+  code     String
+  contactName String?
+  contactPhone String?
+  email    String?
+  // Billing arrangement: DIRECT_BILLING | REIMBURSEMENT | CAPITATION
+  billingArrangement String @default("DIRECT_BILLING")
+  coveragePercent Int    @default(80)
+  active   Boolean @default(true)
+
+  rates  InsuranceRate[]
+  claims InsuranceClaim[]
+  memberPolicies PatientInsurance[]
+
+  @@unique([clinicId, code])
+}
+
+model InsuranceRate {
+  id           String @id @default(cuid())
+  providerId   String
+  serviceId    String
+  rateCents    Int    // negotiated provider-specific rate
+  coveragePercent Int @default(80)
+  active       Boolean @default(true)
+
+  provider InsuranceProvider @relation(fields: [providerId], references: [id])
+  service  Service           @relation(fields: [serviceId], references: [id])
+
+  @@unique([providerId, serviceId])
+}
+
+// STATUS: DRAFT | SUBMITTED | APPROVED | PARTIALLY_APPROVED | REJECTED | PAID
+model InsuranceClaim {
+  id          String   @id @default(cuid())
+  clinicId    String
+  providerId  String
+  invoiceId   String   @unique
+  claimNumber String   @unique
+  claimedCents Int
+  approvedCents Int    @default(0)
+  status      String   @default("DRAFT")
+  submittedDate DateTime?
+  decisionDate  DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  provider InsuranceProvider @relation(fields: [providerId], references: [id])
+  invoice  Invoice           @relation(fields: [invoiceId], references: [id])
+
+  @@index([providerId, status])
+}
+
+// ===================== CLINICAL: EPISODES =====================
+
+// STATUS: AWAITING_ASSESSMENT | ASSESSMENT_IN_PROGRESS | AWAITING_PLAN | ACTIVE_TREATMENT | ON_HOLD | UNDER_REVIEW | DISCHARGED | DISCONTINUED
+model TreatmentEpisode {
+  id          String   @id @default(cuid())
+  clinicId    String
+  patientId   String
+  episodeNumber Int
+  title       String
+  // JSON string: [{date, reason, notes}] hold history
+  holdHistory String   @default("[]")
+  openedDate  DateTime @default(now())
+  closedDate  DateTime?
+  status      String   @default("AWAITING_ASSESSMENT")
+  therapistId String?
+  branchId    String?
+  totalCompletedSessions Int @default(0)
+  sessionsSinceReview    Int @default(0)
+  reviewThreshold   Int @default(15)
+  reviewDue         Boolean @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient     Patient          @relation(fields: [patientId], references: [id])
+  therapist   StaffProfile?    @relation("EpisodeTherapist", fields: [therapistId], references: [id])
+  assessments Assessment[]
+  diagnoses   Diagnosis[]
+  plans       TreatmentPlan[]
+  appointments Appointment[]
+  sessions    TherapySession[]
+  reviews     ProgressReview[]
+  discharges  Discharge[]
+  invoices    Invoice[]
+
+  @@unique([patientId, episodeNumber])
+  @@index([clinicId, status])
+}
+
+// ===================== CLINICAL: ASSESSMENTS =====================
+
+// STATUS: DRAFT | COMPLETED
+model Assessment {
+  id         String   @id @default(cuid())
+  clinicId   String
+  episodeId  String
+  therapistId String
+  assessmentDate DateTime @default(now())
+  status     String   @default("DRAFT")
+  // Presenting complaint
+  primaryComplaint String?
+  bodyPart   String?
+  affectedSide String? // LEFT | RIGHT | BILATERAL | N/A
+  duration   String?
+  onset      String? // SUDDEN | GRADUAL | INSIDIOUS
+  cause      String?
+  aggravating String?
+  relieving  String?
+  previousTreatment String?
+  additionalHistory String?
+  // Pain assessment
+  painCurrent Int?
+  painWorst  Int?
+  painLowest Int?
+  painLocation String?
+  painType   String?
+  painFrequency String?
+  painNotes  String?
+  // Physical examination - observation
+  posture    String?
+  swelling   String?
+  deformity  String?
+  skinCondition String?
+  muscleWasting String?
+  gait       String?
+  // Vitals
+  bloodPressure String?
+  heartRate   Int?
+  respiratoryRate Int?
+  temperature Float?
+  oxygenSaturation Int?
+  weightKg    Float?
+  heightCm    Float?
+  // Clinical findings
+  clinicalFindings String?
+  impairments      String?
+  functionalLimitations String?
+  clinicalImpression    String?
+  precautions     String?
+  additionalNotes String?
+  therapistSignature String?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  episode     TreatmentEpisode         @relation(fields: [episodeId], references: [id])
+  romMeasurements    RomMeasurement[]
+  strengthMeasurements StrengthMeasurement[]
+  functionalItems    FunctionalAssessmentItem[]
+
+  @@index([episodeId])
+}
+
+model RomMeasurement {
+  id           String  @id @default(cuid())
+  assessmentId String
+  bodyPart     String
+  movement     String
+  side         String
+  activeRom    Float?
+  passiveRom   Float?
+  normalValue  Float?
+  notes        String?
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([assessmentId])
+}
+
+model StrengthMeasurement {
+  id           String  @id @default(cuid())
+  assessmentId String
+  bodyPart     String
+  muscleGroup  String
+  side         String
+  grade        Int // MRC 0-5
+  notes        String?
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([assessmentId])
+}
+
+model FunctionalAssessmentItem {
+  id           String  @id @default(cuid())
+  assessmentId String
+  activity     String
+  difficulty   Int // 0-4
+  notes        String?
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([assessmentId])
+}
+
+// STATUS: ACTIVE | SUPERSEDED
+model Diagnosis {
+  id          String   @id @default(cuid())
+  clinicId    String
+  episodeId   String
+  title       String
+  category    String   // MUSCULOSKELETAL | NEUROLOGICAL | SPORTS_INJURY | POST_SURGICAL | OTHER
+  bodyPart    String?
+  affectedSide String?
+  severity    String?  // MILD | MODERATE | SEVERE
+  explanation String?
+  provisional Boolean  @default(false)
+  diagnosisDate DateTime @default(now())
+  therapistId String
+  status      String   @default("ACTIVE")
+  // JSON: change history [{date, from, justification, by}]
+  changeHistory String @default("[]")
+  createdAt   DateTime @default(now())
+
+  episode TreatmentEpisode @relation(fields: [episodeId], references: [id])
+
+  @@index([episodeId])
+}
+
+// ===================== TREATMENT PLANS =====================
+
+// STATUS: DRAFT | ACTIVE | UNDER_REVIEW | REVISED | COMPLETED | DISCONTINUED
+model TreatmentPlan {
+  id          String   @id @default(cuid())
+  clinicId    String
+  episodeId   String
+  version     Int      @default(1)
+  status      String   @default("DRAFT")
+  // Session schedule
+  sessionsPerWeek  Int?
+  expectedTotalSessions Int?
+  startDate   DateTime?
+  endDate     DateTime?
+  sessionDurationMin Int?
+  reviewThresholdSessions Int @default(15)
+  // Precautions & recommendations
+  contraindications String?
+  restrictions      String?
+  activitiesToAvoid String?
+  specialPrecautions String?
+  patientRecommendations String?
+  referralInstructions String?
+  activatedAt DateTime?
+  revisedFromId String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  episode    TreatmentEpisode   @relation(fields: [episodeId], references: [id])
+  objectives PlanObjective[]
+  milestones RehabilitationMilestone[]
+  interventions PlanIntervention[]
+  reviews    ProgressReview[]
+
+  @@unique([episodeId, version])
+  @@index([clinicId, status])
+}
+
+model PlanObjective {
+  id          String  @id @default(cuid())
+  planId      String
+  description String
+  baseline    String?
+  target      String?
+  unit        String?
+  priority    String? // HIGH | MEDIUM | LOW
+  expectedDate DateTime?
+  status      String  @default("PENDING") // PENDING | IN_PROGRESS | ACHIEVED | NOT_ACHIEVED | NLA
+  notes       String?
+
+  plan TreatmentPlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+}
+
+// STATUS: PENDING | IN_PROGRESS | ACHIEVED | NOT_ACHIEVED
+model RehabilitationMilestone {
+  id          String  @id @default(cuid())
+  planId      String
+  description String
+  objectiveId String?
+  expectedDate DateTime?
+  status      String  @default("PENDING")
+  notes       String?
+
+  plan TreatmentPlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+}
+
+model PlanIntervention {
+  id          String  @id @default(cuid())
+  planId      String
+  name        String
+  description String?
+  frequency   String?
+  duration    String?
+  instructions String?
+  notes       String?
+
+  plan TreatmentPlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+}
+
+// ===================== APPOINTMENTS & SESSIONS =====================
+
+// STATUS: SCHEDULED | CONFIRMED | COMPLETED | CANCELLED | NO_SHOW | RESCHEDULED | ATTENDED_NO_TREATMENT
+model Appointment {
+  id          String   @id @default(cuid())
+  clinicId    String
+  branchId    String?
+  patientId   String
+  episodeId   String?
+  therapistId String
+  date        DateTime
+  startMin    Int // minutes from midnight
+  endMin      Int
+  purpose     String?
+  notes       String?
+  status      String   @default("SCHEDULED")
+  walkIn      Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient   Patient          @relation(fields: [patientId], references: [id])
+  episode   TreatmentEpisode? @relation(fields: [episodeId], references: [id])
+  therapist StaffProfile?    @relation("AppointmentTherapist", fields: [therapistId], references: [id])
+  sessions  TherapySession[]
+
+  @@index([therapistId, date, status])
+  @@index([patientId, date])
+  @@index([clinicId, date])
+}
+
+// STATUS: PLANNED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW
+model TherapySession {
+  id          String   @id @default(cuid())
+  clinicId    String
+  episodeId   String
+  patientId   String
+  therapistId String
+  appointmentId String? @unique
+  date        DateTime
+  timeMin     Int?
+  durationMin Int?
+  status      String   @default("PLANNED")
+  painLevel   Int?
+  bloodPressure String?
+  heartRate   Int?
+  otherVitals String?
+  patientResponse String?
+  observations String?
+  notes       String?
+  therapistSignature String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  episode      TreatmentEpisode    @relation(fields: [episodeId], references: [id])
+  appointment  Appointment?        @relation(fields: [appointmentId], references: [id])
+  therapist    StaffProfile?       @relation("SessionTherapist", fields: [therapistId], references: [id])
+  patient      Patient             @relation("SessionPatient", fields: [patientId], references: [id])
+  interventions SessionIntervention[]
+
+  @@index([episodeId, status])
+  @@index([patientId])
+}
+
+model SessionIntervention {
+  id        String @id @default(cuid())
+  sessionId String
+  name      String
+  details   String?
+
+  session TherapySession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+}
+
+// ===================== PROGRESS REVIEWS & DISCHARGES =====================
+
+// STATUS: DUE | DRAFT | COMPLETED
+model ProgressReview {
+  id          String   @id @default(cuid())
+  clinicId    String
+  episodeId   String
+  planId      String?
+  triggerSessions Int  // sessions completed at time of review
+  reviewDate  DateTime @default(now())
+  status      String   @default("DRAFT")
+  // Updated clinical assessment
+  painCurrent Int?
+  painWorst   Int?
+  romSummary  String?
+  strengthSummary String?
+  functionalSummary String?
+  vitals      String?
+  newFindings String?
+  // Baseline comparison JSON: [{metric, baseline, current, unit, change}]
+  comparison  String   @default("[]")
+  // Therapist summary
+  improvements String?
+  deterioration String?
+  patientResponse String?
+  observations String?
+  recommendations String?
+  // DECISION: CONTINUE | MODIFY_INTERVENTIONS | MODIFY_OBJECTIVES | ADJUST_FREQUENCY | REVISE_PLAN | REFER | DISCHARGE
+  decision    String?
+  decisionNotes String?
+  newPlanId   String?
+  therapistSignature String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  episode         TreatmentEpisode        @relation(fields: [episodeId], references: [id])
+  plan            TreatmentPlan?          @relation(fields: [planId], references: [id])
+  objectiveResults ReviewObjectiveResult[]
+
+  @@index([episodeId, status])
+}
+
+// RESULT: ACHIEVED | PARTIALLY_ACHIEVED | NOT_ACHIEVED | NLA
+model ReviewObjectiveResult {
+  id          String @id @default(cuid())
+  reviewId    String
+  objectiveId String
+  objectiveDescription String
+  baseline    String?
+  target      String?
+  current     String?
+  result      String
+  notes       String?
+
+  review ProgressReview @relation(fields: [reviewId], references: [id])
+
+  @@index([reviewId])
+}
+
+// STATUS: DRAFT | PENDING_SIGNOFF | COMPLETED
+model Discharge {
+  id          String   @id @default(cuid())
+  clinicId    String
+  episodeId   String
+  patientId   String
+  therapistId String
+  dischargeDate DateTime @default(now())
+  status      String   @default("DRAFT")
+  reason      String
+  finalAssessment String?
+  // JSON baseline comparison
+  baselineComparison String @default("[]")
+  objectiveOutcomes String?
+  remainingLimitations String?
+  summary     String?
+  // FOLLOW_UP: FURTHER_PHYSIO | CLINIC | TELEPHONE | MEDICAL_REFERRAL | OTHER (optional)
+  followUpType   String?
+  followUpDetails String?
+  therapistSignature String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  episode        TreatmentEpisode          @relation(fields: [episodeId], references: [id])
+  patient        Patient                   @relation(fields: [patientId], references: [id])
+  recommendations DischargeRecommendation[]
+
+  @@index([episodeId])
+  @@index([patientId])
+}
+
+model DischargeRecommendation {
+  id         String @id @default(cuid())
+  dischargeId String
+  exerciseName String
+  instructions String?
+  frequency   String?
+  duration    String?
+  repetitions String?
+  precautions String?
+  notes       String?
+
+  discharge Discharge @relation(fields: [dischargeId], references: [id])
+
+  @@index([dischargeId])
+}
+
+// ===================== BILLING =====================
+
+// ARRANGEMENT: PAYG | PACKAGE | INSURANCE
+// STATUS: DRAFT | UNPAID | PARTIAL | PAID | CANCELLED
+model Invoice {
+  id          String   @id @default(cuid())
+  clinicId    String
+  invoiceNumber String @unique
+  patientId   String
+  episodeId   String?
+  arrangement String   @default("PAYG")
+  status      String   @default("UNPAID")
+  subtotalCents Int    @default(0)
+  discountCents Int    @default(0)
+  totalCents  Int      @default(0)
+  paidCents   Int      @default(0)
+  insuranceCoveredCents Int @default(0)
+  notes       String?
+  issuedById  String?
+  issuedAt    DateTime @default(now())
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient  Patient           @relation(fields: [patientId], references: [id])
+  episode  TreatmentEpisode? @relation(fields: [episodeId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+  refunds  Refund[]
+  claim    InsuranceClaim?
+
+  @@index([patientId, status])
+  @@index([clinicId, createdAt])
+}
+
+model InvoiceItem {
+  id         String @id @default(cuid())
+  invoiceId  String
+  serviceId  String?
+  description String
+  quantity   Int    @default(1)
+  unitPriceCents Int
+  // historical rate applied (insurance)
+  appliedRateCents Int?
+  coveragePercent Int?
+  coveredCents Int @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+// METHOD: CASH | MOBILE_MONEY | CARD | BANK_TRANSFER | INSURANCE
+model Payment {
+  id          String   @id @default(cuid())
+  clinicId    String
+  invoiceId   String
+  amountCents Int
+  method      String
+  reference   String?
+  paidAt      DateTime @default(now())
+  receivedById String?
+  notes       String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model Refund {
+  id          String   @id @default(cuid())
+  clinicId    String
+  invoiceId   String
+  paymentId   String?
+  amountCents Int
+  reason      String
+  refundedAt  DateTime @default(now())
+  approvedById String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+// TYPE: INVOICE_ISSUED | PAYMENT_RECEIVED | REFUND_ISSUED | PACKAGE_PURCHASE | INSURANCE_PAYMENT | ADJUSTMENT
+model FinancialTransaction {
+  id          String   @id @default(cuid())
+  clinicId    String
+  patientId   String?
+  type        String
+  amountCents Int
+  refType     String?
+  refId       String?
+  description String?
+  performedById String?
+  createdAt   DateTime @default(now())
+
+  @@index([clinicId, type, createdAt])
+}
+
+// ===================== STAFF =====================
+
+model StaffProfile {
+  id          String  @id @default(cuid())
+  clinicId    String
+  branchId    String?
+  staffCode   String  @unique // ST-0001
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  jobTitle    String
+  department  String?
+  // ROLE: ADMIN | RECEPTIONIST | PHYSIOTHERAPIST | MANAGEMENT
+  staffRole   String
+  employmentDate DateTime?
+  // STATUS: ACTIVE | ON_LEAVE | TERMINATED
+  employmentStatus String @default("ACTIVE")
+  // Therapist-specific
+  professionalDesignation String?
+  specialization String?
+  qualifications String? // JSON array
+  availability  String? // JSON
+  // Remuneration: FIXED | PER_PATIENT | PER_SESSION
+  remunerationMethod String @default("FIXED")
+  remunerationRateCents Int?
+  isTherapist Boolean @default(false)
+  userId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic        Clinic        @relation("ClinicStaff", fields: [clinicId], references: [id])
+  patientPatients Patient[]   @relation("PatientTherapist")
+  episodeEpisodes TreatmentEpisode[] @relation("EpisodeTherapist")
+  appointments  Appointment[] @relation("AppointmentTherapist")
+  sessions      TherapySession[] @relation("SessionTherapist")
+
+  @@index([clinicId, staffRole])
+}
+
+// ===================== GENERAL =====================
+
+model Setting {
+  id       String @id @default(cuid())
+  clinicId String
+  key      String
+  value    String
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  @@unique([clinicId, key])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  clinicId  String
+  userId    String?
+  // Audience role when userId is null: ADMIN | RECEPTIONIST | PHYSIOTHERAPIST | MANAGEMENT | ALL
+  audienceRole String?
+  type      String
+  title     String
+  message   String
+  entityType String?
+  entityId  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  clinicId    String
+  userId      String?
+  userName    String?
+  action      String
+  entityType  String
+  entityId    String
+  previousValues String?
+  newValues   String?
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([clinicId, createdAt])
+}
+
+model Counter {
+  id       String @id @default(cuid())
+  clinicId String
+  key      String
+  value    Int    @default(0)
+
+  @@unique([clinicId, key])
+}
