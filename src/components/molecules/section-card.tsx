@@ -19,18 +19,22 @@ interface SectionCardProps {
 
 export function SectionCard({ title, icon, description, actions, children, className, contentClassName, loading, noPadding }: SectionCardProps) {
   return (
-    <Card className={cn("shadow-sm", className)}>
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+    <Card className={cn("rounded-xl shadow-sm", noPadding ? "gap-0 overflow-hidden py-0" : "gap-3 py-4", className)}>
+      <CardHeader className={cn("flex flex-row items-start justify-between gap-3 space-y-0 px-4", noPadding ? "border-b border-slate-200 py-3 pb-3!" : "pb-0")}>
         <div>
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            {icon ? <AtomIcon name={icon} className="h-4 w-4 text-teal-600" /> : null}
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            {icon ? (
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50 text-teal-600">
+                <AtomIcon name={icon} className="h-3.5 w-3.5" />
+              </span>
+            ) : null}
             {title}
           </CardTitle>
           {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </CardHeader>
-      <CardContent className={cn(!noPadding && "pt-0", contentClassName)}>
+      <CardContent className={cn(!noPadding && "px-4 pt-0", contentClassName)}>
         {loading ? <Skeleton className="h-32 w-full" /> : children}
       </CardContent>
     </Card>

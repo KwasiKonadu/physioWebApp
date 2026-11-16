@@ -1,7 +1,7 @@
 "use client";
 // ============ Patient registration: 5-step wizard with duplicate detection ============
-import { useEffect, useState } from "react";
-import { useFieldArray, useForm, type FieldPath } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { get, useFieldArray, useForm, useWatch, type FieldPath, type PathValue } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -13,9 +13,7 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -191,7 +189,10 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
     mode: "onTouched",
   });
 
-  const { register, watch, setValue, trigger, handleSubmit, reset, formState } = form;
+  const { register, setValue, trigger, handleSubmit, reset, formState } = form;
+  const watchedValues = useWatch({ control: form.control });
+  const watch = <P extends FieldPath<FormValues>>(name: P) =>
+    get(watchedValues, name) as PathValue<FormValues, P>;
   const contacts = useFieldArray({ control: form.control, name: "emergencyContacts" });
   const history = useFieldArray({ control: form.control, name: "medicalHistory" });
 
@@ -202,10 +203,9 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
   const dob = watch("dateOfBirth");
   const dupKey = `${phone}|${firstName}|${lastName}|${dob}`;
   const debouncedDupKey = useDebounced(dupKey, 400);
-  const [dupParams, setDupParams] = useState({ phone: "", firstName: "", lastName: "", dob: "" });
-  useEffect(() => {
+  const dupParams = useMemo(() => {
     const [p, f, l, d] = debouncedDupKey.split("|");
-    setDupParams({ phone: p || "", firstName: f || "", lastName: l || "", dob: d || "" });
+    return { phone: p || "", firstName: f || "", lastName: l || "", dob: d || "" };
   }, [debouncedDupKey]);
   const dupEnabled = !!(dupParams.phone.trim().length >= 7 || (dupParams.firstName.trim() && dupParams.lastName.trim()));
   const duplicates = useDuplicates(dupParams, dupEnabled);
@@ -313,18 +313,18 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[900px] flex-col gap-0 overflow-hidden p-0 sm:rounded-xl">
-        <DialogHeader className="border-b px-5 py-4 text-left">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <AtomIcon name="UserPlus" className="h-4 w-4 text-teal-600" />
-            Register new patient
-          </DialogTitle>
-          <DialogDescription>
-            Complete each section. Fields marked * are required — the record is created on the final step.
-          </DialogDescription>
-        </DialogHeader>
-
+    <SidePanel
+      open={open}
+      onOpenChange={handleClose}
+      size="xl"
+      title={(
+        <>
+          <AtomIcon name="UserPlus" className="h-4 w-4 text-teal-600" />
+          Register new patient
+        </>
+      )}
+      description="Complete each section. Fields marked * are required — the record is created on the final step."
+    >
         {/* stepper */}
         <div className="flex items-center gap-1 overflow-x-auto border-b px-5 py-3 custom-scrollbar">
           {STEPS.map((s, i) => (
@@ -356,7 +356,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
 
         {/* body */}
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <SidePanelBody>
             {/* ---------- STEP 1: PERSONAL INFO ---------- */}
             {step === 0 ? (
               <div className="space-y-4">
@@ -380,7 +380,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                   </Alert>
                 ) : null}
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-3 *:min-w-0">
                   <div className="space-y-1.5">
                     <Label>First name *</Label>
                     <Input {...register("firstName")} placeholder="Kofi" />
@@ -398,7 +398,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                   <div className="space-y-1.5">
                     <Label>Date of birth</Label>
                     <div className="flex items-center gap-2">
-                      <Input type="date" {...register("dateOfBirth")} className="flex-1" />
+                      <Input type="date" {...register("dateOfBirth")} className="min-w-0 flex-1" />
                       <div className="w-20 shrink-0">
                         <Input value={calcAge(dob)} readOnly placeholder="—" aria-label="Age" className="bg-muted text-center" />
                       </div>
@@ -408,7 +408,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                   <div className="space-y-1.5">
                     <Label>Gender</Label>
                     <Select value={watch("gender")} onValueChange={(v) => setValue("gender", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {GENDERS.map((g) => (
                           <SelectItem key={g} value={g}>{labelize(g)}</SelectItem>
@@ -419,7 +419,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                   <div className="space-y-1.5">
                     <Label>Marital status</Label>
                     <Select value={watch("maritalStatus")} onValueChange={(v) => setValue("maritalStatus", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {MARITAL_STATUSES.map((m) => (
                           <SelectItem key={m} value={m}>{labelize(m)}</SelectItem>
@@ -482,7 +482,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                         ) : null}
                       </div>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-4 *:min-w-0">
                       <div className="space-y-1">
                         <Label>Name *</Label>
                         <Input {...register(`emergencyContacts.${index}.fullName`)} placeholder="Full name" />
@@ -541,11 +541,11 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                 ) : null}
 
                 {history.fields.map((field, index) => (
-                  <div key={field.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[160px_1fr_1fr_40px]">
+                  <div key={field.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[160px_1fr_1fr_40px] *:min-w-0">
                     <div className="space-y-1">
                       <Label>Type</Label>
                       <Select value={watch(`medicalHistory.${index}.type`)} onValueChange={(v) => setValue(`medicalHistory.${index}.type`, v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {MEDICAL_HISTORY_TYPES.map((t) => (
                             <SelectItem key={t} value={t}>{labelize(t)}</SelectItem>
@@ -575,11 +575,11 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
             {/* ---------- STEP 4: REFERRAL ---------- */}
             {step === 3 ? (
               <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                   <div className="space-y-1.5">
                     <Label>Referral source</Label>
                     <Select value={watch("referral.source")} onValueChange={(v) => setValue("referral.source", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select source (optional)" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Select source (optional)" /></SelectTrigger>
                       <SelectContent>
                         {REFERRAL_SOURCES.map((s) => (
                           <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
@@ -615,7 +615,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                   <RadioGroup
                     value={payment}
                     onValueChange={(v) => setValue("paymentArrangement", v as FormValues["paymentArrangement"], { shouldValidate: true })}
-                    className="grid gap-3 sm:grid-cols-3"
+                    className="grid gap-3 sm:grid-cols-3 *:min-w-0"
                   >
                     {(["PAYG", "PACKAGE", "INSURANCE"] as const).map((option) => (
                       <Label
@@ -657,11 +657,11 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                         </AlertDescription>
                       </Alert>
                     ) : null}
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
                       <div className="space-y-1">
                         <Label>Provider *</Label>
                         <Select value={watch("insurance.providerId")} onValueChange={(v) => setValue("insurance.providerId", v, { shouldValidate: true })}>
-                          <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Select provider" /></SelectTrigger>
                           <SelectContent>
                             {(providers.data ?? []).map((p) => (
                               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -687,7 +687,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                         <Label>Relationship to principal</Label>
                         <Input {...register("insurance.relationshipToPrincipal")} placeholder="e.g. Spouse, dependant" />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 *:min-w-0">
                         <div className="space-y-1">
                           <Label>Valid from</Label>
                           <Input type="date" {...register("insurance.validFrom")} />
@@ -732,7 +732,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                       </span>
                     </label>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-3 *:min-w-0">
                     <div className="space-y-1">
                       <Label>Signature name</Label>
                       <Input {...register("consent.signatureName")} placeholder="Signed by" />
@@ -743,7 +743,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                     </div>
                   </div>
                   {isMinor ? (
-                    <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:grid-cols-2">
+                    <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:grid-cols-2 *:min-w-0">
                       <p className="text-xs font-medium text-amber-800 sm:col-span-2">
                         Patient is under 18 — guardian consent details are required.
                       </p>
@@ -762,10 +762,10 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                 </div>
               </div>
             ) : null}
-          </div>
+          </SidePanelBody>
 
           {/* footer */}
-          <div className="flex items-center justify-between gap-3 border-t bg-muted/30 px-5 py-3">
+          <SidePanelFooter className="justify-between gap-3">
             <p className="hidden text-xs text-muted-foreground sm:block">
               Step {step + 1} of {STEPS.length} · {STEPS[step].title}
             </p>
@@ -795,9 +795,8 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
                 </Button>
               )}
             </div>
-          </div>
+          </SidePanelFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </SidePanel>
   );
 }

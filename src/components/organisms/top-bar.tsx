@@ -1,14 +1,12 @@
 "use client";
-// ORGANISM: top navigation bar — global search, notifications, profile menu, logout
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+// ORGANISM: top navigation bar — page title + tabs (rendered by pages via slots), actions, notifications, profile
+import { usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { useAuthStore, useUIStore } from "@/stores/app-store";
+import { useAuthStore, useUIStore, viewFromPath } from "@/stores/app-store";
 import { initials, relativeTime } from "@/lib/format";
 import { AtomIcon } from "@/components/atoms/icon";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -18,6 +16,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { NAV_ITEMS } from "@/lib/constants";
+import { useTopBarSlots } from "@/components/templates/topbar-slots";
 
 interface NotificationItem {
   id: string;
@@ -34,8 +34,9 @@ export function TopBar() {
   const navigate = useUIStore((s) => s.navigate);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
+  const slots = useTopBarSlots();
+  const activeView = viewFromPath(usePathname());
+  const fallbackTitle = NAV_ITEMS.find((i) => i.key === activeView)?.label;
 
   const notifications = useQuery({
     queryKey: ["notifications"],
@@ -57,66 +58,18 @@ export function TopBar() {
 
   const unread = (notifications.data?.items || []).filter((n) => !n.read).length;
 
-  const onSearch = (q: string) => {
-    setSearch(q);
-    if (q.length >= 2) setOpen(true);
-  };
-
-  const searchResults = useQuery({
-    queryKey: ["global-search", search],
-    queryFn: () => apiFetch<{ patients: { id: string; patientCode: string; firstName: string; lastName: string }[] }>(
-      `/api/patients?search=${encodeURIComponent(search)}&pageSize=6`
-    ),
-    enabled: search.trim().length >= 2,
-  });
-
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="flex h-14 items-center gap-3 px-4 md:px-6">
-        {/* Global search */}
-        <div className="relative w-full max-w-md">
-          <AtomIcon name="Search" className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            onFocus={() => search.length >= 2 && setOpen(true)}
-            onBlur={() => setTimeout(() => setOpen(false), 200)}
-            placeholder="Search patients by name, phone or ID…"
-            className="h-9 pl-8"
-            aria-label="Global search"
-          />
-          {open && search.trim().length >= 2 && (
-            <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-lg border bg-popover shadow-lg">
-              <ScrollArea className="max-h-72 custom-scrollbar">
-                {searchResults.isLoading ? (
-                  <p className="p-3 text-sm text-muted-foreground">Searching…</p>
-                ) : (searchResults.data?.patients || []).length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">No matching patients found</p>
-                ) : (
-                  (searchResults.data?.patients || []).map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-navy-50"
-                      onClick={() => {
-                        navigate("patients", { patientId: p.id });
-                        setSearch("");
-                        setOpen(false);
-                      }}
-                    >
-                      <span className="truncate">
-                        <span className="font-medium">{p.firstName} {p.lastName}</span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{p.patientCode}</span>
-                    </button>
-                  ))
-                )}
-              </ScrollArea>
-            </div>
-          )}
+    <header className="sticky top-0 z-20 flex h-24 flex-col border-b border-slate-200 bg-white">
+      {/* Row 1: page title + actions + notifications + profile */}
+      <div className="flex h-14 shrink-0 items-center gap-3 px-4 md:px-6">
+        {/* Page title — filled by <PageHeader>; falls back to the section name */}
+        <div ref={slots?.setTitle} className="peer min-w-0 flex-1 empty:hidden" />
+        <div className="hidden min-w-0 flex-1 peer-empty:block">
+          <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">{fallbackTitle}</h1>
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div ref={slots?.setActions} className="shrink-0 empty:hidden" />
+        <div className="flex shrink-0 items-center gap-1.5">
           {/* Notifications */}
           <Popover>
             <PopoverTrigger asChild>
@@ -187,6 +140,19 @@ export function TopBar() {
           </DropdownMenu>
         </div>
       </div>
+      {/* Row 2: tabs — always reserved so the bar height is identical on every page */}
+      <div
+        ref={slots?.setTabs}
+        className={cn(
+          "flex h-10 shrink-0 items-stretch overflow-x-auto px-4 md:px-6",
+          // Underline tab style (scoped to the top bar only; pill tabs elsewhere are unchanged)
+          "[&>div]:flex [&>div]:items-stretch",
+          "**:data-[slot=tabs]:h-full **:data-[slot=tabs]:gap-0",
+          "**:data-[slot=tabs-list]:h-full **:data-[slot=tabs-list]:w-auto **:data-[slot=tabs-list]:justify-start **:data-[slot=tabs-list]:gap-6 **:data-[slot=tabs-list]:rounded-none **:data-[slot=tabs-list]:bg-transparent! **:data-[slot=tabs-list]:p-0",
+          "**:data-[slot=tabs-trigger]:h-full **:data-[slot=tabs-trigger]:flex-none **:data-[slot=tabs-trigger]:rounded-none **:data-[slot=tabs-trigger]:border-0 **:data-[slot=tabs-trigger]:border-b-2 **:data-[slot=tabs-trigger]:border-transparent! **:data-[slot=tabs-trigger]:bg-transparent! **:data-[slot=tabs-trigger]:items-end **:data-[slot=tabs-trigger]:px-1 **:data-[slot=tabs-trigger]:pb-2 **:data-[slot=tabs-trigger]:pt-0 **:data-[slot=tabs-trigger]:text-sm **:data-[slot=tabs-trigger]:font-medium **:data-[slot=tabs-trigger]:text-slate-500 **:data-[slot=tabs-trigger]:shadow-none **:data-[slot=tabs-trigger]:hover:text-navy-800",
+          "[&_[data-slot=tabs-trigger][data-state=active]]:border-navy-900! [&_[data-slot=tabs-trigger][data-state=active]]:font-semibold [&_[data-slot=tabs-trigger][data-state=active]]:text-navy-900 [&_[data-slot=tabs-trigger][data-state=active]]:shadow-none"
+        )}
+      />
     </header>
   );
 }

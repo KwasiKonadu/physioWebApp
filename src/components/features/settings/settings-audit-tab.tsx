@@ -1,24 +1,19 @@
 "use client";
 // SETTINGS: Audit log tab — filters, expandable JSON detail rows, pagination
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { labelize } from "@/lib/constants";
 import { formatDateTime, relativeTime } from "@/lib/format";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
-import { SectionCard } from "@/components/molecules/section-card";
-import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { AtomIcon } from "@/components/atoms/icon";
-import { cn } from "@/lib/utils";
 
 interface AuditRow {
   id: string;
@@ -80,7 +75,7 @@ export default function SettingsAuditTab() {
   if (to) params.set("to", to);
   if (search) params.set("search", search);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["audit-logs", entityType, from, to, search, page, pageSize],
     queryFn: () => apiFetch<{ items: AuditRow[]; total: number; page: number; pageSize: number; entityTypes: string[] }>(
       `/api/audit-logs?${params.toString()}`
@@ -90,123 +85,74 @@ export default function SettingsAuditTab() {
   const items = data?.items || [];
 
   return (
-    <SectionCard
-      title="Audit log"
-      icon="History"
-      description="Every staff, user, role and setting change — with before/after values"
-      noPadding
-    >
-      <div className="p-4 pb-2">
-        <DataToolbar
-          search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search user or action…" }}
-          onRefresh={() => setPage(page)}
-          refreshing={isFetching}
-          filters={
-            <>
-              <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="w-44"><SelectValue placeholder="Entity" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All entities</SelectItem>
-                  {(data?.entityTypes || []).map((t) => (
-                    <SelectItem key={t} value={t}>{labelize(t)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-36" aria-label="From date" />
-              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-36" aria-label="To date" />
-            </>
-          }
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2 p-4">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-10 animate-pulse rounded bg-muted" />)}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="p-4">
-          <EmptyState icon="History" title="No audit entries" description="Changes made in the clinic will be recorded here." />
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto custom-scrollbar">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead className="hidden sm:table-cell">Entity</TableHead>
-                  <TableHead className="hidden md:table-cell">Entity ID</TableHead>
-                  <TableHead className="hidden lg:table-cell">Reason</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((log) => (
-                  <Fragment key={log.id}>
-                    <TableRow
-                      className={cn("cursor-pointer", expandedId === log.id && "bg-muted/40")}
-                      onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                    >
-                      <TableCell>
-                        <AtomIcon
-                          name={expandedId === log.id ? "ChevronDown" : "ChevronRight"}
-                          className="h-4 w-4 text-muted-foreground"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-sm font-medium">{relativeTime(log.createdAt)}</p>
-                        <p className="hidden text-xs text-muted-foreground sm:block">{formatDateTime(log.createdAt)}</p>
-                      </TableCell>
-                      <TableCell className="text-sm">{log.userName || "System"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={actionTone(log.action)}>
-                          {log.action.replaceAll("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden text-sm sm:table-cell">{labelize(log.entityType)}</TableCell>
-                      <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
-                        {log.entityId.slice(0, 10)}…
-                      </TableCell>
-                      <TableCell className="hidden max-w-52 truncate text-sm text-muted-foreground lg:table-cell">
-                        {log.reason || "—"}
-                      </TableCell>
-                    </TableRow>
-                    {expandedId === log.id && (
-                      <TableRow key={`${log.id}-detail`} className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="bg-slate-50 p-4">
-                          <div className="grid gap-4 lg:grid-cols-2">
-                            <div>
-                              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Previous values</p>
-                              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-navy-800">
-                                {pretty(log.previousValues)}
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">New values</p>
-                              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-teal-800">
-                                {pretty(log.newValues)}
-                              </pre>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
+    <>
+    <div className="mb-3">
+      <DataToolbar
+        search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search user or action…" }}
+        onRefresh={() => void refetch()}
+        refreshing={isFetching}
+        filters={
+          <>
+            <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Entity" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All entities</SelectItem>
+                {(data?.entityTypes || []).map((t) => (
+                  <SelectItem key={t} value={t}>{labelize(t)}</SelectItem>
                 ))}
-              </TableBody>
-            </Table>
+              </SelectContent>
+            </Select>
+            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-36" aria-label="From date" />
+            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-36" aria-label="To date" />
+          </>
+        }
+      />
+    </div>
+    <DataTable
+      rows={items}
+      rowKey={(l: AuditRow) => l.id}
+      loading={isLoading}
+      minWidth="min-w-180"
+      onRowClick={(l) => setExpandedId(expandedId === l.id ? null : l.id)}
+      rowClassName={(l) => (expandedId === l.id ? "bg-muted/40" : undefined)}
+      empty={<EmptyState icon="History" title="No audit entries" description="Changes made in the clinic will be recorded here." />}
+      pagination={{ page, pageSize, total: data?.total || 0, onPageChange: setPage, onPageSizeChange: (s) => { setPageSize(s); setPage(1); } }}
+      expandedRow={(log) =>
+        expandedId === log.id ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Previous values</p>
+              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-navy-800">
+                {pretty(log.previousValues)}
+              </pre>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">New values</p>
+              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-teal-800">
+                {pretty(log.newValues)}
+              </pre>
+            </div>
           </div>
-          <TablePagination
-            page={page}
-            pageSize={pageSize}
-            total={data?.total || 0}
-            onPageChange={setPage}
-            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-          />
-        </>
-      )}
-    </SectionCard>
+        ) : null
+      }
+      columns={[
+        { id: "chev", header: "", className: "w-8", cell: (l) => <AtomIcon name={expandedId === l.id ? "ChevronDown" : "ChevronRight"} className="h-4 w-4 text-muted-foreground" /> },
+        {
+          id: "time", header: "Time",
+          cell: (l) => (
+            <>
+              <p className="text-sm font-medium">{relativeTime(l.createdAt)}</p>
+              <p className="hidden text-xs text-muted-foreground sm:block">{formatDateTime(l.createdAt)}</p>
+            </>
+          ),
+        },
+        { id: "user", header: "User", cell: (l) => <span className="text-sm">{l.userName || "System"}</span> },
+        { id: "action", header: "Action", cell: (l) => <Badge variant="outline" className={actionTone(l.action)}>{l.action.replaceAll("_", " ")}</Badge> },
+        { id: "entity", header: "Entity", hideBelow: "sm", cell: (l) => <span className="text-sm">{labelize(l.entityType)}</span> },
+        { id: "entityId", header: "Entity ID", hideBelow: "md", cell: (l) => <span className="font-mono text-xs text-muted-foreground">{l.entityId.slice(0, 10)}…</span> },
+        { id: "reason", header: "Reason", hideBelow: "lg", className: "max-w-52 truncate", cell: (l) => <span className="text-sm text-muted-foreground">{l.reason || "—"}</span> },
+      ]}
+    />
+    </>
   );
 }

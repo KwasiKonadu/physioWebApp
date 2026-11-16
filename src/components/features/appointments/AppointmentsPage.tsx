@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { AppointmentCalendar } from "./AppointmentCalendar";
+import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { BookingDialog } from "./BookingDialog";
 import { AppointmentDetails } from "./AppointmentDetails";
 import {
@@ -45,6 +46,43 @@ function rangeLabel(view: View, anchor: string): string {
     return `${formatDate(mon, { day: "numeric", month: "short" })} – ${formatDate(sun, { day: "numeric", month: "short", year: "numeric" })}`;
   }
   return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
+/** Label for the "jump to today" button, relative to the period being viewed. */
+function relativeLabel(view: View, anchor: string): string {
+  const MS_DAY = 86_400_000;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = anchorDateOf(anchor);
+  const yearSuffix = d.getFullYear() !== today.getFullYear();
+
+  if (view === "day") {
+    const diff = Math.round((d.getTime() - today.getTime()) / MS_DAY);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    if (diff === -1) return "Yesterday";
+    // within a week: the weekday name is unambiguous; further out it would repeat, so show the date
+    if (Math.abs(diff) <= 6) return d.toLocaleDateString("en-GB", { weekday: "long" });
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(yearSuffix ? { year: "numeric" } : {}) });
+  }
+
+  if (view === "week") {
+    const mon = mondayOf(d);
+    const diff = Math.round((mon.getTime() - mondayOf(today).getTime()) / (7 * MS_DAY));
+    if (diff === 0) return "This week";
+    if (diff === 1) return "Next week";
+    if (diff === -1) return "Last week";
+    const sun = addDays(mon, 6);
+    const f = (x: Date, withYear: boolean) => x.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) });
+    return `${f(mon, false)} – ${f(sun, yearSuffix || sun.getFullYear() !== today.getFullYear())}`;
+  }
+
+  const diff = (d.getFullYear() - today.getFullYear()) * 12 + (d.getMonth() - today.getMonth());
+  if (diff === 0) return "This month";
+  if (diff === 1) return "Next month";
+  if (diff === -1) return "Last month";
+  // a month name stays unambiguous for a year; at 12 months away it would repeat, so add the year
+  if (Math.abs(diff) <= 11) return d.toLocaleDateString("en-GB", { month: "long" });
+  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
 export default function AppointmentsPage() {
@@ -128,8 +166,52 @@ export default function AppointmentsPage() {
         title="Appointments"
         description="Booking calendar and schedule management"
         icon="CalendarDays"
-        actions={
-          canManage ? (
+      />
+
+      <div className="mb-3">
+        <DataToolbar
+          filters={
+            <>
+              <Tabs value={view} onValueChange={(v) => setView(v as View)}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="day" className="h-auto! px-3 text-xs" title={view === "day" ? "Click again to jump to today" : undefined} onClick={() => { if (view === "day") setAnchor(todayKey); }}>Day</TabsTrigger>
+                  <TabsTrigger value="week" className="h-auto! px-3 text-xs" title={view === "week" ? "Click again to jump to this week" : undefined} onClick={() => { if (view === "week") setAnchor(todayKey); }}>Week</TabsTrigger>
+                  <TabsTrigger value="month" className="h-auto! px-3 text-xs" title={view === "month" ? "Click again to jump to this month" : undefined} onClick={() => { if (view === "month") setAnchor(todayKey); }}>Month</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(-1)} aria-label="Previous">
+                  <AtomIcon name="ChevronLeft" className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 min-w-24" onClick={() => setAnchor(todayKey)} title="Jump to today">{relativeLabel(view, anchor)}</Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(1)} aria-label="Next">
+                  <AtomIcon name="ChevronRight" className="h-4 w-4" />
+                </Button>
+              </div>
+              <Select value={therapistFilter} onValueChange={setTherapistFilter}>
+                <SelectTrigger className="w-40 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All therapists</SelectItem>
+                  {(therapists.data || []).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All statuses</SelectItem>
+                  {APPOINTMENT_STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          }
+          onRefresh={() => qc.invalidateQueries({ queryKey: ["appointments"] })}
+          refreshing={query.isFetching}
+        >
+          {canManage ? (
             <>
               <Button variant="outline" onClick={() => openBooking(true)}>
                 <AtomIcon name="Zap" className="h-4 w-4" /> Walk-in
@@ -138,9 +220,9 @@ export default function AppointmentsPage() {
                 <AtomIcon name="Plus" className="h-4 w-4" /> New appointment
               </Button>
             </>
-          ) : null
-        }
-      />
+          ) : null}
+        </DataToolbar>
+      </div>
 
       {/* range stats */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -151,52 +233,13 @@ export default function AppointmentsPage() {
         <StatCard label="Cancelled / no-show" value={stats.missed} icon="UserX" tone="rose" loading={query.isLoading} />
       </div>
 
-      {/* calendar */}
+      {/* calendar (+ the day list beside it in day view) */}
+      <div className={view === "day" ? "grid items-start gap-4 xl:grid-cols-[3fr_2fr]" : undefined}>
       <SectionCard
+        className="min-w-0"
         title={view === "day" ? "Day schedule" : view === "week" ? "Week schedule" : "Month overview"}
         description={rangeLabel(view, anchor)}
         icon={view === "month" ? "Grid3x3" : "CalendarDays"}
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Tabs value={view} onValueChange={(v) => setView(v as View)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="day" className="px-3 text-xs">Day</TabsTrigger>
-                <TabsTrigger value="week" className="px-3 text-xs">Week</TabsTrigger>
-                <TabsTrigger value="month" className="px-3 text-xs">Month</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(-1)} aria-label="Previous">
-                <AtomIcon name="ChevronLeft" className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" className="h-8" onClick={() => setAnchor(todayKey)}>Today</Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shift(1)} aria-label="Next">
-                <AtomIcon name="ChevronRight" className="h-4 w-4" />
-              </Button>
-            </div>
-            <Select value={therapistFilter} onValueChange={setTherapistFilter}>
-              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All therapists</SelectItem>
-                {(therapists.data || []).map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.firstName} {t.lastName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All statuses</SelectItem>
-                {APPOINTMENT_STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => qc.invalidateQueries({ queryKey: ["appointments"] })} disabled={query.isFetching} aria-label="Refresh">
-              <AtomIcon name="RefreshCw" className={query.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-            </Button>
-          </div>
-        }
       >
         {query.isError ? (
           <EmptyState
@@ -219,7 +262,7 @@ export default function AppointmentsPage() {
 
       {/* compact today list (day view only) */}
       {view === "day" ? (
-        <div className="mt-4">
+        <div className="min-w-0">
           <SectionCard
             title={dayListTitle}
             icon="ListChecks"
@@ -242,14 +285,14 @@ export default function AppointmentsPage() {
                     tabIndex={0}
                     onClick={() => setDetailsId(a.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") setDetailsId(a.id); }}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border bg-white p-3 transition-colors hover:bg-muted/40"
+                    className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-white p-3 transition-colors hover:bg-muted/40"
                   >
                     <div className="w-20 shrink-0 text-center">
                       <p className="text-sm font-semibold">{minutesToTime(a.startMin)}</p>
                       <p className="text-[10px] text-muted-foreground">to {minutesToTime(a.endMin)}</p>
                     </div>
                     <span className="h-9 w-1 shrink-0 rounded-full bg-border" />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-40 flex-1">
                       <p className="truncate text-sm font-medium">
                         {a.patient.firstName} {a.patient.lastName}
                         <span className="ml-1.5 text-xs font-normal text-muted-foreground">{a.patient.patientCode}{a.walkIn ? " · walk-in" : ""}</span>
@@ -259,9 +302,9 @@ export default function AppointmentsPage() {
                         {a.sessions?.length ? " · session created" : ""}
                       </p>
                     </div>
-                    <StatusBadge status={a.status} className="hidden sm:inline-flex" />
+                    <StatusBadge status={a.status} className="ml-auto hidden sm:inline-flex" />
                     {canManage ? (
-                      <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1.5 max-xl:order-last max-xl:w-full max-xl:justify-end">
                         {a.status === "SCHEDULED" ? (
                           <Button variant="outline" size="sm" className="h-8" disabled={action.isPending}
                             onClick={(e) => { e.stopPropagation(); action.mutate({ id: a.id, body: { action: "confirm" }, successMsg: "Appointment confirmed" }); }}>
@@ -284,6 +327,7 @@ export default function AppointmentsPage() {
           </SectionCard>
         </div>
       ) : null}
+      </div>
 
       <BookingDialog
         open={bookingOpen}

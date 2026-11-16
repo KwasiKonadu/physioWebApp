@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -47,41 +47,46 @@ export function AppointmentDetails({ appointmentId, open, onOpenChange }: Appoin
   const startSession = useStartSession();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="custom-scrollbar max-h-[92vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Appointment
-            {appt ? <StatusBadge status={appt.status} /> : null}
-            {appt?.walkIn ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-                <AtomIcon name="Zap" className="h-3 w-3" /> Walk-in
-              </span>
-            ) : null}
-          </DialogTitle>
-          <DialogDescription>Full booking details, actions and the linked therapy session.</DialogDescription>
-        </DialogHeader>
-
-        {detail.isLoading ? (
+    <SidePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Appointment"
+      description="Full booking details, actions and the linked therapy session."
+      headerExtra={(
+        <>
+          {appt ? <StatusBadge status={appt.status} /> : null}
+          {appt?.walkIn ? (
+            <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+              <AtomIcon name="Zap" className="h-3 w-3" /> Walk-in
+            </span>
+          ) : null}
+        </>
+      )}
+    >
+      {detail.isLoading ? (
+        <SidePanelBody>
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-40 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : !appt ? (
+        </SidePanelBody>
+      ) : !appt ? (
+        <SidePanelBody>
           <EmptyState icon="CalendarOff" title="Appointment not found" description="It may have been removed or belongs to another clinic." />
-        ) : (
-          // keyed remount keeps per-appointment UI state fresh without effects
-          <AppointmentDetailsBody
-            key={appt.id}
-            appt={appt}
-            onOpenChange={onOpenChange}
-            action={action}
-            startSession={startSession}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+        </SidePanelBody>
+      ) : (
+        // keyed remount keeps per-appointment UI state fresh without effects
+        <AppointmentDetailsBody
+          key={appt.id}
+          appt={appt}
+          onOpenChange={onOpenChange}
+          action={action}
+          startSession={startSession}
+        />
+      )}
+    </SidePanel>
   );
 }
 
@@ -129,6 +134,7 @@ function AppointmentDetailsBody({ appt, onOpenChange, action, startSession }: {
 
   return (
     <>
+      <SidePanelBody>
       <div className="space-y-4">
         {/* patient header */}
         <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
@@ -214,9 +220,12 @@ function AppointmentDetailsBody({ appt, onOpenChange, action, startSession }: {
           </div>
         ) : null}
 
-        {/* actions */}
-        {canManage ? (
-          <div className="flex flex-wrap gap-2 border-t pt-3">
+      </div>
+      </SidePanelBody>
+
+      {/* actions — pinned footer */}
+      {canManage ? (
+        <SidePanelFooter>
             {status === "SCHEDULED" ? (
               <Button size="sm" className="bg-teal-600 hover:bg-teal-700" disabled={action.isPending}
                 onClick={() => doAction({ action: "confirm" }, "Appointment confirmed")}>
@@ -266,9 +275,8 @@ function AppointmentDetailsBody({ appt, onOpenChange, action, startSession }: {
             {!appt.episodeId && canStartSession && !linkedSession ? (
               <p className="w-full text-xs text-amber-700">Starting a therapy session requires this appointment to be linked to a treatment episode.</p>
             ) : null}
-          </div>
-        ) : null}
-      </div>
+        </SidePanelFooter>
+      ) : null}
 
       {/* cancel with reason */}
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>

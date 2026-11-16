@@ -1,156 +1,44 @@
 "use client";
 // FEATURE: Treatment plan form wizard — create / edit draft / revise (objectives → milestones → interventions → schedule → precautions → review)
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Controller, useFieldArray, useForm, useWatch, type UseFormReturn } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+
+
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { SectionCard } from "@/components/molecules/section-card";
+
+import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
+import { PageHeader } from "@/components/molecules/page-header";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PatientSearchSelect } from "../assessments/AssessmentForm";
+import type { PatientLite } from "../assessments/assessments-api";
+import { apiFetch } from "@/lib/api-client";
+import { setNavGuard, useUIStore } from "@/stores/app-store";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { EmptyStateCompact } from "@/components/molecules/empty-state";
-import { MILESTONE_STATUSES, PLAN_INTERVENTIONS } from "@/lib/constants";
-import { fullName, ymd } from "@/lib/format";
+import { fullName, initials, ymd } from "@/lib/format";
 import { plansApi, fetchPatientEpisodes, searchPatients } from "./plan-api";
 import type { TreatmentPlanDto } from "./types";
 
-const OBJECTIVE_PRIORITIES = ["HIGH", "MEDIUM", "LOW"] as const;
-const CUSTOM_SENTINEL = "__custom__";
-
-// ---------- schema ----------
-const objectiveRowSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  baseline: z.string(),
-  target: z.string(),
-  unit: z.string(),
-  priority: z.string(),
-  expectedDate: z.string(),
-});
-const milestoneRowSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  objectiveIdx: z.string(),
-  expectedDate: z.string(),
-  status: z.string(),
-});
-const interventionRowSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string(),
-  frequency: z.string(),
-  duration: z.string(),
-  instructions: z.string(),
-  notes: z.string(),
-});
-
-const buildSchema = (mode: "create" | "edit" | "revise") =>
-  z.object({
-    episodeId: mode === "create" ? z.string().min(1, "Select an episode for this plan") : z.string(),
-    objectives: z.array(objectiveRowSchema).max(30),
-    milestones: z.array(milestoneRowSchema).max(30),
-    interventions: z.array(interventionRowSchema).max(30),
-    sessionsPerWeek: z.string(),
-    expectedTotalSessions: z.string(),
-    sessionDurationMin: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
-    reviewThresholdSessions: z.string(),
-    contraindications: z.string(),
-    restrictions: z.string(),
-    activitiesToAvoid: z.string(),
-    specialPrecautions: z.string(),
-    patientRecommendations: z.string(),
-    referralInstructions: z.string(),
-    changeReason: mode === "revise" ? z.string().min(1, "A change reason is required") : z.string(),
-  });
-
-type FormValues = z.infer<ReturnType<typeof buildSchema>>;
-
-const emptyObjective = { description: "", baseline: "", target: "", unit: "", priority: "", expectedDate: "" };
-const emptyMilestone = { description: "", objectiveIdx: "", expectedDate: "", status: "PENDING" };
-const emptyIntervention = { name: "", description: "", frequency: "", duration: "", instructions: "", notes: "" };
-
-function intOrNull(v: string): number | null {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function dateOrNull(v: string): string | null {
-  return v && v.trim() ? v : null;
-}
-
-// ---------- intervention name: presets select + custom free text ----------
-function InterventionNameInput({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
-  const isPreset = (PLAN_INTERVENTIONS as readonly string[]).includes(value || "");
-  const [custom, setCustom] = useState(!!value && !isPreset);
-
-  if (custom) {
-    return (
-      <div className="flex gap-1.5">
-        <Input value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Custom intervention name" />
-        <Button
-          type="button" variant="ghost" size="icon" className="shrink-0"
-          onClick={() => { setCustom(false); onChange(""); }}
-          title="Choose from presets instead"
-        >
-          <AtomIcon name="List" className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <Select value={value || ""} onValueChange={(v) => {
-      if (v === CUSTOM_SENTINEL) { setCustom(true); onChange(""); } else onChange(v);
-    }}>
-      <SelectTrigger><SelectValue placeholder="Select intervention" /></SelectTrigger>
-      <SelectContent>
-        {PLAN_INTERVENTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-        <SelectItem value={CUSTOM_SENTINEL}>
-          <span className="inline-flex items-center gap-1.5"><AtomIcon name="Pencil" className="h-3.5 w-3.5" /> Custom…</span>
-        </SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
-
-// ---------- repeatable row helpers ----------
-function RowShell({ index, label, onRemove, children }: {
-  index: number; label: string; onRemove: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label} {index + 1}</span>
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={onRemove} aria-label={`Remove ${label}`}>
-          <AtomIcon name="Trash2" className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ErrText({ form, name }: { form: UseFormReturn<FormValues>; name: string }) {
-  const err = name.split(".").reduce<unknown>((acc, key) => {
-    if (acc && typeof acc === "object") return (acc as Record<string, unknown>)[key];
-    return undefined;
-  }, form.formState.errors);
-  const msg = (err as { message?: string } | undefined)?.message;
-  return msg ? <p className="mt-1 text-xs text-rose-600">{msg}</p> : null;
-}
+import { buildSchema, FormValues, emptyObjective, emptyMilestone, emptyIntervention, intOrNull, dateOrNull } from "./plan-form-schema";
+import { ObjectivesStep, MilestonesStep, InterventionsStep, ScheduleStep, PrecautionsStep, ReviewStep } from "./PlanFormSteps";
 
 // ---------- main ----------
 export function PlanForm({
-  mode, sourcePlanId, preselectPatientId, preselectEpisodeId, onDone, onCancel,
+  mode, sourcePlanId, preselectPatientId, preselectEpisodeId, onDone, onCancel, title, subtitle,
 }: {
+  title: string;
+  subtitle?: string;
   mode: "create" | "edit" | "revise";
   sourcePlanId?: string | null;
   preselectPatientId?: string;
@@ -159,12 +47,16 @@ export function PlanForm({
   onCancel: () => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useUIStore((s) => s.navigate);
   const schema = useMemo(() => buildSchema(mode), [mode]);
 
   // entry-step lookups
   const [patientSearch, setPatientSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState<string>(preselectPatientId || "");
+  const [pickedPatient, setPickedPatient] = useState<PatientLite | null>(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const pendingLeave = useRef<(() => void) | null>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(patientSearch.trim()), 350);
     return () => clearTimeout(t);
@@ -173,7 +65,16 @@ export function PlanForm({
   const patientsQuery = useQuery({
     queryKey: ["plans", "patient-search", debouncedSearch],
     queryFn: () => searchPatients(debouncedSearch),
-    enabled: mode === "create",
+    // only list patients that match what was typed — never the whole directory
+    enabled: mode === "create" && debouncedSearch.trim().length > 0,
+  });
+  const patientInfoQ = useQuery({
+    queryKey: ["plans", "patient-info", selectedPatientId],
+    queryFn: async () => {
+      const res = await apiFetch<Record<string, unknown>>(`/api/patients/${selectedPatientId}`);
+      return (res?.patient ?? res) as { firstName?: string; lastName?: string; middleName?: string | null; patientCode?: string };
+    },
+    enabled: mode === "create" && !!selectedPatientId && !pickedPatient,
   });
   const episodesQuery = useQuery({
     queryKey: ["plans", "patient-episodes", selectedPatientId],
@@ -272,7 +173,6 @@ export function PlanForm({
   // ---------- wizard steps ----------
   const steps = useMemo(() => {
     const base: { key: string; label: string; icon: string }[] = [];
-    if (mode === "create") base.push({ key: "episode", label: "Episode", icon: "FolderOpen" });
     base.push(
       { key: "objectives", label: "Objectives", icon: "Target" },
       { key: "milestones", label: "Milestones", icon: "Flag" },
@@ -284,6 +184,7 @@ export function PlanForm({
     return base;
   }, [mode]);
   const [stepIdx, setStepIdx] = useState(0);
+  const [maxIdx, setMaxIdx] = useState(0);
   const step = steps[stepIdx];
 
   const stepFields: Record<string, string[]> = {
@@ -299,7 +200,7 @@ export function PlanForm({
   const goNext = async () => {
     const fields = stepFields[step.key] || [];
     const ok = fields.length === 0 ? true : await form.trigger(fields as never, { shouldFocus: true });
-    if (ok) setStepIdx((i) => Math.min(steps.length - 1, i + 1));
+    if (ok) { setStepIdx((i) => Math.min(steps.length - 1, i + 1)); setMaxIdx((m) => Math.max(m, Math.min(steps.length - 1, stepIdx + 1))); }
   };
 
   // ---------- submit ----------
@@ -387,6 +288,24 @@ export function PlanForm({
   const saveDraft = form.handleSubmit(() => submitMutation.mutate({ activate: false }));
   const saveActivate = form.handleSubmit(() => submitMutation.mutate({ activate: true }));
 
+  // ---------- unsaved-changes protection (cancel, breadcrumb, sidebar, tab close) ----------
+  const dirty = form.formState.isDirty && !submitMutation.isSuccess;
+  const requestLeave = () => { if (dirty) setLeaveOpen(true); else onCancel(); };
+  const finishLeave = () => {
+    setLeaveOpen(false);
+    setNavGuard(null);
+    const go = pendingLeave.current;
+    pendingLeave.current = null;
+    if (go) go(); else onCancel();
+  };
+  useEffect(() => {
+    if (!dirty) return;
+    setNavGuard((proceed) => { pendingLeave.current = proceed; setLeaveOpen(true); return true; });
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => { setNavGuard(null); window.removeEventListener("beforeunload", h); };
+  }, [dirty]);
+
   // ---------- loading states ----------
   if ((mode === "edit" || mode === "revise") && sourceQuery.isLoading) {
     return (
@@ -404,85 +323,201 @@ export function PlanForm({
   const selectedPatient = patientsQuery.data?.find((p) => p.id === selectedPatientId);
   const selectedEpisode = episodesQuery.data?.find((e) => e.id === episodeIdWatch);
 
+  const patientForStrip = mode === "create"
+    ? (pickedPatient ?? patientInfoQ.data ?? null)
+    : (source?.episode.patient ?? null);
+  const stripName = patientForStrip ? fullName(patientForStrip as never) : "";
+  const stripCode = (patientForStrip as { patientCode?: string } | null)?.patientCode || "";
+  const stripPatientId = mode === "create" ? selectedPatientId : source?.episode.patient.id;
+  const stripEpisode = mode === "create" ? selectedEpisode?.title : source?.episode.title;
+
+  // gate (create): wait for a preselected episode to resolve before showing the pop-up
+  const awaitingPreselect = !!preselectEpisodeId && !episodesQuery.isError && (episodesQuery.isLoading || !episodesQuery.data);
+  const showGate = mode === "create" && !episodeIdWatch && !awaitingPreselect;
+
+  const stepDone = (key: string): boolean => {
+    switch (key) {
+      case "objectives": return (objectivesWatch || []).some((o) => o?.description?.trim());
+      case "milestones": return (milestonesWatch || []).some((m) => m?.description?.trim());
+      case "interventions": return (interventionsWatch || []).some((iv) => iv?.name?.trim());
+      case "schedule": return !!(intOrNull(perWeekW) || intOrNull(totalW) || startW);
+      case "precautions": return false;
+      default: return false;
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* context banner */}
-      {source ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-3 shadow-sm">
-          <AtomIcon name={mode === "revise" ? "GitBranch" : "Pencil"} className="h-4 w-4 text-teal-600" />
-          <span className="text-sm text-muted-foreground">
-            {mode === "revise" ? "Revising" : "Editing draft"} <Badge variant="outline" className="font-mono">v{source.version}</Badge>
-          </span>
-          <span className="text-sm font-medium text-foreground">{fullName(source.episode.patient)}</span>
-          <Badge variant="outline" className="font-mono text-xs">{source.episode.patient.patientCode}</Badge>
-          <StatusBadge status={source.status} />
-          <span className="text-sm text-muted-foreground">· {source.episode.title}</span>
+      <PageBreadcrumb items={[{ label: "Treatment Plans", onClick: requestLeave }, { label: title }]} />
+      <PageHeader title={title} description={subtitle} icon="ClipboardList" />
+
+      {/* patient strip */}
+      {(mode !== "create" || episodeIdWatch) ? (
+        <div className="flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm md:flex-row md:items-center md:justify-between md:px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">
+              {initials(stripName)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="min-w-0 truncate text-sm font-semibold">
+                  {stripPatientId && stripName ? (
+                    <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: stripPatientId })}>{stripName}</button>
+                  ) : (stripName || "—")}
+                </p>
+                {stripCode ? <span className="rounded-md bg-navy-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-navy-800">{stripCode}</span> : null}
+                {source ? <StatusBadge status={source.status} /> : null}
+              </div>
+              <p className="truncate text-xs text-muted-foreground">{stripEpisode || "—"}</p>
+            </div>
+          </div>
+          <dl className="flex flex-wrap gap-x-8 gap-y-1">
+            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Mode</dt><dd className="text-sm font-medium">{mode === "create" ? "New plan" : mode === "edit" ? "Editing draft" : "Revising"}</dd></div>
+            {source ? <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Version</dt><dd className="text-sm font-medium">v{source.version}</dd></div> : null}
+          </dl>
         </div>
       ) : null}
 
-      {/* stepper */}
-      <div className="custom-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1">
-        {steps.map((s, i) => {
+      <div className="grid w-full gap-5 lg:grid-cols-[290px_minmax(0,1fr)] *:min-w-0">
+        {/* step list + live summary */}
+        <div className="hidden space-y-3 self-start lg:sticky lg:top-28 lg:block">
+          <nav className="rounded-xl border bg-white p-2 shadow-sm">
+            {steps.map((st, i) => {
+              const done = stepDone(st.key);
+              const reachable = i <= maxIdx;
+              return (
+                <button
+                  key={st.key}
+                  type="button"
+                  disabled={!reachable}
+                  onClick={() => setStepIdx(i)}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    i === stepIdx ? "bg-teal-50 font-semibold text-teal-800" : reachable ? "text-muted-foreground hover:bg-muted/60" : "text-muted-foreground/50"
+                  }`}
+                >
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                    done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === stepIdx ? "border-teal-400 bg-teal-100 text-teal-700" : "border-border"
+                  }`}>
+                    <AtomIcon name={done ? "Check" : st.icon} className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{st.label}</span>
+                  {st.key !== "review" ? (
+                    <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{["objectives", "interventions"].includes(st.key) ? "Core" : "Optional"}</span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Plan summary</p>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs *:min-w-0">
+              <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(objectivesWatch || []).filter((o) => o?.description?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Objectives</p></div>
+              <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(milestonesWatch || []).filter((m) => m?.description?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Milestones</p></div>
+              <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(interventionsWatch || []).filter((iv) => iv?.name?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Interventions</p></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs *:min-w-0">
+              <div><p className="text-muted-foreground">Sessions / week</p><p className="font-medium">{intOrNull(perWeekW) ?? "—"}</p></div>
+              <div><p className="text-muted-foreground">Total sessions</p><p className="font-medium">{intOrNull(totalW) ?? "—"}</p></div>
+              <div><p className="text-muted-foreground">Start</p><p className="font-medium">{startW || "—"}</p></div>
+              <div><p className="text-muted-foreground">End</p><p className="font-medium">{endW || "—"}</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full min-w-0 space-y-4 **:data-[slot=card]:w-full">
+      {/* mobile / tablet step chips */}
+      <div className="custom-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 lg:hidden">
+        {steps.map((st, i) => {
           const isCurrent = i === stepIdx;
           const isPast = i < stepIdx;
           return (
             <button
-              key={s.key}
+              key={st.key}
               type="button"
-              disabled={i > stepIdx}
-              onClick={() => i < stepIdx && setStepIdx(i)}
+              disabled={i > maxIdx}
+              onClick={() => setStepIdx(i)}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                isCurrent
-                  ? "border-navy-800 bg-navy-800 text-white"
-                  : isPast
-                    ? "border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100"
-                    : "border-slate-200 bg-white text-muted-foreground"
+                isCurrent ? "border-navy-800 bg-navy-800 text-white" : isPast ? "border-teal-200 bg-teal-50 text-teal-800" : "border-slate-200 bg-white text-muted-foreground"
               }`}
             >
-              <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] ${
-                isCurrent ? "bg-white/20" : isPast ? "bg-teal-600 text-white" : "bg-slate-100"
-              }`}>
-                {isPast ? <AtomIcon name="Check" className="h-2.5 w-2.5" /> : i + 1}
-              </span>
-              {s.label}
+              {isPast ? <AtomIcon name="Check" className="h-3 w-3" /> : <span>{i + 1}</span>}
+              {st.label}
             </button>
           );
         })}
       </div>
 
-      {/* ---------- STEP: entry (create only) ---------- */}
-      {step.key === "episode" ? (
-        <SectionCard title="Choose patient & episode" icon="FolderOpen" description="Plans are created against an open treatment episode that already has a completed assessment">
+      {/* ---------- STEP: objectives ---------- */}
+      {step.key === "objectives" ? <ObjectivesStep form={form} fields={objectiveFields} onAdd={() => appendObjective({ ...emptyObjective })} onRemove={removeObjective} /> : null}
+
+      {/* ---------- STEP: milestones ---------- */}
+      {step.key === "milestones" ? <MilestonesStep form={form} fields={milestoneFields} onAdd={() => appendMilestone({ ...emptyMilestone })} onRemove={removeMilestone} objectives={objectivesWatch} /> : null}
+
+      {/* ---------- STEP: interventions ---------- */}
+      {step.key === "interventions" ? <InterventionsStep form={form} fields={interventionFields} onAdd={() => appendIntervention({ ...emptyIntervention })} onRemove={removeIntervention} /> : null}
+
+      {/* ---------- STEP: schedule ---------- */}
+      {step.key === "schedule" ? <ScheduleStep form={form} /> : null}
+
+      {/* ---------- STEP: precautions ---------- */}
+      {step.key === "precautions" ? <PrecautionsStep form={form} /> : null}
+
+      {/* ---------- STEP: review ---------- */}
+      {step.key === "review" ? <ReviewStep form={form} mode={mode} objectives={objectivesWatch} milestones={milestonesWatch} interventions={interventionsWatch} perWeek={perWeekW} total={totalW} duration={durationW} start={startW} end={endW} episodeLabel={selectedEpisode?.title || episodeIdWatch || "—"} /> : null}
+
+      {/* ---------- sticky action bar ---------- */}
+      <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="ghost" size="sm" onClick={requestLeave} disabled={submitMutation.isPending}>
+              <AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list
+            </Button>
+            <span className="hidden text-xs text-muted-foreground sm:inline">Step {stepIdx + 1} of {steps.length}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {stepIdx > 0 ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setStepIdx((i) => i - 1)} disabled={submitMutation.isPending}>Previous</Button>
+            ) : null}
+            {stepIdx < steps.length - 1 ? (
+              <Button type="button" size="sm" onClick={goNext} className="bg-navy-800 text-white hover:bg-navy-900">
+                Continue <AtomIcon name="ArrowRight" className="ml-1.5 h-4 w-4" />
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="outline" size="sm" disabled={submitMutation.isPending} onClick={saveDraft}>
+                  {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Save" className="mr-1.5 h-4 w-4" />}
+                  {mode === "revise" ? "Save new version (draft)" : mode === "edit" ? "Save changes" : "Save draft"}
+                </Button>
+                <Button type="button" size="sm" className="bg-teal-600 text-white hover:bg-teal-700" disabled={submitMutation.isPending} onClick={saveActivate}>
+                  {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Zap" className="mr-1.5 h-4 w-4" />}
+                  {mode === "revise" ? "Save & activate new version" : "Save & activate"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+        </div>
+      </div>
+
+      {/* start pop-up: choose patient & episode (new plans only) */}
+      <Dialog open={showGate} onOpenChange={(v) => { if (!v) onCancel(); }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Start treatment plan</DialogTitle>
+            <DialogDescription>Plans are created against an open treatment episode that already has a completed assessment.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Find patient</Label>
-              <div className="relative">
-                <AtomIcon name="Search" className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                  placeholder="Search by name or patient code…"
-                  className="pl-8"
-                />
-              </div>
-              {patientsQuery.isLoading ? <Skeleton className="h-9 w-full" /> : null}
-              {patientsQuery.data ? (
-                <Select
-                  value={selectedPatientId}
-                  onValueChange={(v) => { setSelectedPatientId(v); form.setValue("episodeId", ""); }}
-                >
-                  <SelectTrigger><SelectValue placeholder={patientsQuery.data.length ? "Select patient" : "No patients matched"} /></SelectTrigger>
-                  <SelectContent>
-                    {patientsQuery.data.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {fullName(p)} · {p.patientCode}{p.currentStatus ? ` · ${p.currentStatus.replace(/_/g, " ").toLowerCase()}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
+              <Label>Patient</Label>
+              <PatientSearchSelect
+                autoFocus
+                selected={pickedPatient}
+                onSelect={(pt) => { setPickedPatient(pt); setSelectedPatientId(pt.id); form.setValue("episodeId", ""); }}
+                onClear={() => { setPickedPatient(null); setSelectedPatientId(""); form.setValue("episodeId", ""); }}
+              />
             </div>
-
             {selectedPatientId ? (
               <div className="space-y-1.5">
                 <Label>Treatment episode</Label>
@@ -491,11 +526,8 @@ export function PlanForm({
                   <p className="text-xs text-muted-foreground">No open episodes for this patient — open an episode in the Patients module first.</p>
                 ) : null}
                 {episodesQuery.data && episodesQuery.data.length > 0 ? (
-                  <Select
-                    value={episodeIdWatch || ""}
-                    onValueChange={(v) => form.setValue("episodeId", v, { shouldValidate: true })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select episode" /></SelectTrigger>
+                  <Select value={episodeIdWatch || ""} onValueChange={(v) => form.setValue("episodeId", v, { shouldValidate: true })}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select episode…" /></SelectTrigger>
                     <SelectContent>
                       {episodesQuery.data.map((e) => (
                         <SelectItem key={e.id} value={e.id}>
@@ -505,304 +537,28 @@ export function PlanForm({
                     </SelectContent>
                   </Select>
                 ) : null}
-                <ErrText form={form} name="episodeId" />
-                {selectedEpisode ? (
-                  <p className="flex items-center gap-1.5 text-xs text-teal-700">
-                    <AtomIcon name="CheckCircle2" className="h-3.5 w-3.5" />
-                    Plan will be created for &ldquo;{selectedEpisode.title}&rdquo;
-                  </p>
-                ) : null}
               </div>
             ) : null}
+            <p className="text-xs text-muted-foreground">Choosing an episode opens the plan form.</p>
           </div>
-        </SectionCard>
-      ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* ---------- STEP: objectives ---------- */}
-      {step.key === "objectives" ? (
-        <SectionCard
-          title="Treatment objectives"
-          icon="Target"
-          description="SMART objectives with measurable baseline → target (used by progress reviews)"
-          actions={
-            <Button type="button" variant="outline" size="sm" onClick={() => appendObjective({ ...emptyObjective })}>
-              <AtomIcon name="Plus" className="mr-1.5 h-3.5 w-3.5" /> Add objective
-            </Button>
-          }
-        >
-          <div className="space-y-3">
-            {objectiveFields.map((field, idx) => (
-              <RowShell key={field.id} index={idx} label="Objective" onRemove={() => removeObjective(idx)}>
-                <div className="grid gap-2 sm:grid-cols-12">
-                  <div className="sm:col-span-6">
-                    <Input placeholder="e.g. Reduce pain from 7/10 to 3/10" {...form.register(`objectives.${idx}.description` as never)} />
-                    <ErrText form={form} name={`objectives.${idx}.description`} />
-                  </div>
-                  <Input className="sm:col-span-2" placeholder="Baseline" {...form.register(`objectives.${idx}.baseline` as never)} />
-                  <Input className="sm:col-span-2" placeholder="Target" {...form.register(`objectives.${idx}.target` as never)} />
-                  <Input className="sm:col-span-2" placeholder="Unit" {...form.register(`objectives.${idx}.unit` as never)} />
-                  <div className="sm:col-span-4">
-                    <Controller
-                      control={form.control}
-                      name={`objectives.${idx}.priority` as never}
-                      render={({ field }) => (
-                        <Select value={field.value || ""} onValueChange={(v) => field.onChange(v)}>
-                          <SelectTrigger><SelectValue placeholder="Priority (optional)" /></SelectTrigger>
-                          <SelectContent>
-                            {OBJECTIVE_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                  <Input className="sm:col-span-4" type="date" title="Expected date" {...form.register(`objectives.${idx}.expectedDate` as never)} />
-                </div>
-              </RowShell>
-            ))}
-            {objectiveFields.length === 0 ? (
-              <EmptyStateCompact message="No objectives yet — add at least one measurable objective" />
-            ) : null}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- STEP: milestones ---------- */}
-      {step.key === "milestones" ? (
-        <SectionCard
-          title="Rehabilitation milestones"
-          icon="Flag"
-          description="Optional checkpoints on the way to the objectives"
-          actions={
-            <Button type="button" variant="outline" size="sm" onClick={() => appendMilestone({ ...emptyMilestone })}>
-              <AtomIcon name="Plus" className="mr-1.5 h-3.5 w-3.5" /> Add milestone
-            </Button>
-          }
-        >
-          <div className="space-y-3">
-            {milestoneFields.map((field, idx) => (
-              <RowShell key={field.id} index={idx} label="Milestone" onRemove={() => removeMilestone(idx)}>
-                <div className="grid gap-2 sm:grid-cols-12">
-                  <div className="sm:col-span-6">
-                    <Input placeholder="e.g. Pain below 5/10 with daily activities" {...form.register(`milestones.${idx}.description` as never)} />
-                    <ErrText form={form} name={`milestones.${idx}.description`} />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <Controller
-                      control={form.control}
-                      name={`milestones.${idx}.objectiveIdx` as never}
-                      render={({ field }) => (
-                        <Select value={field.value || ""} onValueChange={(v) => field.onChange(v)}>
-                          <SelectTrigger><SelectValue placeholder="Linked objective" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Not linked</SelectItem>
-                            {(objectivesWatch || []).map((o, oi) => (
-                              o?.description ? <SelectItem key={oi} value={String(oi)}>Objective {oi + 1}: {o.description.slice(0, 44)}</SelectItem> : null
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                  <Input className="sm:col-span-2" type="date" title="Expected date" {...form.register(`milestones.${idx}.expectedDate` as never)} />
-                  <div className="sm:col-span-1">
-                    <Controller
-                      control={form.control}
-                      name={`milestones.${idx}.status` as never}
-                      render={({ field }) => (
-                        <Select value={field.value || "PENDING"} onValueChange={(v) => field.onChange(v)}>
-                          <SelectTrigger className="px-2"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {MILESTONE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-              </RowShell>
-            ))}
-            {milestoneFields.length === 0 ? (
-              <EmptyStateCompact message="No milestones — this section is optional" />
-            ) : null}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- STEP: interventions ---------- */}
-      {step.key === "interventions" ? (
-        <SectionCard
-          title="Interventions"
-          icon="ClipboardList"
-          description="Techniques and modalities with frequency and dosage"
-          actions={
-            <Button type="button" variant="outline" size="sm" onClick={() => appendIntervention({ ...emptyIntervention })}>
-              <AtomIcon name="Plus" className="mr-1.5 h-3.5 w-3.5" /> Add intervention
-            </Button>
-          }
-        >
-          <div className="space-y-3">
-            {interventionFields.map((field, idx) => (
-              <RowShell key={field.id} index={idx} label="Intervention" onRemove={() => removeIntervention(idx)}>
-                <div className="grid gap-2 sm:grid-cols-12">
-                  <div className="sm:col-span-4">
-                    <Controller
-                      control={form.control}
-                      name={`interventions.${idx}.name` as never}
-                      render={({ field }) => (
-                        <InterventionNameInput value={field.value} onChange={(v2) => field.onChange(v2)} />
-                      )}
-                    />
-                    <ErrText form={form} name={`interventions.${idx}.name`} />
-                  </div>
-                  <Input className="sm:col-span-4" placeholder="Description / dosage details" {...form.register(`interventions.${idx}.description` as never)} />
-                  <Input className="sm:col-span-2" placeholder="Frequency (e.g. 2x/week)" {...form.register(`interventions.${idx}.frequency` as never)} />
-                  <Input className="sm:col-span-2" placeholder="Duration (e.g. 4 weeks)" {...form.register(`interventions.${idx}.duration` as never)} />
-                  <Input className="sm:col-span-7" placeholder="Instructions (technique, parameters…)" {...form.register(`interventions.${idx}.instructions` as never)} />
-                  <Input className="sm:col-span-5" placeholder="Notes (optional)" {...form.register(`interventions.${idx}.notes` as never)} />
-                </div>
-              </RowShell>
-            ))}
-            {interventionFields.length === 0 ? (
-              <EmptyStateCompact message="No interventions yet — add at least one" />
-            ) : null}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- STEP: schedule ---------- */}
-      {step.key === "schedule" ? (
-        <SectionCard title="Session schedule" icon="CalendarClock" description="Planned frequency, volume and review cadence">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Sessions per week</Label>
-              <Input type="number" min="1" placeholder="e.g. 3" {...form.register("sessionsPerWeek")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Expected total sessions</Label>
-              <Input type="number" min="1" placeholder="e.g. 24" {...form.register("expectedTotalSessions")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Session duration (minutes)</Label>
-              <Input type="number" min="1" placeholder="e.g. 45" {...form.register("sessionDurationMin")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Start date</Label>
-              <Input type="date" {...form.register("startDate")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>End date (expected)</Label>
-              <Input type="date" {...form.register("endDate")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Review threshold (sessions)</Label>
-              <Input type="number" min="1" placeholder="Clinic default (15)" {...form.register("reviewThresholdSessions")} />
-              <p className="text-xs text-muted-foreground">Leave empty to use the clinic setting (15).</p>
-            </div>
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- STEP: precautions ---------- */}
-      {step.key === "precautions" ? (
-        <SectionCard title="Precautions & recommendations" icon="ShieldAlert" description="Safety information copied to every session and the discharge summary">
-          <div className="grid gap-3 md:grid-cols-2">
-            {([
-              ["contraindications", "Contraindications"],
-              ["restrictions", "Restrictions"],
-              ["activitiesToAvoid", "Activities to avoid"],
-              ["specialPrecautions", "Special precautions"],
-              ["patientRecommendations", "Patient recommendations"],
-              ["referralInstructions", "Referral instructions"],
-            ] as const).map(([key, label]) => (
-              <div key={key} className="space-y-1.5">
-                <Label>{label}</Label>
-                <Textarea rows={2} placeholder="Optional" {...form.register(key as never)} />
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- STEP: review ---------- */}
-      {step.key === "review" ? (
-        <SectionCard title="Review & save" icon="CheckCircle2" description="Confirm the plan before saving">
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline" className="bg-navy-50 text-navy-800">{objectivesWatch?.length ?? 0} objectives</Badge>
-              <Badge variant="outline" className="bg-navy-50 text-navy-800">{milestonesWatch?.length ?? 0} milestones</Badge>
-              <Badge variant="outline" className="bg-navy-50 text-navy-800">{interventionsWatch?.length ?? 0} interventions</Badge>
-              {intOrNull(perWeekW) ? <Badge variant="outline">{intOrNull(perWeekW)} sessions/week</Badge> : null}
-              {intOrNull(totalW) ? <Badge variant="outline">{intOrNull(totalW)} total sessions</Badge> : null}
-              {intOrNull(durationW) ? <Badge variant="outline">{intOrNull(durationW)} min each</Badge> : null}
-              {startW ? <Badge variant="outline">from {startW}</Badge> : null}
-              {endW ? <Badge variant="outline">to {endW}</Badge> : null}
-            </div>
-            {mode === "create" ? (
-              <p className="text-sm text-muted-foreground">
-                Episode: <span className="font-medium text-foreground">{selectedEpisode?.title || episodeIdWatch || "—"}</span>
-              </p>
-            ) : null}
-            {(objectivesWatch || []).length > 0 ? (
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objectives</p>
-                <ul className="space-y-1">
-                  {(objectivesWatch || []).map((o, i) => (
-                    <li key={i} className="text-sm text-foreground">• {o?.description}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {(interventionsWatch || []).length > 0 ? (
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interventions</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(interventionsWatch || []).map((iv, i) => (
-                    iv?.name ? <Badge key={i} variant="outline">{iv.name}{iv.frequency ? ` · ${iv.frequency}` : ""}</Badge> : null
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {mode === "revise" ? (
-              <div className="space-y-1.5">
-                <Label>Change reason <span className="text-rose-500">*</span></Label>
-                <Textarea
-                  rows={3}
-                  placeholder="Why is this revision needed? (recorded in the audit trail)"
-                  {...form.register("changeReason")}
-                />
-                <ErrText form={form} name="changeReason" />
-              </div>
-            ) : null}
-          </div>
-        </SectionCard>
-      ) : null}
-
-      {/* ---------- footer nav ---------- */}
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={stepIdx === 0 ? onCancel : () => setStepIdx((i) => i - 1)} disabled={submitMutation.isPending}>
-            <AtomIcon name={stepIdx === 0 ? "X" : "ArrowLeft"} className="mr-1.5 h-4 w-4" />
-            {stepIdx === 0 ? "Cancel" : "Back"}
-          </Button>
-          {stepIdx < steps.length - 1 ? (
-            <Button type="button" onClick={goNext} className="bg-navy-800 text-white hover:bg-navy-900">
-              Next <AtomIcon name="ArrowRight" className="ml-1.5 h-4 w-4" />
-            </Button>
-          ) : null}
-        </div>
-        {stepIdx === steps.length - 1 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" disabled={submitMutation.isPending} onClick={saveDraft}>
-              {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Save" className="mr-1.5 h-4 w-4" />}
-              {mode === "revise" ? "Save new version (draft)" : mode === "edit" ? "Save changes" : "Save draft"}
-            </Button>
-            <Button type="button" className="bg-teal-600 text-white hover:bg-teal-700" disabled={submitMutation.isPending} onClick={saveActivate}>
-              {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Zap" className="mr-1.5 h-4 w-4" />}
-              {mode === "revise" ? "Save & activate new version" : "Save & activate"}
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      <Dialog open={leaveOpen} onOpenChange={(v) => { setLeaveOpen(v); if (!v) pendingLeave.current = null; }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave this plan?</DialogTitle>
+            <DialogDescription>You have unsaved changes. Leaving will discard them.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setLeaveOpen(false)}>Keep editing</Button>
+            <Button variant="outline" className="text-rose-600 hover:text-rose-700" onClick={finishLeave}>Discard &amp; leave</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

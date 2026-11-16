@@ -18,7 +18,10 @@ interface DataToolbarProps {
 
 export function DataToolbar({ search, filters, onRefresh, refreshing, children }: DataToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+    <div
+      data-slot="data-toolbar"
+      className="flex w-full flex-col gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm sm:flex-row sm:flex-wrap sm:items-center [&_input]:h-8 [&_button]:h-8 [&_button]:text-xs [&_input]:text-xs [&_button[aria-label=Refresh]]:w-8"
+    >
       {search ? (
         <div className="relative w-full sm:w-72">
           <AtomIcon name="Search" className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -32,12 +35,13 @@ export function DataToolbar({ search, filters, onRefresh, refreshing, children }
       ) : null}
       {filters}
       <div className="flex items-center gap-2 sm:ml-auto">
-        {children}
         {onRefresh ? (
           <Button variant="outline" size="icon" onClick={onRefresh} disabled={refreshing} aria-label="Refresh">
             <AtomIcon name="RefreshCw" className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           </Button>
         ) : null}
+        {/* page actions: secondary controls first, the primary button is always last (far right) */}
+        {children}
       </div>
     </div>
   );

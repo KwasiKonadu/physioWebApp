@@ -78,12 +78,12 @@ export const GET = route(async (req) => {
       ? {
           AND: search.trim().split(/\s+/).filter(Boolean).map((t) => ({
             OR: [
-              { firstName: { contains: t } },
-              { lastName: { contains: t } },
-              { email: { contains: t } },
-              { phone: { contains: t } },
-              { staffCode: { contains: t } },
-              { jobTitle: { contains: t } },
+              { firstName: { contains: t, mode: "insensitive" as const } },
+              { lastName: { contains: t, mode: "insensitive" as const } },
+              { email: { contains: t, mode: "insensitive" as const } },
+              { phone: { contains: t, mode: "insensitive" as const } },
+              { staffCode: { contains: t, mode: "insensitive" as const } },
+              { jobTitle: { contains: t, mode: "insensitive" as const } },
             ],
           })),
         }
@@ -181,8 +181,9 @@ export const POST = route(async (req) => {
       specialization: body.specialization,
       qualifications: JSON.stringify(body.qualifications),
       availability: JSON.stringify(body.availability),
+      // everyone can have a pay rate; only therapists can be paid per session / per patient (others are salaried)
       remunerationMethod: body.staffRole === "PHYSIOTHERAPIST" ? body.remunerationMethod : "FIXED",
-      remunerationRateCents: body.staffRole === "PHYSIOTHERAPIST" ? body.remunerationRateCents || null : null,
+      remunerationRateCents: body.remunerationRateCents || null,
       isTherapist: body.staffRole === "PHYSIOTHERAPIST",
     },
   });

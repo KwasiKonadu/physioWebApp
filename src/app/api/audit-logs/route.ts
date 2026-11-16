@@ -31,8 +31,8 @@ export const GET = route(async (req) => {
     ...(search
       ? {
           OR: [
-            { userName: { contains: search } },
-            { action: { contains: search } },
+            { userName: { contains: search, mode: "insensitive" as const } },
+            { action: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : {}),

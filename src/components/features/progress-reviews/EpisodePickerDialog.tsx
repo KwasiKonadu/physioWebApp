@@ -1,6 +1,6 @@
 "use client";
 // FEATURE: episode picker dialog — shared by progress reviews (early review) and discharges
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { fullName } from "@/lib/format";
@@ -31,18 +31,27 @@ export function EpisodePickerDialog({ open, onOpenChange, endpoint, title, descr
     onOpenChange(o);
   };
 
+  // debounce typing so we search once the user pauses
+  const [dq, setDq] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDq(q.trim()), 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Nothing is listed until something is searched — except when opened for one specific episode.
+  const searching = dq.length > 0;
   const query = useQuery({
-    queryKey: ["picker-episodes", endpoint, q, preselectedEpisodeId, open],
+    queryKey: ["picker-episodes", endpoint, dq, preselectedEpisodeId, open],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (q.trim()) params.set("q", q.trim());
-      if (!q.trim() && preselectedEpisodeId) params.set("episodeId", preselectedEpisodeId);
+      if (dq) params.set("q", dq);
+      else if (preselectedEpisodeId) params.set("episodeId", preselectedEpisodeId);
       return apiFetch<{ items: PickerEpisode[] }>(`${endpoint}?${params.toString()}`);
     },
-    enabled: open,
+    enabled: open && (searching || !!preselectedEpisodeId),
   });
 
-  const items = query.data?.items || [];
+  const items = searching || preselectedEpisodeId ? query.data?.items || [] : [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -53,15 +62,17 @@ export function EpisodePickerDialog({ open, onOpenChange, endpoint, title, descr
         </DialogHeader>
         <div className="relative">
           <AtomIcon name="Search" className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patient name, code or episode…" className="pl-8" />
+          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patient name, code or episode…" className="pl-8" />
         </div>
         <div className="custom-scrollbar max-h-80 space-y-2 overflow-y-auto">
-          {query.isLoading ? (
+          {!searching && !preselectedEpisodeId ? (
+            <p className="px-1 py-6 text-center text-sm text-muted-foreground">Start typing a patient name, code or episode to find an open episode.</p>
+          ) : query.isLoading || (searching && query.isFetching && !query.data) ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
           ) : items.length === 0 ? (
-            <EmptyState icon="FolderOpen" title="No open episodes found" description={q ? "Try a different search term." : "No episodes currently open."} />
+            <EmptyState icon="FolderOpen" title="No open episodes found" description="Try a different search term." />
           ) : (
             items.map((ep) => (
               <button

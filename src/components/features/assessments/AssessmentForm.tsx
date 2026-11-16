@@ -1,7 +1,9 @@
 "use client";
 // ============ AssessmentForm: 8-section clinical assessment editor + read-only completed view ============
+import { DataTable } from "@/components/molecules/data-table";
+import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFieldArray, useForm, Controller } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,21 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/molecules/page-header";
 import { SectionCard } from "@/components/molecules/section-card";
+import { StatCard } from "@/components/molecules/stat-card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DetailRow, DetailGrid } from "@/components/molecules/detail-row";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { BODY_PARTS, SIDES, FUNCTIONAL_ACTIVITIES, FUNCTIONAL_DIFFICULTY_LABELS, PERMS, labelize } from "@/lib/constants";
-import { formatDate, fullName } from "@/lib/format";
-import { useAuthStore, hasPermission } from "@/stores/app-store";
+import { formatDate, fullName, initials } from "@/lib/format";
+import { useAuthStore, useUIStore, hasPermission, setNavGuard } from "@/stores/app-store";
 import { cn } from "@/lib/utils";
 import * as API from "./assessments-api";
 
@@ -68,6 +70,18 @@ const SECTIONS = [
   { key: "findings", label: "Clinical findings", icon: "ClipboardCheck" },
   { key: "review", label: "Review & complete", icon: "ListChecks" },
 ] as const;
+
+// Standard (AAOS-style) normal ranges in degrees, used for quick-add sets and auto-filling "Normal"
+const ROM_PRESETS: Record<string, [string, number][]> = {
+  "Cervical spine": [["Flexion", 45], ["Extension", 45], ["Lateral flexion", 45], ["Rotation", 80]],
+  "Lumbar spine": [["Flexion", 60], ["Extension", 25], ["Lateral flexion", 25], ["Rotation", 30]],
+  Shoulder: [["Flexion", 180], ["Extension", 60], ["Abduction", 180], ["Internal rotation", 70], ["External rotation", 90]],
+  Elbow: [["Flexion", 150], ["Extension", 0], ["Supination", 80], ["Pronation", 80]],
+  "Wrist/Hand": [["Flexion", 80], ["Extension", 70], ["Radial deviation", 20], ["Ulnar deviation", 30]],
+  Hip: [["Flexion", 120], ["Extension", 30], ["Abduction", 45], ["Adduction", 30], ["Internal rotation", 45], ["External rotation", 45]],
+  Knee: [["Flexion", 135], ["Extension", 0]],
+  "Ankle/Foot": [["Dorsiflexion", 20], ["Plantarflexion", 50], ["Inversion", 35], ["Eversion", 15]],
+};
 
 const MRC_GRADES = ["0", "1", "2", "3", "4", "5"] as const;
 const MRC_LABELS: Record<string, string> = {
@@ -204,13 +218,17 @@ function DRow({ label, value }: { label: string; value?: string | number | null 
   return <DetailRow label={label} value={value === null || value === undefined || value === "" ? "—" : String(value)} />;
 }
 
+const PAIN_TONES = [
+  "bg-emerald-500", "bg-emerald-500", "bg-lime-500", "bg-lime-500", "bg-yellow-500",
+  "bg-amber-500", "bg-orange-500", "bg-orange-500", "bg-red-500", "bg-red-600", "bg-red-700",
+];
 function PainSlider({ label, value, onChange }: { label: string; value?: number; onChange: (v?: number) => void }) {
   return (
     <div className="rounded-lg border bg-muted/20 p-3">
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="min-w-9 justify-center bg-teal-50 text-teal-700 border-teal-200">{value ?? "—"}</Badge>
+          <Badge variant="outline" className="min-w-9 justify-center bg-teal-50 text-teal-700 border-teal-200">{value ?? "—"}/10</Badge>
           {value !== undefined ? (
             <button type="button" onClick={() => onChange(undefined)} className="text-muted-foreground hover:text-foreground" aria-label={`Clear ${label}`}>
               <AtomIcon name="X" className="h-3.5 w-3.5" />
@@ -218,24 +236,39 @@ function PainSlider({ label, value, onChange }: { label: string; value?: number;
           ) : null}
         </div>
       </div>
-      <Slider min={0} max={10} step={1} value={[value ?? 0]} onValueChange={(vals) => onChange(vals[0])} className="mt-3" />
+      <div className="mt-3 grid grid-cols-11 gap-1" role="radiogroup" aria-label={label}>
+        {PAIN_TONES.map((tone, n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onClick={() => onChange(n)}
+            className={cn(
+              "h-8 rounded-md text-xs font-semibold transition-all",
+              value === n ? cn(tone, "text-white shadow-sm ring-2 ring-offset-1 ring-slate-400") : "border bg-white text-slate-600 hover:bg-slate-100",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
       <div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>0 — none</span><span>10 — worst</span></div>
     </div>
   );
 }
 
-function MeasurementTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
+function MeasurementTable<T>({ rows, columns }: { rows: T[]; columns: [string, (r: T) => React.ReactNode][] }) {
   return (
-    <div className="overflow-x-auto custom-scrollbar">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {headers.map((h) => <TableHead key={h} className="text-xs whitespace-nowrap">{h}</TableHead>)}
-          </TableRow>
-        </TableHeader>
-        <TableBody>{children}</TableBody>
-      </Table>
-    </div>
+    <DataTable
+      bare
+      compact
+      maxHeight="max-h-none"
+      minWidth="min-w-120"
+      rows={rows}
+      rowKey={(_r, i) => String(i)}
+      columns={columns.map(([header, cell], i) => ({ id: String(i), header, cell }))}
+    />
   );
 }
 
@@ -337,8 +370,11 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
   // Entry state (create mode)
   const [patient, setPatient] = useState<API.PatientLite | null>(null);
   const [episode, setEpisode] = useState<API.EpisodeLite | null>(null);
-  const [therapistId, setTherapistId] = useState("");
-  const [step, setStep] = useState(0);
+  const [selectedTherapistId, setTherapistId] = useState("");
+  const [step, setStep] = useState(1); // step 0 (visit info) now lives in the patient strip
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const pendingLeave = useRef<(() => void) | null>(null); // set when a sidebar click was intercepted
   const [reviewVisited, setReviewVisited] = useState(false);
   const [customActivity, setCustomActivity] = useState("");
 
@@ -353,18 +389,22 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
     staleTime: 5 * 60_000,
   });
 
+  const therapistId = selectedTherapistId || therapistsQ.data?.[0]?.id || "";
+
   const form = useForm<FormValues>({ defaultValues: EMPTY_FORM });
   const romArr = useFieldArray({ control: form.control, name: "rom" });
   const strengthArr = useFieldArray({ control: form.control, name: "strength" });
   const fnArr = useFieldArray({ control: form.control, name: "functional" });
-  const values = form.watch();
+  const values = useWatch({ control: form.control }) as FormValues;
 
   // hydrate from an existing assessment
   useEffect(() => {
     if (!detail) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate local state from the loaded assessment */
     setPatient((detail.episode?.patient as API.PatientLite) ?? null);
     setEpisode((detail.episode as API.EpisodeLite) ?? null);
     setTherapistId(detail.therapistId);
+    /* eslint-enable react-hooks/set-state-in-effect */
     form.reset(toFormValues(detail));
   }, [detail?.id]);
 
@@ -396,12 +436,6 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
     })();
     return () => { cancelled = true; };
   }, [assessmentId, target.patientId, target.episodeId, patient?.id]);
-
-  // default therapist
-  useEffect(() => {
-    if (therapistId || !therapistsQ.data?.length) return;
-    setTherapistId(therapistsQ.data[0].id);
-  }, [therapistsQ.data, therapistId]);
 
   // Adopt an existing DRAFT assessment for the selected episode instead of creating a
   // duplicate record on completion (completed records must stay unique per draft chain).
@@ -446,7 +480,11 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
       default: return false;
     }
   };
-  const completedCount = SECTIONS.reduce((acc, _, i) => acc + (isSectionComplete(i) ? 1 : 0), 0);
+  const NAV = SECTIONS.map((sec, i) => ({ ...sec, i })).filter((x) => x.i > 0);
+  const completedCount = NAV.reduce((acc, x) => acc + (isSectionComplete(x.i) ? 1 : 0), 0);
+  const problem = validateForComplete(values);
+  const REQUIRED = new Set([1]);
+  const hasError = (i: number) => reviewVisited && problem?.section === i;
 
   const goTo = (i: number) => {
     setStep(i);
@@ -468,11 +506,39 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
         onDone(data.id);
       } else {
         toast.success("Draft saved");
+        setSavedAt(new Date());
+        form.reset(form.getValues());
         if (!assessmentId && data?.id) onTargetChange({ assessmentId: data.id });
       }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to save assessment"),
   });
+
+  // warn before closing/reloading the tab with unsaved edits
+  useEffect(() => {
+    if (!form.formState.isDirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [form.formState.isDirty]);
+
+  // leaving the form: confirm first when there are unsaved edits
+  const requestLeave = () => { if (form.formState.isDirty) setLeaveOpen(true); else onBack(); };
+  const finishLeave = () => {
+    setLeaveOpen(false);
+    setNavGuard(null);
+    const go = pendingLeave.current;
+    pendingLeave.current = null;
+    if (go) go(); else onBack();
+  };
+
+  // intercept sidebar navigation while there are unsaved edits
+  const dirty = form.formState.isDirty;
+  useEffect(() => {
+    if (!dirty) return;
+    setNavGuard((proceed) => { pendingLeave.current = proceed; setLeaveOpen(true); return true; });
+    return () => setNavGuard(null);
+  }, [dirty]);
 
   const saveDraft = () => saveQ.mutate({ status: "DRAFT" });
 
@@ -520,7 +586,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
         onReplaced={(id) => {
           qc.invalidateQueries({ queryKey: ["assessments"] });
           onTargetChange({ assessmentId: id });
-          setStep(0);
+          setStep(1);
           setReviewVisited(false);
         }}
         onBack={onBack}
@@ -533,41 +599,48 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
 
   return (
     <div className="pb-2">
+      <PageBreadcrumb items={[{ label: "Assessments", onClick: requestLeave }, { label: assessmentId ? "Assessment (draft)" : "New assessment" }]} />
       <PageHeader
         title={assessmentId ? "Assessment (draft)" : "New assessment"}
         description={patient ? `${fullName(patient)} · ${episode?.title || ""}` : "Select a patient and episode to begin"}
         icon="ClipboardList"
-        actions={<Button variant="outline" onClick={onBack}><AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list</Button>}
       />
 
-      {/* Patient info header card */}
-      <div className="mb-5 rounded-xl border bg-white p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Patient</p>
-            <p className="text-sm font-semibold">{patient ? fullName(patient) : "—"}</p>
-            <p className="text-xs text-muted-foreground">{patient?.patientCode || ""}</p>
+      {ready ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm md:flex-row md:items-center md:justify-between md:px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">
+              {initials(patient ? fullName(patient) : "")}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-semibold">{patient ? fullName(patient) : "—"}</p>
+                {patient?.patientCode ? <span className="rounded-md bg-navy-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-navy-800">{patient.patientCode}</span> : null}
+                {episode?.status ? <StatusBadge status={episode.status} /> : null}
+              </div>
+              <p className="truncate text-xs text-muted-foreground">{episode?.title || "—"}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Episode</p>
-            <p className="text-sm font-semibold">{episode?.title || "—"}</p>
-            <div className="mt-1">{episode?.status ? <StatusBadge status={episode.status} /> : null}</div>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assessment date</p>
-            <p className="text-sm font-semibold">{detail ? formatDate(detail.assessmentDate) : formatDate(new Date())}</p>
-            <p className="text-xs text-muted-foreground">{detail?.status ? labelize(detail.status) : "Draft in progress"}</p>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Therapist</p>
-            <p className="text-sm font-semibold">{therapistName ? fullName(therapistName) : therapistId ? "—" : "Not selected"}</p>
-          </div>
+          <dl className="flex flex-wrap gap-x-8 gap-y-1">
+            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Date</dt><dd className="text-sm font-medium">{detail ? formatDate(detail.assessmentDate) : formatDate(new Date())}</dd></div>
+            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Therapist</dt><dd className="text-sm font-medium">{therapistName ? fullName(therapistName) : "—"}</dd></div>
+            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</dt><dd className="text-sm font-medium">{detail?.status ? labelize(detail.status) : "Draft"}</dd></div>
+          </dl>
         </div>
-      </div>
+      ) : null}
 
       {/* Entry gate */}
       {!ready ? (
-        <SectionCard title="Start assessment" description="Choose the patient, episode and assessing therapist" icon="ClipboardPen">
+        <Dialog open onOpenChange={(v) => { if (!v) onBack(); }}>
+          <DialogContent
+            showCloseButton={false}
+            className="sm:max-w-lg"
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle>Start assessment</DialogTitle>
+              <DialogDescription>Choose the patient, episode and assessing therapist.</DialogDescription>
+            </DialogHeader>
           <div className="space-y-4">
             <Field label="Patient">
               <PatientSearchSelect
@@ -580,7 +653,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
             {patient ? (
               <Field label="Episode" hint="Only episodes open for assessment are listed">
                 <Select value={episode?.id || undefined} onValueChange={(v) => setEpisode(episodeOptions.find((e) => e.id === v) || null)}>
-                  <SelectTrigger><SelectValue placeholder="Select episode…" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select episode…" /></SelectTrigger>
                   <SelectContent>
                     {episodeOptions.length ? episodeOptions.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
@@ -594,10 +667,10 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
             {patient && episode ? (
               <Field label="Assessing therapist">
                 {therapistsQ.isLoading ? (
-                  <Skeleton className="h-9 w-56" />
+                  <Skeleton className="h-9 w-full" />
                 ) : (
                   <Select value={therapistId || undefined} onValueChange={setTherapistId}>
-                    <SelectTrigger><SelectValue placeholder="Select therapist…" /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select therapist…" /></SelectTrigger>
                     <SelectContent>
                       {(therapistsQ.data || []).map((t) => (
                         <SelectItem key={t.id} value={t.id}>{fullName(t)}{t.jobTitle ? ` — ${t.jobTitle}` : ""}</SelectItem>
@@ -615,18 +688,22 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
               </p>
             )}
           </div>
-        </SectionCard>
+            <DialogFooter>
+              <Button variant="outline" onClick={onBack}>Cancel</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : (
         <>
           {/* progress */}
           <div className="mb-4 flex items-center gap-3">
-            <Progress value={(completedCount / SECTIONS.length) * 100} className="h-2 flex-1" />
-            <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">{completedCount}/{SECTIONS.length} sections complete</span>
+            <Progress value={(completedCount / NAV.length) * 100} className="h-2 flex-1" />
+            <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">{completedCount}/{NAV.length} sections complete</span>
           </div>
 
           {/* mobile section chips */}
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 custom-scrollbar md:hidden">
-            {SECTIONS.map((s, i) => (
+            {NAV.map((s) => { const i = s.i; return (
               <button
                 key={s.key}
                 type="button"
@@ -639,59 +716,84 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                 {isSectionComplete(i) ? <AtomIcon name="Check" className="h-3 w-3" /> : <span>{i + 1}</span>}
                 {s.label}
               </button>
-            ))}
+            ); })}
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[230px_1fr]">
+          <div className="grid w-full gap-5 lg:grid-cols-[290px_minmax(0,1fr)] *:min-w-0">
             {/* section nav */}
-            <nav className="hidden rounded-xl border bg-white p-2 shadow-sm lg:block">
-              {SECTIONS.map((s, i) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => goTo(i)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                    i === step ? "bg-teal-50 font-semibold text-teal-800" : "text-muted-foreground hover:bg-muted/60",
-                  )}
-                >
-                  <span className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
-                    isSectionComplete(i) ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === step ? "border-teal-400 bg-teal-100 text-teal-700" : "border-border bg-muted/40",
-                  )}>
-                    {isSectionComplete(i) ? <AtomIcon name="Check" className="h-3.5 w-3.5" /> : i + 1}
-                  </span>
-                  {s.label}
-                </button>
-              ))}
+            <div className="hidden space-y-3 self-start lg:sticky lg:top-28 lg:block">
+            <nav className="rounded-xl border bg-white p-2 shadow-sm">
+              {NAV.map((s) => {
+                const i = s.i;
+                const done = isSectionComplete(i);
+                const err = hasError(i);
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => goTo(i)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      i === step ? "bg-teal-50 font-semibold text-teal-800" : "text-muted-foreground hover:bg-muted/60",
+                    )}
+                  >
+                    <span className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
+                      err ? "border-rose-300 bg-rose-50 text-rose-600" : done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === step ? "border-teal-400 bg-teal-100 text-teal-700" : "border-border text-muted-foreground",
+                    )}>
+                      <AtomIcon name={err ? "AlertCircle" : done ? "Check" : s.icon} className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    {err ? <span className="h-2 w-2 shrink-0 rounded-full bg-rose-500" aria-label="Needs attention" />
+                      : i < 7 ? <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{REQUIRED.has(i) ? "Required" : "Optional"}</span> : null}
+                  </button>
+                );
+              })}
             </nav>
+              <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Case summary</p>
+                <div className="grid grid-cols-3 gap-2 *:min-w-0">
+                  {[{ l: "Now", v: values.painCurrent }, { l: "Worst", v: values.painWorst }, { l: "Lowest", v: values.painLowest }].map((p) => (
+                    <div key={p.l} className="rounded-lg border bg-slate-50/70 px-2 py-1.5 text-center">
+                      <p className="text-base font-semibold leading-tight">{p.v ?? "—"}</p>
+                      <p className="text-[10px] text-muted-foreground">{p.l}</p>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Primary complaint</p>
+                  <p className="line-clamp-4 text-sm">{values.primaryComplaint?.trim() || "—"}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs *:min-w-0">
+                  <div><p className="text-muted-foreground">Body part</p><p className="font-medium">{(values.bodyPart === "Other" ? values.bodyPartCustom : values.bodyPart) || "—"}</p></div>
+                  <div><p className="text-muted-foreground">Side</p><p className="font-medium">{values.affectedSide ? labelize(values.affectedSide) : "—"}</p></div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs *:min-w-0">
+                  <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{values.rom?.length ?? 0}</p><p className="text-[10px] text-muted-foreground">ROM</p></div>
+                  <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{values.strength?.length ?? 0}</p><p className="text-[10px] text-muted-foreground">Strength</p></div>
+                  <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{values.functional?.length ?? 0}</p><p className="text-[10px] text-muted-foreground">Functional</p></div>
+                </div>
+                {values.precautions?.trim() ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                    <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700"><AtomIcon name="AlertTriangle" className="h-3 w-3" />Precautions</p>
+                    <p className="mt-0.5 line-clamp-3 text-xs text-amber-900">{values.precautions}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
 
             {/* section content */}
-            <div className="min-w-0">
-              {step === 0 ? (
-                <SectionCard title="Visit info" description="Auto-populated from the selected patient and episode" icon="CalendarDays">
-                  <DetailGrid cols={2}>
-                    <DRow label="Patient" value={patient ? fullName(patient) : ""} />
-                    <DRow label="Patient code" value={patient?.patientCode || ""} />
-                    <DRow label="Episode" value={episode?.title || ""} />
-                    <DRow label="Episode status" value={episode?.status ? labelize(episode.status) : ""} />
-                    <DRow label="Assessment date" value={detail ? formatDate(detail.assessmentDate) : formatDate(new Date())} />
-                    <DRow label="Therapist" value={therapistName ? fullName(therapistName) : ""} />
-                    <DRow label="Current status" value={detail ? labelize(detail.status) : "Draft"} />
-                  </DetailGrid>
-                </SectionCard>
-              ) : null}
-
+            <div className="w-full min-w-0 **:data-[slot=card]:w-full">
               {step === 1 ? (
                 <SectionCard title="Presenting complaint" icon="MessageSquareText">
                   <div className="space-y-4">
                     <Field label="Primary complaint">
                       <Textarea rows={3} placeholder="e.g. Persistent lower back pain radiating to the left buttock" {...form.register("primaryComplaint")} />
                     </Field>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                       <Field label="Body part">
                         <Select value={values.bodyPart || undefined} onValueChange={(v) => form.setValue("bodyPart", v)}>
-                          <SelectTrigger><SelectValue placeholder="Select body part…" /></SelectTrigger>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Select body part…" /></SelectTrigger>
                           <SelectContent>
                             {[...BODY_PARTS, "Other"].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                           </SelectContent>
@@ -699,7 +801,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                       </Field>
                       <Field label="Affected side">
                         <Select value={values.affectedSide || undefined} onValueChange={(v) => form.setValue("affectedSide", v)}>
-                          <SelectTrigger><SelectValue placeholder="Select side…" /></SelectTrigger>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Select side…" /></SelectTrigger>
                           <SelectContent>
                             {SIDES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
                           </SelectContent>
@@ -711,13 +813,13 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                         <Input placeholder="Describe the affected region" {...form.register("bodyPartCustom")} />
                       </Field>
                     ) : null}
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                       <Field label="Duration">
                         <Input placeholder="e.g. 4 months" {...form.register("duration")} />
                       </Field>
                       <Field label="Onset">
                         <Select value={values.onset || undefined} onValueChange={(v) => form.setValue("onset", v)}>
-                          <SelectTrigger><SelectValue placeholder="Select onset…" /></SelectTrigger>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Select onset…" /></SelectTrigger>
                           <SelectContent>
                             {["SUDDEN", "GRADUAL", "INSIDIOUS"].map((o) => <SelectItem key={o} value={o}>{labelize(o)}</SelectItem>)}
                           </SelectContent>
@@ -727,7 +829,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                     <Field label="Cause / mechanism of injury">
                       <Textarea rows={2} placeholder="e.g. Prolonged sitting and frequent heavy lifting at work" {...form.register("cause")} />
                     </Field>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                       <Field label="Aggravating factors">
                         <Textarea rows={2} placeholder="e.g. Sitting, bending, lifting" {...form.register("aggravating")} />
                       </Field>
@@ -748,12 +850,12 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
               {step === 2 ? (
                 <SectionCard title="Pain assessment" description="Rate each on a 0–10 scale" icon="Activity">
                   <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 xl:grid-cols-3 *:min-w-0">
                       <PainSlider label="Current pain" value={values.painCurrent} onChange={(v) => form.setValue("painCurrent", v)} />
                       <PainSlider label="Worst pain" value={values.painWorst} onChange={(v) => form.setValue("painWorst", v)} />
                       <PainSlider label="Lowest pain" value={values.painLowest} onChange={(v) => form.setValue("painLowest", v)} />
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                       <Field label="Pain location">
                         <Input placeholder="e.g. Left lumbar region radiating to buttock" {...form.register("painLocation")} />
                       </Field>
@@ -774,7 +876,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
               {step === 3 ? (
                 <div className="space-y-5">
                   <SectionCard title="Observation" icon="Eye">
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                       <Field label="Posture"><Input {...form.register("posture")} /></Field>
                       <Field label="Swelling"><Input {...form.register("swelling")} /></Field>
                       <Field label="Deformity"><Input {...form.register("deformity")} /></Field>
@@ -789,9 +891,27 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                     icon="Move3d"
                     description="Record degrees for active / passive / normal values"
                     actions={(
-                      <Button type="button" variant="outline" size="sm" onClick={() => romArr.append({ bodyPart: "", movement: "", side: "", activeRom: "", passiveRom: "", normalValue: "", notes: "" })}>
-                        <AtomIcon name="Plus" className="h-4 w-4" />Add row
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value=""
+                          onValueChange={(bp) => {
+                            const rows = ROM_PRESETS[bp] || [];
+                            const existing = new Set((values.rom || []).filter((r) => r.bodyPart === bp).map((r) => r.movement));
+                            // one row per movement for each side (left & right); movements already listed are skipped
+                            rows.forEach(([movement, normal]) => {
+                              if (existing.has(movement)) return;
+                              (["LEFT", "RIGHT"] as const).forEach((side) =>
+                                romArr.append({ bodyPart: bp, movement, side, activeRom: "", passiveRom: "", normalValue: String(normal), notes: "" }));
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Add standard set…" /></SelectTrigger>
+                          <SelectContent>{Object.keys(ROM_PRESETS).map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" onClick={() => romArr.append({ bodyPart: "", movement: "", side: "", activeRom: "", passiveRom: "", normalValue: "", notes: "" })}>
+                          <AtomIcon name="Plus" className="h-4 w-4" />Add row
+                        </Button>
+                      </div>
                     )}
                   >
                     {romArr.fields.length === 0 ? (
@@ -800,19 +920,28 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                       <div className="space-y-3">
                         {romArr.fields.map((f, idx) => (
                           <div key={f.id} className="rounded-lg border bg-muted/10 p-3">
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 *:min-w-0">
                               <Field label="Body part">
                                 <Select value={values.rom?.[idx]?.bodyPart || undefined} onValueChange={(v) => form.setValue(`rom.${idx}.bodyPart`, v)}>
-                                  <SelectTrigger className="h-9"><SelectValue placeholder="Body part…" /></SelectTrigger>
+                                  <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Body part…" /></SelectTrigger>
                                   <SelectContent>{[...BODY_PARTS].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                                 </Select>
                               </Field>
                               <Field label="Movement">
-                                <Input placeholder="e.g. Flexion" {...form.register(`rom.${idx}.movement`)} />
+                                <Input
+                                  placeholder="e.g. Flexion"
+                                  {...form.register(`rom.${idx}.movement`, {
+                                    onBlur: (e) => {
+                                      const bp = form.getValues(`rom.${idx}.bodyPart`);
+                                      const hit = ROM_PRESETS[bp]?.find(([m]) => m.toLowerCase() === String(e.target.value).trim().toLowerCase());
+                                      if (hit && !form.getValues(`rom.${idx}.normalValue`)) form.setValue(`rom.${idx}.normalValue`, String(hit[1]));
+                                    },
+                                  })}
+                                />
                               </Field>
                               <Field label="Side">
                                 <Select value={values.rom?.[idx]?.side || undefined} onValueChange={(v) => form.setValue(`rom.${idx}.side`, v)}>
-                                  <SelectTrigger className="h-9"><SelectValue placeholder="Side…" /></SelectTrigger>
+                                  <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Side…" /></SelectTrigger>
                                   <SelectContent>{SIDES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}</SelectContent>
                                 </Select>
                               </Field>
@@ -850,10 +979,10 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                       <div className="space-y-3">
                         {strengthArr.fields.map((f, idx) => (
                           <div key={f.id} className="rounded-lg border bg-muted/10 p-3">
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 *:min-w-0">
                               <Field label="Body part">
                                 <Select value={values.strength?.[idx]?.bodyPart || undefined} onValueChange={(v) => form.setValue(`strength.${idx}.bodyPart`, v)}>
-                                  <SelectTrigger className="h-9"><SelectValue placeholder="Body part…" /></SelectTrigger>
+                                  <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Body part…" /></SelectTrigger>
                                   <SelectContent>{[...BODY_PARTS].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                                 </Select>
                               </Field>
@@ -862,15 +991,30 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                               </Field>
                               <Field label="Side">
                                 <Select value={values.strength?.[idx]?.side || undefined} onValueChange={(v) => form.setValue(`strength.${idx}.side`, v)}>
-                                  <SelectTrigger className="h-9"><SelectValue placeholder="Side…" /></SelectTrigger>
+                                  <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Side…" /></SelectTrigger>
                                   <SelectContent>{SIDES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}</SelectContent>
                                 </Select>
                               </Field>
                               <Field label="MRC grade">
-                                <Select value={values.strength?.[idx]?.grade || undefined} onValueChange={(v) => form.setValue(`strength.${idx}.grade`, v)}>
-                                  <SelectTrigger className="h-9"><SelectValue placeholder="Grade…" /></SelectTrigger>
-                                  <SelectContent>{MRC_GRADES.map((g) => <SelectItem key={g} value={g}>{MRC_LABELS[g]}</SelectItem>)}</SelectContent>
-                                </Select>
+                                <div className="flex gap-1" role="radiogroup" aria-label="MRC grade">
+                                  {MRC_GRADES.map((g) => {
+                                    const on = values.strength?.[idx]?.grade === g;
+                                    const tone = ["bg-red-600", "bg-orange-500", "bg-amber-500", "bg-lime-500", "bg-emerald-500", "bg-emerald-600"][Number(g)];
+                                    return (
+                                      <button
+                                        key={g}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={on}
+                                        title={MRC_LABELS[g]}
+                                        onClick={() => form.setValue(`strength.${idx}.grade`, g)}
+                                        className={cn("h-9 flex-1 rounded-md text-xs font-semibold transition-all", on ? cn(tone, "text-white shadow-sm") : "border bg-white text-slate-600 hover:bg-slate-100")}
+                                      >
+                                        {g}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </Field>
                               <div className="flex items-end justify-end">
                                 <Button type="button" variant="ghost" size="sm" className="text-rose-600 hover:text-rose-700" onClick={() => strengthArr.remove(idx)}>
@@ -929,7 +1073,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                         <div key={f.id} className="grid items-end gap-2 rounded-lg border bg-muted/10 p-3 sm:grid-cols-[1fr_220px_1fr_auto]">
                           <Field label="Activity">
                             <Select value={values.functional?.[idx]?.activity || undefined} onValueChange={(v) => form.setValue(`functional.${idx}.activity`, v)}>
-                              <SelectTrigger className="h-9"><SelectValue placeholder="Activity…" /></SelectTrigger>
+                              <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Activity…" /></SelectTrigger>
                               <SelectContent>
                                 {activityOptions.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                               </SelectContent>
@@ -937,7 +1081,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                           </Field>
                           <Field label="Difficulty">
                             <Select value={values.functional?.[idx]?.difficulty || undefined} onValueChange={(v) => form.setValue(`functional.${idx}.difficulty`, v)}>
-                              <SelectTrigger className="h-9"><SelectValue placeholder="Difficulty…" /></SelectTrigger>
+                              <SelectTrigger className="h-9 w-full"><SelectValue placeholder="Difficulty…" /></SelectTrigger>
                               <SelectContent>
                                 {FUNCTIONAL_DIFFICULTY_LABELS.map((l, di) => <SelectItem key={di} value={String(di)}>{l}</SelectItem>)}
                               </SelectContent>
@@ -956,7 +1100,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
 
               {step === 5 ? (
                 <SectionCard title="Vital signs" description="None of these are mandatory" icon="HeartPulse">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 *:min-w-0">
                     <Field label="Blood pressure"><Input placeholder="120/80" {...form.register("bloodPressure")} /></Field>
                     <Field label="Heart rate (bpm)"><Input type="number" inputMode="numeric" {...form.register("heartRate")} /></Field>
                     <Field label="Respiratory rate"><Input type="number" inputMode="numeric" {...form.register("respiratoryRate")} /></Field>
@@ -998,7 +1142,13 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
 
               {step === 7 ? (
                 <SectionCard title="Review" description="Verify all captured information, then complete the assessment" icon="ListChecks">
-                  <div className="space-y-5">
+                  <div className="grid gap-x-8 gap-y-5 xl:grid-cols-2 *:min-w-0">
+                    {problem ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 xl:col-span-2">
+                        <p className="flex items-center gap-2 text-sm text-rose-800"><AtomIcon name="AlertCircle" className="h-4 w-4 shrink-0" />{problem.message}</p>
+                        <Button size="sm" variant="outline" className="shrink-0 bg-white" onClick={() => goTo(problem.section)}>Fix now</Button>
+                      </div>
+                    ) : null}
                     <div>
                       <h4 className="mb-2 text-sm font-semibold">Presenting complaint</h4>
                       <DetailGrid cols={2}>
@@ -1029,44 +1179,26 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                         Examination — {values.rom?.length || 0} ROM · {values.strength?.length || 0} strength measurements
                       </h4>
                       {(values.rom?.length || 0) > 0 ? (
-                        <MeasurementTable headers={["Body part", "Movement", "Side", "Active", "Passive", "Normal"]}>
-                          {(values.rom || []).map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell className="text-xs">{r.bodyPart || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.movement || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.side ? labelize(r.side) : "—"}</TableCell>
-                              <TableCell className="text-xs">{r.activeRom || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.passiveRom || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.normalValue || "—"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </MeasurementTable>
+                        <MeasurementTable rows={values.rom || []} columns={[
+                          ["Body part", (r) => r.bodyPart || "—"], ["Movement", (r) => r.movement || "—"],
+                          ["Side", (r) => (r.side ? labelize(r.side) : "—")], ["Active", (r) => r.activeRom || "—"],
+                          ["Passive", (r) => r.passiveRom || "—"], ["Normal", (r) => r.normalValue || "—"],
+                        ]} />
                       ) : null}
                       {(values.strength?.length || 0) > 0 ? (
-                        <MeasurementTable headers={["Body part", "Muscle group", "Side", "Grade"]}>
-                          {(values.strength || []).map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell className="text-xs">{r.bodyPart || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.muscleGroup || "—"}</TableCell>
-                              <TableCell className="text-xs">{r.side ? labelize(r.side) : "—"}</TableCell>
-                              <TableCell className="text-xs">{r.grade}/5</TableCell>
-                            </TableRow>
-                          ))}
-                        </MeasurementTable>
+                        <MeasurementTable rows={values.strength || []} columns={[
+                          ["Body part", (r) => r.bodyPart || "—"], ["Muscle group", (r) => r.muscleGroup || "—"],
+                          ["Side", (r) => (r.side ? labelize(r.side) : "—")], ["Grade", (r) => `${r.grade}/5`],
+                        ]} />
                       ) : null}
                     </div>
                     <div>
                       <h4 className="mb-2 text-sm font-semibold">Functional — {values.functional?.length || 0} activities</h4>
                       {(values.functional?.length || 0) > 0 ? (
-                        <MeasurementTable headers={["Activity", "Difficulty", "Notes"]}>
-                          {(values.functional || []).map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell className="text-xs">{r.activity}</TableCell>
-                              <TableCell className="text-xs">{FUNCTIONAL_DIFFICULTY_LABELS[Number(r.difficulty || 0)]}</TableCell>
-                              <TableCell className="text-xs">{r.notes || "—"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </MeasurementTable>
+                        <MeasurementTable rows={values.functional || []} columns={[
+                          ["Activity", (r) => r.activity], ["Difficulty", (r) => FUNCTIONAL_DIFFICULTY_LABELS[Number(r.difficulty || 0)]],
+                          ["Notes", (r) => r.notes || "—"],
+                        ]} />
                       ) : null}
                     </div>
                     <div>
@@ -1082,24 +1214,30 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                         <DRow label="Precautions" value={values.precautions} />
                       </DetailGrid>
                     </div>
-                    <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800">
+                    <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800 xl:col-span-2">
                       Completing the assessment marks the episode <strong>awaiting plan</strong> and locks this record. Corrections create a new draft linked in the audit trail.
                     </p>
                   </div>
                 </SectionCard>
               ) : null}
 
-              {/* footer actions */}
+              {/* sticky action bar */}
               <div className="sticky bottom-0 z-10 mt-5 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Button variant="ghost" size="sm" onClick={onBack}>
-                    <AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={requestLeave}>
+                      <AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list
+                    </Button>
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                      Step {step} of {NAV.length}
+                      {savedAt ? ` · Draft saved ${savedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                    </span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="secondary" size="sm" disabled={saveQ.isPending || !canManage} onClick={saveDraft}>
                       <AtomIcon name="Save" className="h-4 w-4" />{saveQ.isPending ? "Saving…" : "Save draft"}
                     </Button>
-                    {step > 0 ? (
+                    {step > 1 ? (
                       <Button variant="outline" size="sm" onClick={() => goTo(step - 1)}>Previous</Button>
                     ) : null}
                     {step < SECTIONS.length - 1 ? (
@@ -1116,6 +1254,25 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
           </div>
         </>
       )}
+
+      <Dialog open={leaveOpen} onOpenChange={(v) => { setLeaveOpen(v); if (!v) pendingLeave.current = null; }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave this assessment?</DialogTitle>
+            <DialogDescription>You have unsaved changes. Save a draft to keep them, or leave and discard them.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setLeaveOpen(false)}>Keep editing</Button>
+            <Button variant="outline" className="text-rose-600 hover:text-rose-700" onClick={finishLeave}>Discard & leave</Button>
+            <Button
+              disabled={saveQ.isPending || !canManage}
+              onClick={() => saveQ.mutate({ status: "DRAFT" }, { onSuccess: finishLeave })}
+            >
+              {saveQ.isPending ? "Saving…" : "Save draft & leave"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1127,6 +1284,7 @@ function CompletedView({ detail, canManage, onReplaced, onBack }: {
   onReplaced: (id: string) => void;
   onBack: () => void;
 }) {
+  const navigate = useUIStore((s) => s.navigate);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [reason, setReason] = useState("");
   const correctQ = useMutation({
@@ -1147,164 +1305,177 @@ function CompletedView({ detail, canManage, onReplaced, onBack }: {
 
   return (
     <div className="pb-2">
+      <PageBreadcrumb items={[{ label: "Assessments", onClick: onBack }, { label: patient ? `Assessment — ${fullName(patient)}` : "Assessment" }]} />
       <PageHeader
         title="Assessment"
         description={`${patient ? fullName(patient) : ""}${patient?.patientCode ? ` · ${patient.patientCode}` : ""} — ${detail.episode?.title || ""}`}
         icon="ClipboardList"
-        actions={(
-          <>
-            <Button variant="outline" onClick={onBack}><AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list</Button>
-            {canManage ? (
-              <Button onClick={() => setCorrectionOpen(true)}><AtomIcon name="FilePenLine" className="h-4 w-4" />Start correction</Button>
-            ) : null}
-          </>
-        )}
       />
 
-      <div className="mb-5 rounded-xl border bg-white p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</p>
-            <div className="mt-1"><StatusBadge status={detail.status} /></div>
+      {/* ---------- summary ---------- */}
+      <div className="mb-4 rounded-xl border bg-card shadow-sm">
+        <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar className="h-12 w-12 rounded-xl">
+              <AvatarFallback className="rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">
+                {initials(patient ? fullName(patient) : "")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="min-w-0"><button type="button" title="Open patient profile" disabled={!patient?.id} className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => patient?.id && navigate("patients", { patientId: patient.id })}>{patient ? fullName(patient) : "Patient"}</button></h2>
+                {patient?.patientCode ? (
+                  <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{patient.patientCode}</span>
+                ) : null}
+                <StatusBadge status={detail.status} />
+              </div>
+              <p className="mt-0.5 truncate text-sm text-muted-foreground">{detail.episode?.title || "—"}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assessment date</p>
-            <p className="text-sm font-semibold">{formatDate(detail.assessmentDate)}</p>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Completed</p>
-            <p className="text-sm font-semibold">{detail.completedAt ? formatDate(detail.completedAt) : "—"}</p>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Therapist</p>
-            <p className="text-sm font-semibold">
-              {detail.therapist ? fullName(detail.therapist) : detail.therapistName || "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">{detail.therapist?.jobTitle || ""}</p>
-          </div>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:shrink-0">
+            {[
+              { l: "Assessed", v: formatDate(detail.assessmentDate) },
+              { l: "Completed", v: detail.completedAt ? formatDate(detail.completedAt) : "—" },
+              { l: "Therapist", v: detail.therapist ? fullName(detail.therapist) : detail.therapistName || "—", sub: detail.therapist?.jobTitle },
+              { l: "Signed by", v: detail.therapistSignature || "—" },
+            ].map((x) => (
+              <div key={x.l} className="min-w-0">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+                <dd className="truncate text-sm font-semibold">{x.v}</dd>
+                {x.sub ? <dd className="truncate text-xs text-muted-foreground">{x.sub}</dd> : null}
+              </div>
+            ))}
+          </dl>
         </div>
-        {detail.therapistSignature ? (
-          <p className="mt-3 border-t pt-2 text-xs text-muted-foreground">Signed: <span className="font-medium text-foreground">{detail.therapistSignature}</span></p>
+        {canManage ? (
+          <div className="flex items-center justify-between gap-3 border-t bg-slate-50/80 px-4 py-2.5 md:px-5">
+            <p className="text-xs text-muted-foreground">Completed assessments are immutable. A correction creates a new editable draft and keeps this record in the audit trail.</p>
+            <Button variant="outline" size="sm" className="shrink-0" onClick={() => setCorrectionOpen(true)}>
+              <AtomIcon name="FilePenLine" className="h-4 w-4" />Start correction
+            </Button>
+          </div>
         ) : null}
       </div>
 
-      <div className="space-y-5">
-        <SectionCard title="Presenting complaint" icon="MessageSquareText">
-          <DetailGrid cols={2}>
-            <DRow label="Primary complaint" value={detail.primaryComplaint} />
-            <DRow label="Body part" value={detail.bodyPart} />
-            <DRow label="Affected side" value={detail.affectedSide ? labelize(detail.affectedSide) : ""} />
-            <DRow label="Duration" value={detail.duration} />
-            <DRow label="Onset" value={detail.onset ? labelize(detail.onset) : ""} />
-            <DRow label="Cause / mechanism" value={detail.cause} />
-            <DRow label="Aggravating" value={detail.aggravating} />
-            <DRow label="Relieving" value={detail.relieving} />
-            <DRow label="Previous treatment" value={detail.previousTreatment} />
-            <DRow label="Additional history" value={detail.additionalHistory} />
-          </DetailGrid>
-        </SectionCard>
+      {/* ---------- key figures ---------- */}
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Pain — current" value={detail.painCurrent != null ? `${detail.painCurrent}/10` : "—"} icon="Activity" tone="rose" />
+        <StatCard label="Pain — worst" value={detail.painWorst != null ? `${detail.painWorst}/10` : "—"} icon="Flame" tone="amber" />
+        <StatCard label="Pain — lowest" value={detail.painLowest != null ? `${detail.painLowest}/10` : "—"} icon="Snowflake" tone="sky" />
+        <StatCard label="Measurements" value={rom.length + strength.length + functional.length} icon="Ruler" tone="teal" hint={`${rom.length} ROM · ${strength.length} strength · ${functional.length} functional`} />
+      </div>
 
-        <SectionCard title="Pain assessment" icon="Activity">
-          <div className="mb-3 flex flex-wrap gap-2">
-            {[
-              { l: "Current", v: detail.painCurrent },
-              { l: "Worst", v: detail.painWorst },
-              { l: "Lowest", v: detail.painLowest },
-            ].map((p) => (
-              <Badge key={p.l} variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{p.l}: {p.v ?? "—"}/10</Badge>
-            ))}
-          </div>
-          <DetailGrid cols={2}>
-            <DRow label="Location" value={detail.painLocation} />
-            <DRow label="Type" value={detail.painType} />
-            <DRow label="Frequency" value={detail.painFrequency} />
-            <DRow label="Notes" value={detail.painNotes} />
-          </DetailGrid>
-        </SectionCard>
+      <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+        {/* ---------- left: narrative + examination ---------- */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <SectionCard title="Presenting complaint" icon="MessageSquareText">
+            <DetailGrid cols={2}>
+              <DRow label="Primary complaint" value={detail.primaryComplaint} />
+              <DRow label="Body part" value={detail.bodyPart} />
+              <DRow label="Affected side" value={detail.affectedSide ? labelize(detail.affectedSide) : ""} />
+              <DRow label="Duration" value={detail.duration} />
+              <DRow label="Onset" value={detail.onset ? labelize(detail.onset) : ""} />
+              <DRow label="Cause / mechanism" value={detail.cause} />
+              <DRow label="Aggravating" value={detail.aggravating} />
+              <DRow label="Relieving" value={detail.relieving} />
+              <DRow label="Previous treatment" value={detail.previousTreatment} />
+              <DRow label="Additional history" value={detail.additionalHistory} />
+            </DetailGrid>
+          </SectionCard>
 
-        <SectionCard title="Physical examination" icon="Stethoscope">
-          <DetailGrid cols={2}>
-            <DRow label="Posture" value={detail.posture} />
-            <DRow label="Swelling" value={detail.swelling} />
-            <DRow label="Deformity" value={detail.deformity} />
-            <DRow label="Skin condition" value={detail.skinCondition} />
-            <DRow label="Muscle wasting" value={detail.muscleWasting} />
-            <DRow label="Gait" value={detail.gait} />
-          </DetailGrid>
-          {rom.length ? (
-            <div className="mt-4">
-              <h4 className="mb-2 text-sm font-semibold">Range of motion</h4>
-              <MeasurementTable headers={["Body part", "Movement", "Side", "Active", "Passive", "Normal", "Notes"]}>
-                {rom.map((r) => (
-                  <TableRow key={r.id || r.bodyPart + r.movement}>
-                    <TableCell className="text-xs">{r.bodyPart}</TableCell>
-                    <TableCell className="text-xs">{r.movement}</TableCell>
-                    <TableCell className="text-xs">{labelize(r.side)}</TableCell>
-                    <TableCell className="text-xs">{r.activeRom ?? "—"}</TableCell>
-                    <TableCell className="text-xs">{r.passiveRom ?? "—"}</TableCell>
-                    <TableCell className="text-xs">{r.normalValue ?? "—"}</TableCell>
-                    <TableCell className="text-xs">{r.notes || "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </MeasurementTable>
-            </div>
-          ) : null}
-          {strength.length ? (
-            <div className="mt-4">
-              <h4 className="mb-2 text-sm font-semibold">Muscle strength (MRC)</h4>
-              <MeasurementTable headers={["Body part", "Muscle group", "Side", "Grade", "Notes"]}>
-                {strength.map((r) => (
-                  <TableRow key={r.id || r.bodyPart + r.muscleGroup}>
-                    <TableCell className="text-xs">{r.bodyPart}</TableCell>
-                    <TableCell className="text-xs">{r.muscleGroup}</TableCell>
-                    <TableCell className="text-xs">{labelize(r.side)}</TableCell>
-                    <TableCell className="text-xs"><Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{r.grade}/5</Badge></TableCell>
-                    <TableCell className="text-xs">{r.notes || "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </MeasurementTable>
-            </div>
-          ) : null}
-        </SectionCard>
+          <SectionCard title="Physical examination" icon="Stethoscope">
+            <DetailGrid cols={3}>
+              <DRow label="Posture" value={detail.posture} />
+              <DRow label="Swelling" value={detail.swelling} />
+              <DRow label="Deformity" value={detail.deformity} />
+              <DRow label="Skin condition" value={detail.skinCondition} />
+              <DRow label="Muscle wasting" value={detail.muscleWasting} />
+              <DRow label="Gait" value={detail.gait} />
+            </DetailGrid>
+            {rom.length ? (
+              <div className="mt-4">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Range of motion</h4>
+                <div className="overflow-hidden rounded-lg border">
+                  <MeasurementTable rows={rom} columns={[
+                    ["Body part", (r) => r.bodyPart], ["Movement", (r) => r.movement], ["Side", (r) => labelize(r.side)],
+                    ["Active", (r) => r.activeRom ?? "—"], ["Passive", (r) => r.passiveRom ?? "—"],
+                    ["Normal", (r) => r.normalValue ?? "—"], ["Notes", (r) => r.notes || "—"],
+                  ]} />
+                </div>
+              </div>
+            ) : null}
+            {strength.length ? (
+              <div className="mt-4">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Muscle strength (MRC)</h4>
+                <div className="overflow-hidden rounded-lg border">
+                  <MeasurementTable rows={strength} columns={[
+                    ["Body part", (r) => r.bodyPart], ["Muscle group", (r) => r.muscleGroup], ["Side", (r) => labelize(r.side)],
+                    ["Grade", (r) => <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{r.grade}/5</Badge>],
+                    ["Notes", (r) => r.notes || "—"],
+                  ]} />
+                </div>
+              </div>
+            ) : null}
+          </SectionCard>
 
-        <SectionCard title="Functional assessment" icon="Accessibility">
-          {functional.length ? (
-            <MeasurementTable headers={["Activity", "Difficulty", "Notes"]}>
-              {functional.map((r) => (
-                <TableRow key={r.id || r.activity}>
-                  <TableCell className="text-xs">{r.activity}</TableCell>
-                  <TableCell className="text-xs">{FUNCTIONAL_DIFFICULTY_LABELS[Number(r.difficulty ?? 0)] || "—"}</TableCell>
-                  <TableCell className="text-xs">{r.notes || "—"}</TableCell>
-                </TableRow>
+          <SectionCard title="Clinical findings" icon="ClipboardCheck" className="flex-1">
+            {detail.clinicalImpression ? (
+              <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50/60 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-700">Clinical impression</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{detail.clinicalImpression}</p>
+              </div>
+            ) : null}
+            <DetailGrid cols={2}>
+              <DRow label="Clinical findings" value={detail.clinicalFindings} />
+              <DRow label="Impairments" value={detail.impairments} />
+              <DRow label="Functional limitations" value={detail.functionalLimitations} />
+              <DRow label="Precautions" value={detail.precautions} />
+              <DRow label="Additional notes" value={detail.additionalNotes} />
+            </DetailGrid>
+          </SectionCard>
+        </div>
+
+        {/* ---------- right: pain, vitals, functional ---------- */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <SectionCard title="Pain details" icon="Activity">
+            <DetailGrid cols={1}>
+              <DRow label="Location" value={detail.painLocation} />
+              <DRow label="Type" value={detail.painType} />
+              <DRow label="Frequency" value={detail.painFrequency} />
+              <DRow label="Notes" value={detail.painNotes} />
+            </DetailGrid>
+          </SectionCard>
+
+          <SectionCard title="Vital signs" icon="HeartPulse">
+            <div className="grid grid-cols-2 gap-2 *:min-w-0">
+              {[
+                { l: "Blood pressure", v: detail.bloodPressure },
+                { l: "Heart rate", v: detail.heartRate != null ? `${detail.heartRate} bpm` : "" },
+                { l: "Respiratory rate", v: detail.respiratoryRate != null ? `${detail.respiratoryRate}/min` : "" },
+                { l: "Temperature", v: detail.temperature != null ? `${detail.temperature} °C` : "" },
+                { l: "SpO₂", v: detail.oxygenSaturation != null ? `${detail.oxygenSaturation}%` : "" },
+                { l: "Weight", v: detail.weightKg != null ? `${detail.weightKg} kg` : "" },
+                { l: "Height", v: detail.heightCm != null ? `${detail.heightCm} cm` : "" },
+              ].map((x) => (
+                <div key={x.l} className="rounded-lg border bg-slate-50/60 px-3 py-2">
+                  <p className="text-[11px] text-muted-foreground">{x.l}</p>
+                  <p className="text-sm font-semibold">{x.v || "—"}</p>
+                </div>
               ))}
-            </MeasurementTable>
-          ) : (
-            <p className="text-sm text-muted-foreground">No functional activities recorded.</p>
-          )}
-        </SectionCard>
+            </div>
+          </SectionCard>
 
-        <SectionCard title="Vital signs" icon="HeartPulse">
-          <DetailGrid cols={3}>
-            <DRow label="Blood pressure" value={detail.bloodPressure} />
-            <DRow label="Heart rate" value={detail.heartRate != null ? `${detail.heartRate} bpm` : ""} />
-            <DRow label="Respiratory rate" value={detail.respiratoryRate != null ? `${detail.respiratoryRate}/min` : ""} />
-            <DRow label="Temperature" value={detail.temperature != null ? `${detail.temperature} °C` : ""} />
-            <DRow label="SpO₂" value={detail.oxygenSaturation != null ? `${detail.oxygenSaturation}%` : ""} />
-            <DRow label="Weight" value={detail.weightKg != null ? `${detail.weightKg} kg` : ""} />
-            <DRow label="Height" value={detail.heightCm != null ? `${detail.heightCm} cm` : ""} />
-          </DetailGrid>
-        </SectionCard>
-
-        <SectionCard title="Clinical findings" icon="ClipboardCheck">
-          <DetailGrid cols={1}>
-            <DRow label="Clinical findings" value={detail.clinicalFindings} />
-            <DRow label="Impairments" value={detail.impairments} />
-            <DRow label="Functional limitations" value={detail.functionalLimitations} />
-            <DRow label="Clinical impression" value={detail.clinicalImpression} />
-            <DRow label="Precautions" value={detail.precautions} />
-            <DRow label="Additional notes" value={detail.additionalNotes} />
-          </DetailGrid>
-        </SectionCard>
+          <SectionCard title="Functional assessment" icon="Accessibility" noPadding={functional.length > 0} className="flex-1">
+            {functional.length ? (
+              <MeasurementTable rows={functional} columns={[
+                ["Activity", (r) => r.activity], ["Difficulty", (r) => FUNCTIONAL_DIFFICULTY_LABELS[Number(r.difficulty ?? 0)] || "—"],
+                ["Notes", (r) => r.notes || "—"],
+              ]} />
+            ) : (
+              <p className="text-sm text-muted-foreground">No functional activities recorded.</p>
+            )}
+          </SectionCard>
+        </div>
       </div>
 
       <Dialog open={correctionOpen} onOpenChange={setCorrectionOpen}>

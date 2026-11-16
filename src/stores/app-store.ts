@@ -57,8 +57,42 @@ export interface NavigateOpts {
   focusTab?: string;
 }
 
+// URL for each module. The router is registered once by the app frame (see components/app-frame.tsx).
+export const VIEW_PATHS: Record<ViewKey, string> = {
+  dashboard: "/dashboard",
+  patients: "/patients",
+  appointments: "/appointments",
+  assessments: "/assessments",
+  "treatment-plans": "/treatment-plans",
+  "therapy-sessions": "/therapy-sessions",
+  "progress-reviews": "/progress-reviews",
+  discharges: "/discharges",
+  billing: "/billing",
+  reports: "/reports",
+  staff: "/staff",
+  settings: "/settings",
+};
+
+/** Which module a pathname belongs to (e.g. "/patients/abc" → "patients"). */
+export function viewFromPath(pathname: string | null): ViewKey {
+  const seg = (pathname || "").split("/")[1] as ViewKey;
+  return seg && seg in VIEW_PATHS ? seg : "dashboard";
+}
+
+let routerPush: ((href: string) => void) | null = null;
+export function registerRouter(push: (href: string) => void) {
+  routerPush = push;
+}
+
+// Optional navigation guard: a page with unsaved work registers one; navigate() calls it first.
+// It returns true when it takes over (e.g. shows a confirm dialog) and will call `proceed` later.
+type NavGuard = (proceed: () => void) => boolean;
+let navGuard: NavGuard | null = null;
+export function setNavGuard(g: NavGuard | null) {
+  navGuard = g;
+}
+
 interface UIState {
-  activeView: ViewKey;
   sidebarCollapsed: boolean;
   navOpts: NavigateOpts | null;
   navigate: (view: ViewKey, opts?: NavigateOpts) => void;
@@ -70,14 +104,26 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      activeView: "dashboard",
       sidebarCollapsed: false,
       navOpts: null,
-      navigate: (view, opts) => set({ activeView: view, navOpts: opts || null }),
+      // Changes the URL; extra options (episodeId, focusTab …) are handed to the target page through navOpts.
+      navigate: (view, opts) => {
+        if (navGuard && navGuard(() => useUIStore.getState().navigate(view, opts))) return;
+        let href: string = VIEW_PATHS[view];
+        let rest = opts || null;
+        if (view === "patients" && opts?.patientId) {
+          href = `/patients/${opts.patientId}`;
+          const { patientId: _omit, ...others } = opts;
+          void _omit;
+          rest = Object.keys(others).length ? others : null;
+        }
+        set({ navOpts: rest });
+        routerPush?.(href);
+      },
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
       clearOpts: () => set({ navOpts: null }),
     }),
-    { name: "gmrs-ui", partialize: (s) => ({ activeView: s.activeView, sidebarCollapsed: s.sidebarCollapsed }) }
+    { name: "gmrs-ui", partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }) }
   )
 );

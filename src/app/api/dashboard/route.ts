@@ -30,6 +30,15 @@ export const GET = route(async (req) => {
   const to = getQuery(req, "to");
   const { start, end } = rangeToDates(range, from, to);
 
+  // chart window: last 7 days for "today"/"week", otherwise the selected range (max 60 days)
+  const MS_DAY = 86_400_000;
+  let chartStart = new Date(end); chartStart.setHours(0, 0, 0, 0);
+  if (range === "today" || range === "week") chartStart.setDate(chartStart.getDate() - 6);
+  else chartStart = new Date(start);
+  if (end.getTime() - chartStart.getTime() > 59 * MS_DAY) chartStart = new Date(end.getTime() - 59 * MS_DAY);
+  chartStart.setHours(0, 0, 0, 0);
+  const chartEnd = end;
+
   const day0 = new Date(); day0.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
@@ -39,7 +48,7 @@ export const GET = route(async (req) => {
     paygRevenue,
     todaysAppointments, upcoming, activeEpisodeList, overdueList, recentlyDischarged,
     recentPayments, recentRegistrations, recentSessions, recentAudit,
-    chartAppointments, chartRevenue,
+    chartAppointments, chartRevenue, chartSessions, chartPatients,
   ] = await Promise.all([
     db.patient.count({ where: { clinicId: auth.clinicId } }),
     db.patient.count({ where: { clinicId: auth.clinicId, createdAt: { gte: start, lte: end } } }),
@@ -132,20 +141,22 @@ export const GET = route(async (req) => {
       orderBy: { createdAt: "desc" },
       take: 6,
     }),
-    // charts: appointments & revenue last 7 days
+    // charts: appointments, revenue, sessions and registrations over the chart window
     db.appointment.findMany({
-      where: {
-        clinicId: auth.clinicId,
-        date: { gte: new Date(new Date().setDate(new Date().getDate() - 6)), lte: dayEnd },
-      },
+      where: { clinicId: auth.clinicId, date: { gte: chartStart, lte: chartEnd } },
       select: { date: true, status: true },
     }),
     db.payment.findMany({
-      where: {
-        clinicId: auth.clinicId,
-        paidAt: { gte: new Date(new Date().setDate(new Date().getDate() - 6)), lte: dayEnd },
-      },
+      where: { clinicId: auth.clinicId, paidAt: { gte: chartStart, lte: chartEnd } },
       select: { paidAt: true, amountCents: true },
+    }),
+    db.therapySession.findMany({
+      where: { clinicId: auth.clinicId, status: "COMPLETED", date: { gte: chartStart, lte: chartEnd } },
+      select: { date: true },
+    }),
+    db.patient.findMany({
+      where: { clinicId: auth.clinicId, createdAt: { gte: chartStart, lte: chartEnd } },
+      select: { createdAt: true },
     }),
   ]);
 
@@ -170,28 +181,32 @@ export const GET = route(async (req) => {
 
   const outstanding = outstandingInvoices.reduce((s, i) => s + (i.totalCents - i.paidCents), 0);
 
-  // build 7-day chart series
-  const chart: { day: string; appointments: number; sessions: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const dd = new Date(); dd.setDate(dd.getDate() - i); dd.setHours(0, 0, 0, 0);
-    const ddEnd = new Date(dd); ddEnd.setHours(23, 59, 59, 999);
-    const appts = chartAppointments.filter((a) => {
-      const t = new Date(a.date).getTime();
-      return t >= dd.getTime() && t <= ddEnd.getTime() && !["CANCELLED", "NO_SHOW"].includes(a.status);
-    }).length;
-    chart.push({ day: dd.toLocaleDateString("en-GB", { weekday: "short" }), appointments: appts, sessions: 0 });
+  // per-day trend series over the chart window
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const trend: { day: string; date: string; appointments: number; sessions: number; revenue: number; newPatients: number }[] = [];
+  const idx = new Map<string, number>();
+  const spanDays = Math.round((chartEnd.getTime() - chartStart.getTime()) / MS_DAY) + 1;
+  for (let i = 0; i < spanDays; i++) {
+    const dd = new Date(chartStart); dd.setDate(dd.getDate() + i);
+    idx.set(dayKey(dd), trend.length);
+    trend.push({
+      day: dd.toLocaleDateString("en-GB", spanDays <= 7 ? { weekday: "short" } : { day: "numeric", month: "short" }),
+      date: dd.toISOString(), appointments: 0, sessions: 0, revenue: 0, newPatients: 0,
+    });
   }
+  for (const a of chartAppointments) {
+    if (["CANCELLED", "NO_SHOW"].includes(a.status)) continue;
+    const i = idx.get(dayKey(new Date(a.date))); if (i !== undefined) trend[i].appointments++;
+  }
+  for (const x of chartSessions) { const i = idx.get(dayKey(new Date(x.date))); if (i !== undefined) trend[i].sessions++; }
+  for (const x of chartPatients) { const i = idx.get(dayKey(new Date(x.createdAt))); if (i !== undefined) trend[i].newPatients++; }
+  for (const p of chartRevenue) { const i = idx.get(dayKey(new Date(p.paidAt))); if (i !== undefined) trend[i].revenue += p.amountCents; }
+  for (const t of trend) t.revenue = Math.round(t.revenue / 100);
 
-  const revenueChart: { day: string; revenue: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const dd = new Date(); dd.setDate(dd.getDate() - i); dd.setHours(0, 0, 0, 0);
-    const ddEnd = new Date(dd); ddEnd.setHours(23, 59, 59, 999);
-    const rev = chartRevenue.filter((p) => {
-      const t = new Date(p.paidAt).getTime();
-      return t >= dd.getTime() && t <= ddEnd.getTime();
-    }).reduce((s, p) => s + p.amountCents, 0);
-    revenueChart.push({ day: dd.toLocaleDateString("en-GB", { weekday: "short" }), revenue: Math.round(rev / 100) });
-  }
+  // appointment status breakdown over the chart window
+  const statusCounts: Record<string, number> = {};
+  for (const a of chartAppointments) statusCounts[a.status] = (statusCounts[a.status] || 0) + 1;
+  const appointmentStatus = Object.entries(statusCounts).map(([status, count]) => ({ status, count })).sort((x, y) => y.count - x.count);
 
   return json({
     metrics: {
@@ -243,10 +258,10 @@ export const GET = route(async (req) => {
       })),
       sessions: recentSessions.map((s) => ({
         id: s.id, patient: `${s.patient.firstName} ${s.patient.lastName}`, episode: s.episode?.title || "",
-        therapist: `${s.therapist.firstName} ${s.therapist.lastName}`, date: s.completedAt || s.date,
+        therapist: s.therapist ? `${s.therapist.firstName} ${s.therapist.lastName}` : "—", date: s.completedAt || s.date,
       })),
       audit: recentAudit.map((a) => ({ id: a.id, action: a.action, userName: a.userName, date: a.createdAt, entityType: a.entityType })),
     },
-    charts: { appointmentsByDay: chart, revenueByDay: revenueChart },
+    charts: { trend, appointmentStatus, windowDays: spanDays },
   });
 });

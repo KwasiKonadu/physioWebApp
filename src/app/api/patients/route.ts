@@ -136,11 +136,11 @@ export const GET = route(async (req) => {
     for (const token of tokens) {
       and.push({
         OR: [
-          { firstName: { contains: token } },
-          { middleName: { contains: token } },
-          { lastName: { contains: token } },
-          { patientCode: { contains: token } },
-          { phone: { contains: token } },
+          { firstName: { contains: token, mode: "insensitive" } },
+          { middleName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
+          { patientCode: { contains: token, mode: "insensitive" } },
+          { phone: { contains: token, mode: "insensitive" } },
         ],
       });
     }

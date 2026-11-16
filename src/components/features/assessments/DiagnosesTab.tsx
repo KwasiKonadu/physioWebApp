@@ -8,15 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { SectionCard } from "@/components/molecules/section-card";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
-import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState, EmptyStateCompact } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -72,117 +70,86 @@ export default function DiagnosesTab() {
 
   return (
     <div className="space-y-4">
-      <SectionCard
-        title="Diagnoses"
-        description="Clinical diagnoses across episodes — revisions preserve a full audit trail"
-        icon="FileText"
-        noPadding
-        actions={canManage ? (
-          <Button size="sm" onClick={() => setAddOpen(true)}><AtomIcon name="Plus" className="h-4 w-4" />Add diagnosis</Button>
-        ) : undefined}
-      >
-        <div className="border-b px-4 py-3">
-          <DataToolbar
-            search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search diagnosis, patient, episode…" }}
-            filters={(
-              <>
-                <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-                  <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
-                    {DIAGNOSIS_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{labelize(c)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-                  <SelectTrigger className="h-9 w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="SUPERSEDED">Superseded</SelectItem>
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-            onRefresh={() => listQ.refetch()}
-            refreshing={listQ.isFetching}
-          />
-        </div>
-
-        {listQ.isLoading ? (
-          <div className="space-y-2 p-4">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-          </div>
-        ) : total === 0 ? (
-          <div className="p-4">
+      <div className="mb-3">
+        <DataToolbar
+          search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search diagnosis, patient, episode…" }}
+          filters={(
+            <>
+              <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-45"><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {DIAGNOSIS_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{labelize(c)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="SUPERSEDED">Superseded</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          onRefresh={() => listQ.refetch()}
+          refreshing={listQ.isFetching}
+        >
+          {canManage ? (
+            <Button onClick={() => setAddOpen(true)}><AtomIcon name="Plus" className="h-4 w-4" />Add diagnosis</Button>
+          ) : null}
+        </DataToolbar>
+      </div>
+        <DataTable
+          rows={items}
+          rowKey={(dx) => dx.id}
+          loading={listQ.isLoading}
+          loadingRows={5}
+          minWidth="min-w-240"
+          onRowClick={(dx) => setDetailItem(dx)}
+          empty={
             <EmptyState
-              icon="FileText"
-              title={dq || category !== "all" || status !== "all" ? "No diagnoses match your filters" : "No diagnoses recorded"}
-              description={dq || category !== "all" || status !== "all" ? "Try adjusting the search or filters." : "Add a diagnosis from an episode to get started."}
-              action={(dq || category !== "all" || status !== "all") ? <Button variant="outline" onClick={resetFilters}>Clear filters</Button> : undefined}
+            icon="FileText"
+            title={dq || category !== "all" || status !== "all" ? "No diagnoses match your filters" : "No diagnoses recorded"}
+            description={dq || category !== "all" || status !== "all" ? "Try adjusting the search or filters." : "Add a diagnosis from an episode to get started."}
+            action={(dq || category !== "all" || status !== "all") ? <Button variant="outline" onClick={resetFilters}>Clear filters</Button> : undefined}
             />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto custom-scrollbar">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs">Patient</TableHead>
-                    <TableHead className="text-xs">Episode</TableHead>
-                    <TableHead className="text-xs">Diagnosis</TableHead>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-xs">Body / side</TableHead>
-                    <TableHead className="text-xs">Severity</TableHead>
-                    <TableHead className="text-xs">Prov.</TableHead>
-                    <TableHead className="text-xs">Therapist</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((dx) => (
-                    <TableRow key={dx.id} className="cursor-pointer" onClick={() => setDetailItem(dx)}>
-                      <TableCell className="whitespace-nowrap text-xs">{formatDate(dx.diagnosisDate)}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <p className="text-sm font-medium">{fullName(dx.episode?.patient || {}) || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{dx.episode?.patient?.patientCode || ""}</p>
-                      </TableCell>
-                      <TableCell className="max-w-[160px] truncate text-xs text-muted-foreground">{dx.episode?.title || "—"}</TableCell>
-                      <TableCell className="max-w-[260px]">
-                        <p className="truncate text-sm font-medium">{dx.title}</p>
-                      </TableCell>
-                      <TableCell className="text-xs"><Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{labelize(dx.category)}</Badge></TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">{[dx.bodyPart, dx.affectedSide ? labelize(dx.affectedSide) : ""].filter(Boolean).join(" · ") || "—"}</TableCell>
-                      <TableCell>{severityBadge(dx.severity)}</TableCell>
-                      <TableCell>
-                        {dx.provisional ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex text-sky-600"><AtomIcon name="Info" className="h-4 w-4" /></span>
-                            </TooltipTrigger>
-                            <TooltipContent>Provisional diagnosis — pending confirmation</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{dx.therapistName || "—"}</TableCell>
-                      <TableCell><StatusBadge status={dx.status} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <TablePagination
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-            />
-          </>
-        )}
-      </SectionCard>
+          }
+          pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (s) => { setPageSize(s); setPage(1); } }}
+          columns={[
+            { id: "date", header: "Date", className: "whitespace-nowrap", cell: (dx) => <span className="text-xs">{formatDate(dx.diagnosisDate)}</span> },
+            {
+              id: "patient", header: "Patient", className: "whitespace-nowrap",
+              cell: (dx) => (
+                <>
+                  <p className="text-sm font-medium">{fullName(dx.episode?.patient || {}) || "—"}</p>
+                  <p className="text-xs text-muted-foreground">{dx.episode?.patient?.patientCode || ""}</p>
+                </>
+              ),
+            },
+            { id: "episode", header: "Episode", className: "max-w-40 truncate", cell: (dx) => <span className="text-xs text-muted-foreground">{dx.episode?.title || "—"}</span> },
+            { id: "diagnosis", header: "Diagnosis", className: "max-w-65", cell: (dx) => <p className="truncate text-sm font-medium">{dx.title}</p> },
+            { id: "category", header: "Category", cell: (dx) => <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">{labelize(dx.category)}</Badge> },
+            { id: "body", header: "Body / side", className: "whitespace-nowrap", cell: (dx) => <span className="text-xs">{[dx.bodyPart, dx.affectedSide ? labelize(dx.affectedSide) : ""].filter(Boolean).join(" · ") || "—"}</span> },
+            { id: "severity", header: "Severity", cell: (dx) => severityBadge(dx.severity) },
+            {
+              id: "prov", header: "Prov.",
+              cell: (dx) =>
+                dx.provisional ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex text-sky-600"><AtomIcon name="Info" className="h-4 w-4" /></span>
+                    </TooltipTrigger>
+                    <TooltipContent>Provisional diagnosis — pending confirmation</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                ),
+            },
+            { id: "therapist", header: "Therapist", className: "whitespace-nowrap", cell: (dx) => <span className="text-xs text-muted-foreground">{dx.therapistName || "—"}</span> },
+            { id: "status", header: "Status", cell: (dx) => <StatusBadge status={dx.status} /> },
+          ]}
+        />
 
       <AddDiagnosisDialog open={addOpen} onOpenChange={setAddOpen} onSaved={() => qc.invalidateQueries({ queryKey: ["diagnoses"] })} />
       <DiagnosisDetailDialog
@@ -266,12 +233,14 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto custom-scrollbar sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add diagnosis</DialogTitle>
-          <DialogDescription>Multiple diagnoses may coexist on an episode (primary vs secondary).</DialogDescription>
-        </DialogHeader>
+    <SidePanel
+      open={open}
+      onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}
+      size="lg"
+      title="Add diagnosis"
+      description="Multiple diagnoses may coexist on an episode (primary vs secondary)."
+    >
+      <SidePanelBody>
         <div className="space-y-4">
           <Field label="Patient">
             <PatientSearchSelect autoFocus selected={patient} onSelect={(p) => { setPatient(p); setEpisodeId(""); }} onClear={() => { setPatient(null); setEpisodeId(""); }} />
@@ -279,7 +248,7 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
           {patient ? (
             <Field label="Episode">
               <Select value={episodeId || undefined} onValueChange={setEpisodeId}>
-                <SelectTrigger><SelectValue placeholder="Select episode…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select episode…" /></SelectTrigger>
                 <SelectContent>
                   {episodes.length ? episodes.map((e) => (
                     <SelectItem key={e.id} value={e.id}>{e.title || "Episode"} {e.status ? `· ${labelize(e.status)}` : ""}</SelectItem>
@@ -291,16 +260,16 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
           <Field label="Diagnosis title">
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lumbar disc herniation with radiculopathy (L4-L5, left)" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
             <Field label="Category">
               <Select value={category || undefined} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue placeholder="Category…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Category…" /></SelectTrigger>
                 <SelectContent>{DIAGNOSIS_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{labelize(c)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Body part">
               <Select value={bodyPart || undefined} onValueChange={setBodyPart}>
-                <SelectTrigger><SelectValue placeholder="Body part…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Body part…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Not specified</SelectItem>
                   {[...BODY_PARTS].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
@@ -309,7 +278,7 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
             </Field>
             <Field label="Affected side">
               <Select value={affectedSide || undefined} onValueChange={setAffectedSide}>
-                <SelectTrigger><SelectValue placeholder="Side…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Side…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Not specified</SelectItem>
                   {SIDES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
@@ -318,7 +287,7 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
             </Field>
             <Field label="Severity">
               <Select value={severity || undefined} onValueChange={setSeverity}>
-                <SelectTrigger><SelectValue placeholder="Severity…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Severity…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Not specified</SelectItem>
                   {SEVERITIES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
@@ -339,7 +308,7 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
           {therapistsQ.data?.length ? (
             <Field label="Diagnosing therapist">
               <Select value={therapistId || undefined} onValueChange={setTherapistId}>
-                <SelectTrigger><SelectValue placeholder={therapistsQ.data[0] ? `Default: ${fullName(therapistsQ.data[0])}` : "Therapist…"} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder={therapistsQ.data[0] ? `Default: ${fullName(therapistsQ.data[0])}` : "Therapist…"} /></SelectTrigger>
                 <SelectContent>
                   {therapistsQ.data.map((t) => <SelectItem key={t.id} value={t.id}>{fullName(t)}</SelectItem>)}
                 </SelectContent>
@@ -347,12 +316,12 @@ function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
             </Field>
           ) : null}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={createQ.isPending} onClick={submit}>{createQ.isPending ? "Saving…" : "Add diagnosis"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </SidePanelBody>
+      <SidePanelFooter className="justify-end">
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <Button disabled={createQ.isPending} onClick={submit}>{createQ.isPending ? "Saving…" : "Add diagnosis"}</Button>
+      </SidePanelFooter>
+    </SidePanel>
   );
 }
 

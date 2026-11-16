@@ -1,5 +1,6 @@
 "use client";
 // FEATURE: progress reviews module — due-now dashboard, review history table, early review initiation.
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,28 +14,26 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/molecules/page-header";
 import { SectionCard } from "@/components/molecules/section-card";
 import { StatCard } from "@/components/molecules/stat-card";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
-import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { EpisodePickerDialog } from "./EpisodePickerDialog";
-import ReviewForm from "./ReviewForm";
 import { DECISION_TONE } from "./types";
 import type { PickerEpisode, ReviewsListResponse } from "./types";
 
 export default function ProgressReviewsPage() {
+  const router = useRouter();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const navOpts = useUIStore((s) => s.navOpts);
   const clearOpts = useUIStore((s) => s.clearOpts);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -61,7 +60,7 @@ export default function ProgressReviewsPage() {
       toast.success("Review started — draft created");
       qc.invalidateQueries({ queryKey: ["reviews"] });
       qc.invalidateQueries({ queryKey: ["picker-episodes"] });
-      setSelectedId(data.review.id);
+      router.push(`/progress-reviews/${data.review.id}`);
       setPendingEpisode(null);
       setEarlyReason("");
     },
@@ -77,10 +76,6 @@ export default function ProgressReviewsPage() {
     }
   }, [navOpts]);
 
-  if (selectedId) {
-    return <ReviewForm reviewId={selectedId} onBack={() => setSelectedId(null)} />;
-  }
-
   const data = listQuery.data;
   const stats = data?.stats;
   const dueEpisodes = data?.dueEpisodes || [];
@@ -92,14 +87,6 @@ export default function ProgressReviewsPage() {
         title="Progress Reviews"
         description="Structured re-assessment every review cycle — evaluate objectives, compare against baseline and decide the next step"
         icon="TrendingUp"
-        actions={
-          canManage ? (
-            <Button onClick={() => setEarlyOpen(true)}>
-              <AtomIcon name="Zap" className="mr-2 h-4 w-4" />
-              Early review
-            </Button>
-          ) : null
-        }
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -145,7 +132,7 @@ export default function ProgressReviewsPage() {
                   </div>
                   <div className="mt-3">
                     {ep.draftReviewId ? (
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedId(ep.draftReviewId!)}>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => router.push(`/progress-reviews/${ep.draftReviewId}`)}>
                         <AtomIcon name="FileEdit" className="mr-2 h-4 w-4" />
                         Resume draft review
                       </Button>
@@ -169,68 +156,55 @@ export default function ProgressReviewsPage() {
       </SectionCard>
 
       {/* Review history */}
-      <SectionCard title="Review history" icon="History" noPadding loading={listQuery.isLoading}>
-        <div className="px-4 pt-1 pb-3">
-          <DataToolbar
-            search={undefined}
-            filters={
-              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  {REVIEW_STATUSES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            }
-            onRefresh={() => listQuery.refetch()}
-            refreshing={listQuery.isFetching}
-          />
-        </div>
-        {items.length === 0 ? (
-          <div className="px-4 pb-6">
-            <EmptyState icon="Inbox" title="No reviews yet" description="Reviews appear here once started — threshold reviews from completed sessions or early reviews." />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Episode</TableHead>
-                    <TableHead className="text-right">Trigger sessions</TableHead>
-                    <TableHead>Decision</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Therapist</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((r) => (
-                    <TableRow key={r.id} className="cursor-pointer" onClick={() => setSelectedId(r.id)}>
-                      <TableCell className="font-medium">{formatDate(r.reviewDate)}</TableCell>
-                      <TableCell>
-                        <p className="font-medium">{fullName(r.episode.patient)}</p>
-                        <p className="text-xs text-muted-foreground">{r.episode.patient.patientCode}</p>
-                      </TableCell>
-                      <TableCell className="max-w-56 truncate">{r.episode.title}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.triggerSessions}</TableCell>
-                      <TableCell>
-                        {r.decision ? <Badge variant="outline" className={DECISION_TONE[r.decision]}>{labelize(r.decision)}</Badge> : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell><StatusBadge status={r.status} /></TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {r.episode.therapist ? `${r.episode.therapist.firstName} ${r.episode.therapist.lastName}` : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <TablePagination page={data?.page || page} pageSize={data?.pageSize || pageSize} total={data?.total || 0} onPageChange={setPage} />
-          </>
-        )}
-      </SectionCard>
+      <div className="mb-3">
+        <DataToolbar
+          search={undefined}
+          filters={
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                {REVIEW_STATUSES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          }
+          onRefresh={() => listQuery.refetch()}
+          refreshing={listQuery.isFetching}
+        >
+          {canManage ? (
+            <Button onClick={() => setEarlyOpen(true)}>
+              <AtomIcon name="Zap" className="mr-2 h-4 w-4" />
+              Early review
+            </Button>
+          ) : null}
+        </DataToolbar>
+      </div>
+      <DataTable
+        rows={items}
+        rowKey={(r) => r.id}
+        loading={listQuery.isLoading}
+        minWidth="min-w-180"
+        onRowClick={(r) => router.push(`/progress-reviews/${r.id}`)}
+        empty={<EmptyState icon="Inbox" title="No reviews yet" description="Reviews appear here once started — threshold reviews from completed sessions or early reviews." />}
+        pagination={{ page: data?.page || page, pageSize: data?.pageSize || pageSize, total: data?.total || 0, onPageChange: setPage }}
+        columns={[
+          { id: "date", header: "Date", cell: (r) => <span className="font-medium">{formatDate(r.reviewDate)}</span> },
+          {
+            id: "patient", header: "Patient",
+            cell: (r) => (
+              <>
+                <p className="font-medium">{fullName(r.episode.patient)}</p>
+                <p className="text-xs text-muted-foreground">{r.episode.patient.patientCode}</p>
+              </>
+            ),
+          },
+          { id: "episode", header: "Episode", className: "max-w-56 truncate", cell: (r) => r.episode.title },
+          { id: "trigger", header: "Trigger sessions", align: "right", cell: (r) => <span className="tabular-nums">{r.triggerSessions}</span> },
+          { id: "decision", header: "Decision", cell: (r) => (r.decision ? <Badge variant="outline" className={DECISION_TONE[r.decision]}>{labelize(r.decision)}</Badge> : <span className="text-xs text-muted-foreground">—</span>) },
+          { id: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} /> },
+          { id: "therapist", header: "Therapist", cell: (r) => <span className="text-sm text-muted-foreground">{r.episode.therapist ? `${r.episode.therapist.firstName} ${r.episode.therapist.lastName}` : "—"}</span> },
+        ]}
+      />
 
       {/* Early review: pick any open episode */}
       <EpisodePickerDialog

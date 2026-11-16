@@ -29,10 +29,10 @@ export const GET = route(async (req) => {
   }
   if (firstName && lastName) {
     // SQLite `contains` is case-insensitive (LIKE) → casts a wide net, exact matching below
-    or.push({ AND: [{ firstName: { contains: firstName } }, { lastName: { contains: lastName } }] });
+    or.push({ AND: [{ firstName: { contains: firstName, mode: "insensitive" } }, { lastName: { contains: lastName, mode: "insensitive" } }] });
   }
   if (dobValid && lastName) {
-    or.push({ AND: [{ dateOfBirth: qDob as Date }, { lastName: { contains: lastName } }] });
+    or.push({ AND: [{ dateOfBirth: qDob as Date }, { lastName: { contains: lastName, mode: "insensitive" } }] });
   }
 
   if (or.length === 0) return json({ items: [] });

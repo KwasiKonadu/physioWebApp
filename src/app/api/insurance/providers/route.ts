@@ -28,7 +28,7 @@ export const GET = route(async (req) => {
   const where: Record<string, unknown> = { clinicId: auth.clinicId };
   if (active === "true") where.active = true;
   if (active === "false") where.active = false;
-  if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }];
+  if (search) where.OR = [{ name: { contains: search, mode: "insensitive" } }, { code: { contains: search, mode: "insensitive" } }];
 
   const [items, total] = await Promise.all([
     db.insuranceProvider.findMany({

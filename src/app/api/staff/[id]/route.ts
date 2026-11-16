@@ -136,6 +136,13 @@ export const PATCH = route(async (req, ctx) => {
   if (body.remunerationMethod !== undefined) { data.remunerationMethod = body.remunerationMethod; track("remunerationMethod", staff.remunerationMethod, body.remunerationMethod); }
   if (body.remunerationRateCents !== undefined) { data.remunerationRateCents = body.remunerationRateCents; track("remunerationRateCents", staff.remunerationRateCents, body.remunerationRateCents); }
 
+  // only therapists can be paid per session / per patient; everyone else is salaried
+  const willBeTherapist = (data.isTherapist as boolean | undefined) ?? staff.isTherapist;
+  if (!willBeTherapist && ((data.remunerationMethod as string | undefined) ?? staff.remunerationMethod) !== "FIXED") {
+    data.remunerationMethod = "FIXED";
+    if (body.remunerationRateCents === undefined) data.remunerationRateCents = null;
+  }
+
   if (Object.keys(data).length === 0) throw new ApiError(400, "No changes provided");
 
   const updated = await db.staffProfile.update({ where: { id: staff.id }, data: data as never });

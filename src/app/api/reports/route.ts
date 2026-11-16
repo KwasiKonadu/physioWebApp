@@ -3,6 +3,7 @@
 // "unique patients" = distinct patientId across those completed sessions.
 import { db, route, json, getQuery, ApiError, requirePermission } from "@/server/api-exports";
 import { PERMS, PAYMENT_METHODS } from "@/lib/constants";
+import { fixedSalaryForPeriod } from "@/lib/remuneration";
 
 const OPEN_EPISODE_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS", "AWAITING_PLAN", "ACTIVE_TREATMENT", "ON_HOLD", "UNDER_REVIEW"];
 const REPORT_TYPES = ["patients", "appointments", "clinical", "financial", "staff"] as const;
@@ -374,7 +375,7 @@ async function financialReport(clinicId: string, start: Date, end: Date) {
 }
 
 async function staffReport(clinicId: string, start: Date, end: Date) {
-  const [therapists, sessions, episodeRows] = await Promise.all([
+  const [therapists, sessions, episodeRows, salaried] = await Promise.all([
     db.staffProfile.findMany({
       where: { clinicId, isTherapist: true },
       select: { id: true, firstName: true, lastName: true, jobTitle: true, remunerationMethod: true, remunerationRateCents: true },
@@ -388,7 +389,13 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
       where: { clinicId, status: { in: OPEN_EPISODE_STATUSES }, therapistId: { not: null } },
       select: { therapistId: true },
     }),
+    // non-clinical staff on a monthly salary
+    db.staffProfile.findMany({
+      where: { clinicId, isTherapist: false, employmentStatus: { in: ["ACTIVE", "ON_LEAVE"] }, remunerationRateCents: { gt: 0 } },
+      select: { remunerationRateCents: true },
+    }),
   ]);
+  const salariesCents = salaried.reduce((sum, p) => sum + fixedSalaryForPeriod(p.remunerationRateCents || 0, start, end), 0);
 
   const per = new Map<string, { completedSessions: number; patients: Set<string> }>();
   for (const s of sessions) {
@@ -409,6 +416,7 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
     let computedCents: number | null = null;
     if (rateCents !== null && t.remunerationMethod === "PER_SESSION") computedCents = p.completedSessions * rateCents;
     else if (rateCents !== null && t.remunerationMethod === "PER_PATIENT") computedCents = uniquePatients * rateCents;
+    else if (rateCents !== null && t.remunerationMethod === "FIXED") computedCents = fixedSalaryForPeriod(rateCents, start, end);
     return {
       id: t.id,
       name: `${t.firstName} ${t.lastName}`,
@@ -427,7 +435,8 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
       therapists: therapists.length,
       totalCompletedSessions: sessions.length,
       uniquePatientsSeen: new Set(sessions.map((s) => s.patientId)).size,
-      estimatedRemunerationCents: rows.reduce((s, r) => s + (r.computedCents || 0), 0),
+      estimatedRemunerationCents: rows.reduce((s, r) => s + (r.computedCents || 0), 0) + salariesCents,
+      staffSalariesCents: salariesCents,
     },
     rows,
   };

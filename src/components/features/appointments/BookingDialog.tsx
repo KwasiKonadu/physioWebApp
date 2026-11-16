@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -83,25 +83,25 @@ function extractBundle(res: unknown): { patient: PatientOption | null; episodes:
 
 export function BookingDialog({ open, onOpenChange, presetPatientId, presetWalkIn, defaultDate, therapists }: BookingDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="custom-scrollbar max-h-[92vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{presetWalkIn ? "Book walk-in appointment" : "Book appointment"}</DialogTitle>
-          <DialogDescription>Schedule a session with a physiotherapist. Overlaps are rejected by the server.</DialogDescription>
-        </DialogHeader>
-        {open ? (
-          // keyed mount = fresh form state per opening, no reset effects needed
-          <BookingForm
-            key={`${presetPatientId || ""}|${presetWalkIn ? 1 : 0}|${defaultDate || ""}`}
-            onDone={() => onOpenChange(false)}
-            presetPatientId={presetPatientId || null}
-            presetWalkIn={!!presetWalkIn}
-            defaultDate={defaultDate || ymd(new Date())}
-            therapists={therapists}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <SidePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title={presetWalkIn ? "Book walk-in appointment" : "Book appointment"}
+      description="Schedule a session with a physiotherapist. Overlaps are rejected by the server."
+    >
+      {open ? (
+        // keyed mount = fresh form state per opening, no reset effects needed
+        <BookingForm
+          key={`${presetPatientId || ""}|${presetWalkIn ? 1 : 0}|${defaultDate || ""}`}
+          onDone={() => onOpenChange(false)}
+          presetPatientId={presetPatientId || null}
+          presetWalkIn={!!presetWalkIn}
+          defaultDate={defaultDate || ymd(new Date())}
+          therapists={therapists}
+        />
+      ) : null}
+    </SidePanel>
   );
 }
 
@@ -218,7 +218,8 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+        <SidePanelBody className="space-y-4">
         {errors.root?.message ? (
           <Alert variant="destructive">
             <AtomIcon name="AlertTriangle" className="h-4 w-4" />
@@ -287,7 +288,8 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
           {errors.patientId ? <p className="text-xs font-medium text-destructive">{errors.patientId.message}</p> : null}
         </div>
 
-        {/* episode */}
+        {/* episode + physiotherapist */}
+        <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
         <FormField
           control={form.control}
           name="episodeId"
@@ -296,7 +298,7 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               <FormLabel>Episode (optional)</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || undefined} disabled={!selectedPatientId}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder={selectedPatientId ? "Link a treatment episode" : "Select a patient first"} /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder={selectedPatientId ? "Link a treatment episode" : "Select a patient first"} /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {openEpisodes.length === 0 ? (
@@ -322,7 +324,7 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               <FormLabel>Physiotherapist</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || undefined}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select therapist" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select therapist" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {therapists.length === 0 ? (
@@ -339,8 +341,10 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
           )}
         />
 
-        {/* date + time + duration */}
-        <div className="grid grid-cols-2 gap-3">
+        </div>
+
+        {/* date + start time + duration */}
+        <div className="grid gap-3 sm:grid-cols-3 *:min-w-0">
           <FormField
             control={form.control}
             name="date"
@@ -363,7 +367,6 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               </FormItem>
             )}
           />
-        </div>
         <FormField
           control={form.control}
           name="duration"
@@ -372,7 +375,7 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               <FormLabel>Duration</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {DURATIONS.map((d) => (
@@ -384,6 +387,7 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
             </FormItem>
           )}
         />
+        </div>
 
         {/* purpose */}
         <FormField
@@ -394,7 +398,7 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               <FormLabel>Purpose</FormLabel>
               <Select onValueChange={field.onChange} value={field.value || undefined}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select purpose" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {[...APPOINTMENT_PURPOSES, "Other"].map((p) => (
@@ -442,17 +446,19 @@ function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate, thera
               <FormControl>
                 <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
               </FormControl>
-              <FormLabel className="!mt-0 text-sm font-normal">Walk-in patient (no prior booking)</FormLabel>
+              <FormLabel className="mt-0! text-sm font-normal">Walk-in patient (no prior booking)</FormLabel>
             </FormItem>
           )}
         />
 
-        <DialogFooter className="gap-2">
+        </SidePanelBody>
+
+        <SidePanelFooter className="justify-end">
           <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>
           <Button type="submit" disabled={createMutation.isPending}>
             {createMutation.isPending ? "Booking…" : "Book appointment"}
           </Button>
-        </DialogFooter>
+        </SidePanelFooter>
       </form>
     </Form>
   );

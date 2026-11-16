@@ -6,293 +6,23 @@ import { toast } from "sonner";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { DataTable } from "@/components/molecules/data-table";
 import { SectionCard } from "@/components/molecules/section-card";
 import { DetailGrid, DetailRow } from "@/components/molecules/detail-row";
-import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney, formatDateTime, relativeTime } from "@/lib/format";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
-import { PERMS, PAYMENT_METHODS, labelize } from "@/lib/constants";
-import {
-  ArrangementBadge, patientName, inputToCents, centsToInput,
-  type InvoiceDetail, type ProviderLite,
-} from "./billing-shared";
-
-function RecordPaymentDialog({
-  invoice,
-  open,
-  onClose,
-  defaultAmountCents,
-}: {
-  invoice: InvoiceDetail;
-  open: boolean;
-  onClose: () => void;
-  defaultAmountCents: number;
-}) {
-  const qc = useQueryClient();
-  const [amountText, setAmountText] = useState(() => centsToInput(defaultAmountCents));
-  const [method, setMethod] = useState("CASH");
-  const [reference, setReference] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const m = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/invoices/${invoice.id}/payments`, {
-        method: "POST",
-        json: { amountCents: inputToCents(amountText), method, reference: reference.trim() || undefined, notes: notes.trim() || undefined },
-      }),
-    onSuccess: () => {
-      toast.success("Payment recorded");
-      qc.invalidateQueries({ queryKey: ["billing"] });
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Record payment — {invoice.invoiceNumber}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Amount (₵)</Label>
-            <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
-            <p className="text-xs text-muted-foreground">
-              Outstanding balance {formatMoney(invoice.totalCents - invoice.paidCents)} · partial payments supported
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Method</Label>
-            <Select value={method} onValueChange={setMethod}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.filter((x) => x !== "INSURANCE").map((x) => <SelectItem key={x} value={x}>{labelize(x)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reference</Label>
-            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Receipt / transaction ref (optional)" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => m.mutate()} disabled={m.isPending || inputToCents(amountText) <= 0}>
-            {m.isPending ? "Saving…" : "Record payment"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RefundDialog({
-  invoice,
-  open,
-  onClose,
-}: {
-  invoice: InvoiceDetail;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [amountText, setAmountText] = useState(() => centsToInput(invoice.paidCents));
-  const [reason, setReason] = useState("");
-
-  const m = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/invoices/${invoice.id}/refunds`, {
-        method: "POST",
-        json: { amountCents: inputToCents(amountText), reason: reason.trim(), paymentId: undefined },
-      }),
-    onSuccess: () => {
-      toast.success("Refund recorded");
-      qc.invalidateQueries({ queryKey: ["billing"] });
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Issue a refund — {invoice.invoiceNumber}</AlertDialogTitle>
-          <AlertDialogDescription>
-            A separate refund record is created (payments are never deleted) and the invoice status is recalculated.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Refund amount (₵)</Label>
-            <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
-            <p className="text-xs text-muted-foreground">Maximum {formatMoney(invoice.paidCents)} (amount paid)</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reason *</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this refund being issued?" />
-          </div>
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-rose-600 hover:bg-rose-700"
-            disabled={m.isPending || inputToCents(amountText) <= 0 || reason.trim().length < 3}
-            onClick={(e) => { e.preventDefault(); m.mutate(); }}
-          >
-            {m.isPending ? "Processing…" : "Issue refund"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function CreateClaimDialog({
-  invoice,
-  open,
-  onClose,
-}: {
-  invoice: InvoiceDetail;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [providerId, setProviderId] = useState("");
-  const [notes, setNotes] = useState("");
-  const providersQ = useQuery({
-    queryKey: ["billing", "providers-all"],
-    queryFn: () => apiFetch<{ items: ProviderLite[] }>("/api/insurance/providers?pageSize=100"),
-    enabled: open,
-  });
-
-  const m = useMutation({
-    mutationFn: () =>
-      apiFetch<{ claim: { claimNumber: string } }>("/api/insurance/claims", {
-        method: "POST",
-        json: { invoiceId: invoice.id, providerId: providerId || undefined, notes: notes.trim() || undefined },
-      }),
-    onSuccess: (data: { claim: { claimNumber: string } }) => {
-      toast.success(`Claim ${data.claim.claimNumber} created`);
-      qc.invalidateQueries({ queryKey: ["billing"] });
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create insurance claim</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Invoice</span><span className="font-medium">{invoice.invoiceNumber}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Claimable (covered)</span><span className="font-medium tabular-nums text-sky-700">{formatMoney(invoice.insuranceCoveredCents)}</span></div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Provider</Label>
-            <Select value={providerId} onValueChange={setProviderId}>
-              <SelectTrigger><SelectValue placeholder="Auto-detect from invoice rates" /></SelectTrigger>
-              <SelectContent>
-                {(providersQ.data?.items || []).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Leave unset to infer from the rates applied on the invoice.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => m.mutate()} disabled={m.isPending}>{m.isPending ? "Creating…" : "Create claim"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ClaimInsurancePaymentDialog({
-  invoice,
-  open,
-  onClose,
-}: {
-  invoice: InvoiceDetail;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const claim = invoice.claim ?? null;
-  const remaining = invoice.totalCents - invoice.paidCents;
-  const [amountText, setAmountText] = useState(() =>
-    centsToInput(claim ? Math.min(remaining, claim.claimedCents - (claim.approvedCents || 0)) || remaining : remaining));
-  const [reference, setReference] = useState(claim?.claimNumber ?? "");
-
-  const m = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/insurance/claims/${claim?.id}`, {
-        method: "PATCH",
-        json: { action: "record_payment", amountCents: inputToCents(amountText), reference: reference.trim() || undefined },
-      }),
-    onSuccess: () => {
-      toast.success("Insurance payment recorded");
-      qc.invalidateQueries({ queryKey: ["billing"] });
-      onClose();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  if (!claim) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Record insurance payment — {claim.claimNumber}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Amount received (₵)</Label>
-            <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
-            <p className="text-xs text-muted-foreground">Outstanding on invoice {formatMoney(remaining)}</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reference</Label>
-            <Input value={reference} onChange={(e) => setReference(e.target.value)} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => m.mutate()} disabled={m.isPending || inputToCents(amountText) <= 0}>
-            {m.isPending ? "Saving…" : "Record payment"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { PERMS, labelize } from "@/lib/constants";
+import { ArrangementBadge, patientName, type InvoiceDetail } from "./billing-shared";
+import { RecordPaymentDialog, RefundDialog, CreateClaimDialog, ClaimInsurancePaymentDialog } from "./InvoiceDialogs";
 
 export default function InvoiceDetailSheet({
   invoiceId,
@@ -389,40 +119,42 @@ export default function InvoiceDetailSheet({
             </SectionCard>
 
             <SectionCard title="Line items" icon="List" description="Historical prices and insurance rates as billed" noPadding>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit</TableHead>
-                    {invoice.arrangement === "INSURANCE" && <TableHead className="text-right">Rate / Cover</TableHead>}
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.items.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell className="max-w-[220px]">
+              <DataTable
+                bare
+                maxHeight="max-h-none"
+                minWidth="min-w-0"
+                rows={invoice.items}
+                rowKey={(it) => it.id}
+                columns={[
+                  {
+                    id: "desc", header: "Description", className: "max-w-55",
+                    cell: (it) => (
+                      <>
                         <p className="truncate text-sm">{it.description}</p>
                         {it.coveredCents > 0 ? <p className="text-xs text-sky-700">Covered {formatMoney(it.coveredCents)}</p> : null}
-                      </TableCell>
-                      <TableCell className="text-right">{it.quantity}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatMoney(it.unitPriceCents)}</TableCell>
-                      {invoice.arrangement === "INSURANCE" && (
-                        <TableCell className="text-right text-xs">
-                          {it.appliedRateCents !== null && it.appliedRateCents !== undefined ? (
-                            <>
-                              {formatMoney(it.appliedRateCents)}
-                              {it.coveragePercent !== null && it.coveragePercent !== undefined ? ` · ${it.coveragePercent}%` : ""}
-                            </>
-                          ) : "—"}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right tabular-nums">{formatMoney(it.unitPriceCents * it.quantity)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </>
+                    ),
+                  },
+                  { id: "qty", header: "Qty", align: "right", cell: (it) => it.quantity },
+                  { id: "unit", header: "Unit", align: "right", cell: (it) => <span className="tabular-nums">{formatMoney(it.unitPriceCents)}</span> },
+                  ...(invoice.arrangement === "INSURANCE"
+                    ? [{
+                        id: "rate", header: "Rate / Cover", align: "right" as const,
+                        cell: (it: (typeof invoice.items)[number]) => (
+                          <span className="text-xs">
+                            {it.appliedRateCents !== null && it.appliedRateCents !== undefined ? (
+                              <>
+                                {formatMoney(it.appliedRateCents)}
+                                {it.coveragePercent !== null && it.coveragePercent !== undefined ? ` · ${it.coveragePercent}%` : ""}
+                              </>
+                            ) : "—"}
+                          </span>
+                        ),
+                      }]
+                    : []),
+                  { id: "total", header: "Total", align: "right", cell: (it) => <span className="tabular-nums">{formatMoney(it.unitPriceCents * it.quantity)}</span> },
+                ]}
+              />
               <Separator />
               <div className="space-y-1.5 px-4 py-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatMoney(invoice.subtotalCents)}</span></div>

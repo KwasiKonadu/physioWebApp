@@ -30,7 +30,7 @@ export const GET = route(async (req) => {
   if (active === "false") where.active = false;
   if (category) where.category = category;
   if (search) {
-    where.OR = [{ name: { contains: search } }, { description: { contains: search } }];
+    where.OR = [{ name: { contains: search, mode: "insensitive" } }, { description: { contains: search, mode: "insensitive" } }];
   }
 
   const [items, total, categories] = await Promise.all([

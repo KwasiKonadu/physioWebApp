@@ -28,14 +28,14 @@ export const GET = route(async (req) => {
     ...(status ? { status } : {}),
     ...(search ? {
       AND: tokenizedSearchAnd(search, (t) => [
-        { episode: { title: { contains: t } } },
+        { episode: { title: { contains: t, mode: "insensitive" } } },
         { episode: { patient: { OR: [
-          { firstName: { contains: t } },
-          { middleName: { contains: t } },
-          { lastName: { contains: t } },
-          { patientCode: { contains: t } },
+          { firstName: { contains: t, mode: "insensitive" } },
+          { middleName: { contains: t, mode: "insensitive" } },
+          { lastName: { contains: t, mode: "insensitive" } },
+          { patientCode: { contains: t, mode: "insensitive" } },
         ] } } },
-        { primaryComplaint: { contains: t } },
+        { primaryComplaint: { contains: t, mode: "insensitive" } },
       ]),
     } : {}),
   };

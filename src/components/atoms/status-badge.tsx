@@ -16,7 +16,7 @@ const toneClasses: Record<string, string> = {
 export function StatusBadge({ status, className, prefix }: { status?: string | null; className?: string; prefix?: string }) {
   const tone = STATUS_TONE[status || ""] || "neutral";
   return (
-    <Badge variant="outline" className={cn("font-medium", toneClasses[tone], className)}>
+    <Badge variant="outline" className={cn(toneClasses[tone], className)}>
       {prefix ? `${prefix} ` : ""}
       {labelize(status)}
     </Badge>

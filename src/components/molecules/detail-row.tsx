@@ -12,10 +12,13 @@ export function DetailRow({
   value?: React.ReactNode;
   className?: string;
 }) {
+  // container query: label sits beside the value only when this cell is wide enough, otherwise it stacks
   return (
-    <div className={cn("flex flex-col gap-0.5 py-1.5 sm:flex-row sm:items-baseline sm:gap-3", className)}>
-      <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:w-44">{label}</dt>
-      <dd className="min-w-0 flex-1 text-sm text-foreground">{value ?? "—"}</dd>
+    <div className={cn("@container min-w-0 py-1.5", className)}>
+      <div className="flex flex-col gap-0.5 @sm:flex-row @sm:items-baseline @sm:gap-3">
+        <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground @sm:w-40">{label}</dt>
+        <dd className="min-w-0 flex-1 wrap-break-word text-sm text-foreground">{value ?? "—"}</dd>
+      </div>
     </div>
   );
 }

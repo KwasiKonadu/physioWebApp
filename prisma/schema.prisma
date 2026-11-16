@@ -1,13 +1,14 @@
 // GMRS Physiotherapy Clinic Management System
-// SQLite adaptation: no native enums (string fields + TS constants), money stored as integer pesewas (GHS cents)
+// Postgres (Supabase): no native enums (string fields + TS constants), money stored as integer pesewas (GHS cents)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ===================== ORGANIZATION =====================

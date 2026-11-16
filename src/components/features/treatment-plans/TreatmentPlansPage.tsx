@@ -1,6 +1,7 @@
 "use client";
 // FEATURE: Treatment Plans module — plans list (filters, version expansion) → detail → wizard form
-import { Fragment, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +10,9 @@ import { Card } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { PageHeader } from "@/components/molecules/page-header";
 import { StatCard } from "@/components/molecules/stat-card";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
@@ -23,14 +22,7 @@ import { PERMS, PLAN_STATUSES } from "@/lib/constants";
 import { formatDate, fullName, relativeTime } from "@/lib/format";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
 import { plansApi } from "./plan-api";
-import { PlanDetail } from "./PlanDetail";
-import { PlanForm } from "./PlanForm";
 import type { PlanListItemDto } from "./types";
-
-type View =
-  | { kind: "list" }
-  | { kind: "detail"; planId: string }
-  | { kind: "form"; mode: "create" | "edit" | "revise"; sourcePlanId?: string };
 
 // ---- inline version-history peek (shared "plans.detail" query cache) ----
 function VersionPeek({ planId, onOpen }: { planId: string; onOpen: (id: string) => void }) {
@@ -133,7 +125,14 @@ export default function TreatmentPlansPage() {
   const clearOpts = useUIStore((s) => s.clearOpts);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [view, setView] = useState<View>({ kind: "list" });
+  const router = useRouter();
+  const openNew = () => {
+    const q = new URLSearchParams();
+    if (preselect.patientId) q.set("patientId", preselect.patientId);
+    if (preselect.episodeId) q.set("episodeId", preselect.episodeId);
+    const qs = q.toString();
+    router.push(qs ? `/treatment-plans/new?${qs}` : "/treatment-plans/new");
+  };
   const [status, setStatus] = useState("all");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -193,94 +192,13 @@ export default function TreatmentPlansPage() {
   const scoped = !!(scope.episodeId || scope.patientId);
   const toggleExpand = (id: string) => setExpanded((m) => ({ ...m, [id]: !m[id] }));
 
-  // ================= DETAIL =================
-  if (view.kind === "detail") {
-    return (
-      <div className="mx-auto max-w-6xl">
-        <PlanDetail
-          planId={view.planId}
-          onBack={() => setView({ kind: "list" })}
-          onEdit={() => setView({ kind: "form", mode: "edit", sourcePlanId: view.planId })}
-          onRevise={() => setView({ kind: "form", mode: "revise", sourcePlanId: view.planId })}
-          onOpenVersion={(id) => setView({ kind: "detail", planId: id })}
-        />
-      </div>
-    );
-  }
-
-  // ================= FORM =================
-  if (view.kind === "form") {
-    const title = view.mode === "create" ? "New treatment plan" : view.mode === "edit" ? "Edit plan draft" : "Revise treatment plan";
-    const subtitle = view.mode === "create"
-      ? "Define objectives, milestones, interventions and precautions"
-      : view.mode === "edit"
-        ? "Draft plans can be edited freely until activated"
-        : "Creates a new draft version — the currently active plan stays governing until you activate the revision";
-    return (
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-4 flex items-start gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setView({ kind: "list" })} aria-label="Back">
-            <AtomIcon name="ArrowLeft" className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
-          </div>
-        </div>
-        <PlanForm
-          mode={view.mode}
-          sourcePlanId={view.sourcePlanId || null}
-          preselectPatientId={preselect.patientId}
-          preselectEpisodeId={preselect.episodeId}
-          onDone={(plan) => setView({ kind: "detail", planId: plan.id })}
-          onCancel={() => setView({ kind: "list" })}
-        />
-      </div>
-    );
-  }
-
   // ================= LIST =================
   return (
-    <div className="mx-auto max-w-7xl">
+    <div>
       <PageHeader
         title="Treatment Plans"
         description="Versioned rehabilitation plans with objectives, milestones and precautions"
         icon="Map"
-        actions={canManage ? (
-          <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => setView({ kind: "form", mode: "create" })}>
-            <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
-          </Button>
-        ) : undefined}
-        filters={
-          <DataToolbar
-            search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search patient name or code…" }}
-            filters={
-              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {PLAN_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            }
-            onRefresh={() => listQuery.refetch()}
-            refreshing={listQuery.isFetching}
-          >
-            {scoped ? (
-              <Badge variant="outline" className="bg-sky-50 text-sky-700">
-                {scope.episodeId ? "scoped to episode" : "scoped to patient"}
-                <button
-                  type="button"
-                  className="ml-1 inline-flex text-sky-700 hover:text-sky-900"
-                  onClick={() => { setScope({}); setPreselect({}); setPage(1); }}
-                  aria-label="Clear scope filter"
-                >
-                  <AtomIcon name="X" className="h-3 w-3" />
-                </button>
-              </Badge>
-            ) : null}
-          </DataToolbar>
-        }
       />
 
       {/* stats */}
@@ -291,105 +209,111 @@ export default function TreatmentPlansPage() {
         <StatCard label="Under review" value={statsQuery.data?.review ?? "—"} icon="SearchCheck" tone="sky" loading={statsQuery.isLoading} onClick={() => setStatus("UNDER_REVIEW")} />
       </div>
 
-      <Card className="overflow-hidden py-0 shadow-sm">
-        {/* desktop table */}
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead>Patient</TableHead>
-                <TableHead>Episode</TableHead>
-                <TableHead className="w-14">Ver</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Objectives</TableHead>
-                <TableHead>Review</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listQuery.isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={10}><Skeleton className="h-10 w-full" /></TableCell>
-                  </TableRow>
-                ))
-              ) : items.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="p-0">
-                    <div className="p-6">
-                      <EmptyState
-                        icon="Map"
-                        title="No treatment plans found"
-                        description={scoped || status !== "all" || search ? "Try adjusting the filters, or create a new plan." : "Create the first plan for an episode that has a completed assessment."}
-                        action={canManage ? (
-                          <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => setView({ kind: "form", mode: "create" })}>
-                            <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
-                          </Button>
-                        ) : undefined}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                items.map((item) => (
-                  <Fragment key={item.id}>
-                    <TableRow
-                      className="cursor-pointer hover:bg-slate-50/80"
-                      onClick={() => setView({ kind: "detail", planId: item.id })}
-                    >
-                      <TableCell>
-                        <p className="font-medium text-foreground">{fullName(item.episode.patient)}</p>
-                        <p className="font-mono text-xs text-muted-foreground">{item.episode.patient.patientCode}</p>
-                      </TableCell>
-                      <TableCell className="max-w-[220px]">
-                        <p className="truncate text-sm" title={item.episode.title}>{item.episode.title}</p>
-                        {item.episode.therapist ? (
-                          <p className="truncate text-xs text-muted-foreground">{fullName(item.episode.therapist)}</p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-navy-50 font-mono text-xs text-navy-800">v{item.version}</Badge>
-                      </TableCell>
-                      <TableCell><StatusBadge status={item.status} /></TableCell>
-                      <TableCell><ScheduleSummary item={item} /></TableCell>
-                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                        {formatDate(item.startDate)} → {formatDate(item.endDate)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          <span className="font-semibold text-teal-700">{item.objectivesAchieved}</span>
-                          <span className="text-muted-foreground">/{item.objectivesTotal}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell><ReviewIndicator item={item} /></TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{relativeTime(item.updatedAt)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7"
-                          onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }}
-                          aria-label="Toggle version history"
-                        >
-                          <AtomIcon name={expanded[item.id] ? "ChevronUp" : "ChevronDown"} className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expanded[item.id] ? (
-                      <TableRow key={`${item.id}-versions`}>
-                        <TableCell colSpan={10} className="bg-slate-50/60">
-                          <VersionPeek planId={item.id} onOpen={(id) => setView({ kind: "detail", planId: id })} />
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      <div className="mb-3">
+        <DataToolbar
+          search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search patient name or code…" }}
+          filters={
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+              <SelectTrigger className="w-45"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {PLAN_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          }
+          onRefresh={() => listQuery.refetch()}
+          refreshing={listQuery.isFetching}
+        >
+          {scoped ? (
+            <Badge variant="outline" className="bg-sky-50 text-sky-700">
+              {scope.episodeId ? "scoped to episode" : "scoped to patient"}
+              <button
+                type="button"
+                className="ml-1 inline-flex text-sky-700 hover:text-sky-900"
+                onClick={() => { setScope({}); setPreselect({}); setPage(1); }}
+                aria-label="Clear scope filter"
+              >
+                <AtomIcon name="X" className="h-3 w-3" />
+              </button>
+            </Badge>
+          ) : null}
+          {canManage ? (
+            <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => openNew()}>
+          <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
+        </Button>
+          ) : null}
+        </DataToolbar>
+      </div>
+      {/* desktop table */}
+      <div className="hidden md:block">
+        <DataTable
+          rows={items}
+          rowKey={(item) => item.id}
+          loading={listQuery.isLoading}
+          loadingRows={5}
+          minWidth="min-w-240"
+          onRowClick={(item) => router.push(`/treatment-plans/${item.id}`)}
+          expandedRow={(item) => (expanded[item.id] ? <VersionPeek planId={item.id} onOpen={(id) => router.push(`/treatment-plans/${id}`)} /> : null)}
+          empty={
+            <EmptyState
+              icon="Map"
+              title="No treatment plans found"
+              description={scoped || status !== "all" || search ? "Try adjusting the filters, or create a new plan." : "Create the first plan for an episode that has a completed assessment."}
+              action={canManage ? (
+                <Button onClick={() => openNew()}>
+                  <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
+                </Button>
+              ) : undefined}
+            />
+          }
+          pagination={listQuery.data && listQuery.data.total > 0 ? { page: listQuery.data.page, pageSize: listQuery.data.pageSize, total: listQuery.data.total, onPageChange: setPage, onPageSizeChange: setPageSize } : undefined}
+          columns={[
+            {
+              id: "patient", header: "Patient",
+              cell: (item) => (
+                <>
+                  <p className="font-medium text-foreground">{fullName(item.episode.patient)}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{item.episode.patient.patientCode}</p>
+                </>
+              ),
+            },
+            {
+              id: "episode", header: "Episode", className: "max-w-55",
+              cell: (item) => (
+                <>
+                  <p className="truncate text-sm" title={item.episode.title}>{item.episode.title}</p>
+                  {item.episode.therapist ? <p className="truncate text-xs text-muted-foreground">{fullName(item.episode.therapist)}</p> : null}
+                </>
+              ),
+            },
+            { id: "ver", header: "Ver", className: "w-14", cell: (item) => <Badge variant="outline" className="bg-navy-50 font-mono text-xs text-navy-800">v{item.version}</Badge> },
+            { id: "status", header: "Status", cell: (item) => <StatusBadge status={item.status} /> },
+            { id: "schedule", header: "Schedule", cell: (item) => <ScheduleSummary item={item} /> },
+            { id: "period", header: "Period", className: "whitespace-nowrap", cell: (item) => <span className="text-sm text-muted-foreground">{formatDate(item.startDate)} → {formatDate(item.endDate)}</span> },
+            {
+              id: "objectives", header: "Objectives",
+              cell: (item) => (
+                <span className="text-sm">
+                  <span className="font-semibold text-teal-700">{item.objectivesAchieved}</span>
+                  <span className="text-muted-foreground">/{item.objectivesTotal}</span>
+                </span>
+              ),
+            },
+            { id: "review", header: "Review", cell: (item) => <ReviewIndicator item={item} /> },
+            { id: "updated", header: "Updated", className: "whitespace-nowrap", cell: (item) => <span className="text-xs text-muted-foreground">{relativeTime(item.updatedAt)}</span> },
+            {
+              id: "expand", header: "", className: "w-10",
+              cell: (item) => (
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }} aria-label="Toggle version history">
+                  <AtomIcon name={expanded[item.id] ? "ChevronUp" : "ChevronDown"} className="h-4 w-4" />
+                </Button>
+              ),
+            },
+          ]}
+        />
+      </div>
 
+      <Card className="overflow-hidden py-0 shadow-sm md:hidden">
         {/* mobile cards */}
         <div className="space-y-3 p-3 md:hidden">
           {listQuery.isLoading ? (
@@ -400,7 +324,7 @@ export default function TreatmentPlansPage() {
               title="No treatment plans found"
               description="Adjust filters or create a new plan."
               action={canManage ? (
-                <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => setView({ kind: "form", mode: "create" })}>
+                <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => openNew()}>
                   <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
                 </Button>
               ) : undefined}
@@ -410,10 +334,10 @@ export default function TreatmentPlansPage() {
               <PlanRowMobile
                 key={item.id}
                 item={item}
-                onOpen={() => setView({ kind: "detail", planId: item.id })}
+                onOpen={() => router.push(`/treatment-plans/${item.id}`)}
                 onExpand={() => toggleExpand(item.id)}
                 isOpen={!!expanded[item.id]}
-                expanded={<VersionPeek planId={item.id} onOpen={(id) => setView({ kind: "detail", planId: id })} />}
+                expanded={<VersionPeek planId={item.id} onOpen={(id) => router.push(`/treatment-plans/${id}`)} />}
               />
             ))
           )}

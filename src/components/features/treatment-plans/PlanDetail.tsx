@@ -1,6 +1,8 @@
 "use client";
 // FEATURE: Treatment plan detail — header actions + schedule/objectives/milestones/interventions/precautions/versions
-import { useMemo, useState } from "react";
+import { DataTable } from "@/components/molecules/data-table";
+import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,9 +13,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { SectionCard } from "@/components/molecules/section-card";
 import { DetailRow, DetailGrid } from "@/components/molecules/detail-row";
 import { StatusBadge } from "@/components/atoms/status-badge";
@@ -24,100 +23,8 @@ import { formatDate, formatDateTime, relativeTime, fullName } from "@/lib/format
 import { PERMS } from "@/lib/constants";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
 import { plansApi } from "./plan-api";
-import type { PlanObjectiveDto, PlanVersionDto } from "./types";
 
-const PRIORITY_TONE: Record<string, string> = {
-  HIGH: "bg-rose-50 text-rose-700 border-rose-200",
-  MEDIUM: "bg-amber-50 text-amber-700 border-amber-200",
-  LOW: "bg-slate-100 text-slate-600 border-slate-200",
-};
-
-function ObjectiveRow({ objective }: { objective: PlanObjectiveDto }) {
-  const hasMeasure = objective.baseline || objective.target;
-  return (
-    <div className="rounded-lg border bg-white/60 p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 text-sm font-medium text-foreground">{objective.description}</p>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {objective.priority ? (
-            <Badge variant="outline" className={`text-[10px] font-semibold uppercase ${PRIORITY_TONE[objective.priority] || ""}`}>
-              {objective.priority}
-            </Badge>
-          ) : null}
-          <StatusBadge status={objective.status} />
-        </div>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {hasMeasure ? (
-          <span className="inline-flex items-center gap-1">
-            <span className="font-medium text-slate-500">{objective.baseline || "—"}</span>
-            <AtomIcon name="ArrowRight" className="h-3 w-3" />
-            <span className="font-semibold text-teal-700">{objective.target || "—"}</span>
-            {objective.unit ? <span className="text-slate-400">{objective.unit}</span> : null}
-          </span>
-        ) : null}
-        {objective.expectedDate ? (
-          <span className="inline-flex items-center gap-1">
-            <AtomIcon name="CalendarDays" className="h-3 w-3" /> due {formatDate(objective.expectedDate)}
-          </span>
-        ) : null}
-      </div>
-      {objective.notes ? <p className="mt-1.5 text-xs text-muted-foreground italic">{objective.notes}</p> : null}
-    </div>
-  );
-}
-
-function VersionHistory({ versions, currentId, onOpen }: {
-  versions: PlanVersionDto[];
-  currentId: string;
-  onOpen: (id: string) => void;
-}) {
-  const ordered = useMemo(() => [...versions].sort((a, b) => b.version - a.version), [versions]);
-  const versionLabel = (id: string) => {
-    const v = versions.find((x) => x.id === id);
-    return v ? `v${v.version}` : "earlier version";
-  };
-  return (
-    <ol className="relative space-y-3 border-l border-slate-200 pl-5">
-      {ordered.map((v) => {
-        const isCurrent = v.id === currentId;
-        return (
-          <li key={v.id} className="relative">
-            <span
-              className={`absolute -left-[26px] top-2 h-2.5 w-2.5 rounded-full border-2 ${
-                isCurrent ? "border-teal-600 bg-teal-500" : "border-slate-300 bg-white"
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => onOpen(v.id)}
-              className={`flex w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                isCurrent ? "border-teal-200 bg-teal-50/60" : "border-slate-200 bg-white hover:bg-slate-50"
-              }`}
-            >
-              <span className="text-sm font-semibold text-foreground">v{v.version}</span>
-              <StatusBadge status={v.status} />
-              {isCurrent ? <Badge className="bg-teal-600 text-[10px] text-white">Viewing</Badge> : null}
-              <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(v.createdAt)}</span>
-              {v.activatedAt ? (
-                <span className="w-full text-xs text-muted-foreground">
-                  <AtomIcon name="Zap" className="mr-1 inline h-3 w-3 text-amber-500" />
-                  activated {relativeTime(v.activatedAt)}
-                </span>
-              ) : null}
-              {v.revisedFromId ? (
-                <span className="w-full text-xs text-slate-500">
-                  <AtomIcon name="GitBranch" className="mr-1 inline h-3 w-3" />
-                  revised from {versionLabel(v.revisedFromId)}
-                </span>
-              ) : null}
-            </button>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
+import { ObjectiveRow, VersionHistory } from "./PlanDetailParts";
 
 export function PlanDetail({
   planId, onBack, onEdit, onRevise, onOpenVersion,
@@ -190,17 +97,17 @@ export function PlanDetail({
 
   return (
     <div className="space-y-4">
+      <PageBreadcrumb items={[{ label: "Treatment Plans", onClick: onBack }, { label: `${fullName(plan.episode.patient)} — v${plan.version}` }]} />
       {/* ---- header ---- */}
       <div className="rounded-xl border bg-white shadow-sm">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <Button variant="ghost" size="icon" className="mt-0.5 shrink-0" onClick={onBack} aria-label="Back to plans">
-              <AtomIcon name="ArrowLeft" className="h-4 w-4" />
-            </Button>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg font-semibold text-foreground">
-                  {fullName(plan.episode.patient)}
+                <h2 className="min-w-0 truncate text-lg font-semibold text-foreground">
+                  <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: plan.episode.patient.id })}>
+                    {fullName(plan.episode.patient)}
+                  </button>
                 </h2>
                 <Badge variant="outline" className="font-mono text-xs">{plan.episode.patient.patientCode}</Badge>
                 <Badge variant="outline" className="bg-navy-50 text-xs font-semibold text-navy-800">v{plan.version}</Badge>
@@ -352,38 +259,20 @@ export function PlanDetail({
         </SectionCard>
 
         <SectionCard title="Interventions" icon="ClipboardList" className="lg:col-span-2">
-          {plan.interventions.length === 0 ? (
-            <EmptyStateCompact message="No interventions defined" />
-          ) : (
-            <div className="overflow-hidden rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead>Intervention</TableHead>
-                    <TableHead className="hidden md:table-cell">Description</TableHead>
-                    <TableHead>Frequency</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead className="hidden lg:table-cell">Instructions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plan.interventions.map((iv) => (
-                    <TableRow key={iv.id}>
-                      <TableCell className="font-medium text-foreground">{iv.name}</TableCell>
-                      <TableCell className="hidden max-w-[260px] truncate md:table-cell" title={iv.description || ""}>
-                        {iv.description || "—"}
-                      </TableCell>
-                      <TableCell>{iv.frequency || "—"}</TableCell>
-                      <TableCell>{iv.duration || "—"}</TableCell>
-                      <TableCell className="hidden max-w-[280px] lg:table-cell" title={iv.instructions || ""}>
-                        {iv.instructions || "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            maxHeight="max-h-none"
+            minWidth="min-w-0"
+            rows={plan.interventions}
+            rowKey={(iv) => iv.id}
+            empty={<EmptyStateCompact message="No interventions defined" />}
+            columns={[
+              { id: "name", header: "Intervention", cell: (iv) => <span className="font-medium text-foreground">{iv.name}</span> },
+              { id: "desc", header: "Description", hideBelow: "md", className: "max-w-65 truncate", cell: (iv) => <span title={iv.description || ""}>{iv.description || "—"}</span> },
+              { id: "freq", header: "Frequency", cell: (iv) => iv.frequency || "—" },
+              { id: "dur", header: "Duration", cell: (iv) => iv.duration || "—" },
+              { id: "instr", header: "Instructions", hideBelow: "lg", className: "max-w-70", cell: (iv) => <span title={iv.instructions || ""}>{iv.instructions || "—"}</span> },
+            ]}
+          />
         </SectionCard>
 
         <SectionCard title="Version history" icon="History" className="lg:col-span-2">

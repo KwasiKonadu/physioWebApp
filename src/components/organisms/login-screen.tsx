@@ -82,7 +82,7 @@ export function LoginScreen() {
       </div>
 
       {/* Sign-in panel */}
-      <div className="flex w-full items-center justify-center bg-white p-8 lg:w-[480px] lg:rounded-l-3xl lg:shadow-2xl">
+      <div className="flex w-full items-center justify-center bg-white p-8 lg:w-120 lg:rounded-l-3xl lg:shadow-2xl">
         <div className="w-full max-w-sm">
           <h2 className="text-xl font-bold text-navy-800">Sign in</h2>
           <p className="mt-1 text-sm text-muted-foreground">Use your clinic account credentials.</p>

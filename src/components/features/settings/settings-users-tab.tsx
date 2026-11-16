@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
-import { SectionCard } from "@/components/molecules/section-card";
+import ManageRolesDialog from "./settings-roles-tab";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -18,12 +19,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 interface UserRow {
   id: string;
@@ -40,7 +37,18 @@ interface RolesData {
   items: { id: string; name: string; description: string | null; permissions: string[]; system: boolean; userCount: number }[];
   allPerms: string[];
 }
-interface StaffRow { id: string; firstName: string; lastName: string; staffCode: string; jobTitle: string }
+interface StaffRow {
+  id: string; firstName: string; lastName: string; staffCode: string; jobTitle: string;
+  name?: string; email?: string | null; staffRole?: string; hasAccount?: boolean;
+}
+
+// system role created for each staff role (see ROLE_NAMES)
+const STAFF_ROLE_TO_ROLE_NAME: Record<string, string> = {
+  ADMIN: "Clinic Administrator",
+  RECEPTIONIST: "Receptionist",
+  PHYSIOTHERAPIST: "Physiotherapist",
+  MANAGEMENT: "Management",
+};
 
 interface Props {
   highlightEmail: string | null;
@@ -52,13 +60,14 @@ export default function SettingsUsersTab({ highlightEmail }: Props) {
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<UserRow | null>(null);
+  const [rolesOpen, setRolesOpen] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 350);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["users", "list", search],
     queryFn: () => apiFetch<{ items: UserRow[]; total: number; roles: { id: string; name: string; system: boolean; description: string | null }[] }>(
       `/api/users?pageSize=100${search ? `&search=${encodeURIComponent(search)}` : ""}`
@@ -87,88 +96,70 @@ export default function SettingsUsersTab({ highlightEmail }: Props) {
   const users = data?.items || [];
 
   return (
-    <div className="space-y-6">
-      <SectionCard
-        title="User accounts"
-        icon="Users"
-        description="Login accounts and role assignments. Deactivated users cannot sign in."
-        noPadding
-        actions={
-          <Button size="sm" className="bg-navy-800 hover:bg-navy-900" onClick={() => setAddOpen(true)}>
-            <AtomIcon name="UserPlus" className="mr-1.5 h-3.5 w-3.5" /> Add user
-          </Button>
-        }
+    <div className="space-y-4">
+      <DataToolbar
+        search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search name or email…" }}
+        onRefresh={() => void qc.invalidateQueries({ queryKey: ["users"] })}
+        refreshing={isFetching}
       >
-        <div className="p-4 pb-2">
-          <DataToolbar
-            search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search name or email…" }}
-          />
-        </div>
-        {isLoading ? (
-          <div className="space-y-2 p-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-10 animate-pulse rounded bg-muted" />)}
-          </div>
-        ) : users.length === 0 ? (
-          <div className="p-4"><EmptyState icon="Users" title="No users found" /></div>
-        ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="hidden md:table-cell">Staff link</TableHead>
-                  <TableHead className="hidden lg:table-cell">Created</TableHead>
-                  <TableHead className="text-center">Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow
-                    key={u.id}
-                    className={cn(
-                      highlightEmail && u.email === highlightEmail && "bg-teal-50/60 ring-1 ring-inset ring-teal-300"
-                    )}
-                  >
-                    <TableCell>
-                      <p className="flex items-center gap-2 text-sm font-medium">
-                        {u.name}
-                        {highlightEmail && u.email === highlightEmail && (
-                          <Badge variant="outline" className="border-teal-300 bg-teal-100 text-teal-800">You</Badge>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground sm:hidden">{u.email}</p>
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{u.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-navy-50 text-navy-800">{u.roleName}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                      {u.staffName || <span className="text-xs">— not linked —</span>}
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{formatDate(u.createdAt)}</TableCell>
-                    <TableCell className="text-center">
-                      <Switch
-                        checked={u.active}
-                        onCheckedChange={(v) => setInactive.mutate({ id: u.id, active: v })}
-                        disabled={setInactive.isPending}
-                        aria-label={`Toggle ${u.email}`}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(u)} aria-label="Edit user">
-                        <AtomIcon name="Pencil" className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </SectionCard>
+        <Button variant="outline" onClick={() => setRolesOpen(true)}>
+          <AtomIcon name="ShieldCheck" className="mr-2 h-4 w-4" /> Manage roles
+        </Button>
+        <Button onClick={() => setAddOpen(true)}>
+          <AtomIcon name="UserPlus" className="mr-2 h-4 w-4" /> Add user
+        </Button>
+      </DataToolbar>
+
+      <DataTable
+        rows={users}
+        rowKey={(u: UserRow) => u.id}
+        loading={isLoading}
+        loadingRows={4}
+        minWidth="min-w-160"
+        rowClassName={(u) => (highlightEmail && u.email === highlightEmail ? "bg-teal-50/60 ring-1 ring-inset ring-teal-300" : undefined)}
+        empty={<EmptyState icon="Users" title="No users found" />}
+        columns={[
+          {
+            id: "user", header: "User",
+            cell: (u) => (
+              <>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {u.name}
+                  {highlightEmail && u.email === highlightEmail && (
+                    <Badge variant="outline" className="border-teal-300 bg-teal-100 text-teal-800">You</Badge>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground sm:hidden">{u.email}</p>
+              </>
+            ),
+          },
+          { id: "email", header: "Email", hideBelow: "sm", cell: (u) => <span className="text-sm text-muted-foreground">{u.email}</span> },
+          { id: "role", header: "Role", cell: (u) => <Badge variant="outline" className="bg-navy-50 text-navy-800">{u.roleName}</Badge> },
+          { id: "staff", header: "Staff link", hideBelow: "md", cell: (u) => <span className="text-sm text-muted-foreground">{u.staffName || <span className="text-xs">— not linked —</span>}</span> },
+          { id: "created", header: "Created", hideBelow: "lg", cell: (u) => <span className="text-sm text-muted-foreground">{formatDate(u.createdAt)}</span> },
+          {
+            id: "active", header: "Active", align: "center",
+            cell: (u) => (
+              <Switch
+                checked={u.active}
+                onCheckedChange={(v) => setInactive.mutate({ id: u.id, active: v })}
+                disabled={setInactive.isPending}
+                aria-label={`Toggle ${u.email}`}
+              />
+            ),
+          },
+          {
+            id: "actions", header: "Actions", align: "right",
+            cell: (u) => (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(u)} aria-label="Edit user">
+                <AtomIcon name="Pencil" className="h-4 w-4" />
+              </Button>
+            ),
+          },
+        ]}
+      />
+
+      <ManageRolesDialog open={rolesOpen} onClose={() => setRolesOpen(false)} />
 
       <AddUserDialog open={addOpen} onClose={() => setAddOpen(false)} roles={rolesData?.items || []} staff={staffData?.items || []} />
       <EditUserDialog target={editTarget} onClose={() => setEditTarget(null)} roles={rolesData?.items || []} />
@@ -191,6 +182,24 @@ function AddUserDialog({ open, onClose, roles, staff }: {
   const [saving, setSaving] = useState(false);
 
   const reset = () => { setEmail(""); setName(""); setPassword(""); setRoleId(""); setStaffId("NONE"); };
+
+  // staff who don't have a login yet
+  const available = staff.filter((s) => !s.hasAccount);
+
+  // picking a staff member fills in the rest from their profile
+  const pickStaff = (id: string) => {
+    setStaffId(id);
+    if (id === "NONE") return;
+    const st = staff.find((s) => s.id === id);
+    if (!st) return;
+    setName(st.name || `${st.firstName} ${st.lastName}`);
+    setEmail(st.email || "");
+    const roleName = st.staffRole ? STAFF_ROLE_TO_ROLE_NAME[st.staffRole] : undefined;
+    const match = roles.find((r) => r.name === roleName);
+    if (match) setRoleId(match.id);
+  };
+
+  const close = () => { reset(); onClose(); };
 
   const submit = async () => {
     if (!email.includes("@")) { toast.error("Enter a valid email"); return; }
@@ -215,13 +224,29 @@ function AddUserDialog({ open, onClose, roles, staff }: {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
+    <Dialog open={open} onOpenChange={(v) => (!v ? close() : null)}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add user</DialogTitle>
           <DialogDescription>Create a login account and assign a role.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          <Labeled label="Link to staff profile">
+            <Select value={staffId} onValueChange={pickStaff}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">— None —</SelectItem>
+                {available.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName} · {s.staffCode}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {staffId === "NONE"
+                ? "Pick a staff member to fill in the name, email and role, or leave as None to enter them yourself."
+                : "Name, email and role were filled from the staff profile — you can still change them."}
+            </p>
+          </Labeled>
           <Labeled label="Email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@gmrsphysio.com.gh" />
           </Labeled>
@@ -233,27 +258,16 @@ function AddUserDialog({ open, onClose, roles, staff }: {
           </Labeled>
           <Labeled label="Role">
             <Select value={roleId} onValueChange={setRoleId}>
-              <SelectTrigger><SelectValue placeholder="Choose a role" /></SelectTrigger>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Choose a role" /></SelectTrigger>
               <SelectContent>
                 {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </Labeled>
-          <Labeled label="Link to staff profile (optional)">
-            <Select value={staffId} onValueChange={setStaffId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="NONE">— None —</SelectItem>
-                {staff.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName} · {s.staffCode}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Labeled>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => void submit()} disabled={saving} className="bg-navy-800 hover:bg-navy-900">
+          <Button variant="outline" onClick={close}>Cancel</Button>
+          <Button onClick={() => void submit()} disabled={saving}>
             {saving ? "Creating…" : "Create user"}
           </Button>
         </DialogFooter>
@@ -273,13 +287,15 @@ function EditUserDialog({ target, onClose, roles }: {
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const [prevTarget, setPrevTarget] = useState(target);
+  if (target !== prevTarget) {
+    setPrevTarget(target);
     if (target) {
       setName(target.name);
       setRoleId(target.roleId);
       setPassword("");
     }
-  }, [target]);
+  }
 
   const submit = async () => {
     if (!target) return;

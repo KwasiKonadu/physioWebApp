@@ -1,14 +1,18 @@
 "use client";
 // FEATURE: full-page progress review form — baseline context (A), updated assessment (B),
 // baseline comparison (C), objective evaluation (D), summary (E), decision (F), sign & complete (G).
-import { useEffect, useMemo, useState } from "react";
+import { DataTable } from "@/components/molecules/data-table";
+import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Controller, useForm, useFieldArray } from "react-hook-form";
+import { Controller, useForm, useFieldArray, useWatch } from "react-hook-form";
 import { apiFetch } from "@/lib/api-client";
-import { formatDate, fullName } from "@/lib/format";
+import { formatDate, fullName, initials } from "@/lib/format";
 import { REVIEW_DECISIONS, REVIEW_RESULT_STATUSES, labelize, PERMS } from "@/lib/constants";
-import { useAuthStore, hasPermission, useUIStore } from "@/stores/app-store";
+import { useAuthStore, hasPermission, useUIStore, setNavGuard } from "@/stores/app-store";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/molecules/page-header";
 import { SectionCard } from "@/components/molecules/section-card";
@@ -114,12 +117,31 @@ function buildDefaults(data: ReviewDetailResponse, signatureFallback: string): R
 }
 
 // ---------- Read-only section A: previous clinical info ----------
+// Colour-codes a 0–10 pain score: green (none/mild) → amber (moderate) → red (severe)
+function painTone(v: number | null | undefined): { box: string; text: string; label: string } {
+  if (v === null || v === undefined) return { box: "border-slate-200 bg-slate-50", text: "text-slate-500", label: "Not recorded" };
+  if (v === 0) return { box: "border-emerald-200 bg-emerald-50", text: "text-emerald-700", label: "No pain" };
+  if (v <= 3) return { box: "border-lime-200 bg-lime-50", text: "text-lime-700", label: "Mild" };
+  if (v <= 6) return { box: "border-amber-200 bg-amber-50", text: "text-amber-700", label: "Moderate" };
+  if (v <= 8) return { box: "border-orange-200 bg-orange-50", text: "text-orange-700", label: "Severe" };
+  return { box: "border-red-200 bg-red-50", text: "text-red-700", label: "Very severe" };
+}
+function PainChip({ label, value }: { label: string; value: number | null | undefined }) {
+  const t = painTone(value);
+  return (
+    <span title={t.label} className="whitespace-nowrap">
+      <span className="text-muted-foreground">{label} </span>
+      <span className={`font-semibold ${t.text}`}>{value === null || value === undefined ? "—" : `${value}/10`}</span>
+    </span>
+  );
+}
+
 function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
   const a = baseline.assessment;
   const plan = baseline.plan;
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 *:min-w-0">
         <SectionCard title="Initial assessment summary" icon="ClipboardList" description={a ? formatDate(a.assessmentDate) : "No completed assessment yet"}>
           {a ? (
             <div className="space-y-1">
@@ -128,7 +150,16 @@ function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
               <DetailRow label="Duration / onset" value={[a.duration, labelize(a.onset)].filter(Boolean).join(" · ") || "—"} />
               <DetailRow label="Cause" value={a.cause} />
               <DetailRow label="Aggravating / relieving" value={[a.aggravating, a.relieving].filter(Boolean).join("  |  ") || "—"} />
-              <DetailRow label="Pain (current / worst / lowest)" value={[a.pain.current, a.pain.worst, a.pain.lowest].map((v) => (v === null || v === undefined ? "—" : `${v}/10`)).join(" / ")} />
+              <DetailRow
+                label="Pain"
+                value={
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    <PainChip label="Current" value={a.pain.current} />
+                    <PainChip label="Worst" value={a.pain.worst} />
+                    <PainChip label="Lowest" value={a.pain.lowest} />
+                  </span>
+                }
+              />
               <DetailRow label="Vitals" value={[
                 a.vitals.bloodPressure, a.vitals.heartRate && `${a.vitals.heartRate} bpm`, a.vitals.weightKg && `${a.vitals.weightKg} kg`, a.vitals.heightCm && `${a.vitals.heightCm} cm`,
               ].filter(Boolean).join(" · ") || "—"} />
@@ -164,9 +195,9 @@ function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Baseline measurements" icon="Ruler" description={a ? "From the initial assessment — compare against current values in section C" : undefined}>
+      <SectionCard title="Baseline measurements" icon="Ruler" description={a ? "From the initial assessment — compare against current values in Baseline vs current" : undefined}>
         {a ? (
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3 *:min-w-0">
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">ROM</p>
               {a.rom.length === 0 ? <p className="text-xs text-muted-foreground">None recorded</p> : (
@@ -275,6 +306,8 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
   const navigate = useUIStore((s) => s.navigate);
   const canManage = hasPermission(user, PERMS.clinicalManage);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const pendingLeave = useRef<(() => void) | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["review", reviewId],
@@ -382,6 +415,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
       qc.invalidateQueries({ queryKey: ["reviews"] });
       qc.invalidateQueries({ queryKey: ["review", reviewId] });
       qc.invalidateQueries({ queryKey: ["picker-episodes"] });
+      setNavGuard(null);
       const episodeId = review?.episodeId;
       if (values.decision === "REVISE_PLAN" && episodeId) {
         navigate("treatment-plans", { episodeId, focusTab: "revise" });
@@ -394,16 +428,34 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
     onError: (err: Error) => toast.error(err.message || "Could not complete review"),
   });
 
-  const decision = form.watch("decision");
-  const watchedComparison = form.watch("comparison");
-  const watchedResults = form.watch("objectiveResults");
+  const decision = useWatch({ control: form.control, name: "decision" });
+  const watchedComparison = useWatch({ control: form.control, name: "comparison" });
+  const watchedResults = useWatch({ control: form.control, name: "objectiveResults" });
 
   const handleSubmitComplete = () => {
     const values = form.getValues();
-    if (!values.decision) { toast.error("Select a review decision (section F) before completing"); return; }
-    if (!values.therapistSignature || values.therapistSignature.trim().length < 2) { toast.error("Enter your signature (section G) before completing"); return; }
+    if (!values.decision) { toast.error("Select a review decision before completing"); return; }
+    if (!values.therapistSignature || values.therapistSignature.trim().length < 2) { toast.error("Enter your signature before completing"); return; }
     complete.mutate(values);
   };
+
+  // ---- unsaved-changes protection (back button, breadcrumb, sidebar, tab close) ----
+  const dirty = form.formState.isDirty && data?.review?.status !== "COMPLETED";
+  const requestLeave = () => { if (dirty) setLeaveOpen(true); else onBack(); };
+  const finishLeave = () => {
+    setLeaveOpen(false);
+    setNavGuard(null);
+    const go = pendingLeave.current;
+    pendingLeave.current = null;
+    if (go) go(); else onBack();
+  };
+  useEffect(() => {
+    if (!dirty) return;
+    setNavGuard((proceed) => { pendingLeave.current = proceed; setLeaveOpen(true); return true; });
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => { setNavGuard(null); window.removeEventListener("beforeunload", h); };
+  }, [dirty]);
 
   const sessionPct = useMemo(() => {
     if (!review) return 0;
@@ -438,32 +490,44 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
 
   return (
     <div className="space-y-5">
+      <PageBreadcrumb items={[{ label: "Progress Reviews", onClick: requestLeave }, { label: `Review — ${fullName(review.episode.patient)}` }]} />
       <PageHeader
-        title={`Progress review — ${fullName(review.episode.patient)}`}
-        description={`${review.episode.title} · ${review.episode.patient.patientCode} · after ${review.triggerSessions} sessions${review.episode.therapist ? ` · therapist ${review.episode.therapist.firstName} ${review.episode.therapist.lastName}` : ""}`}
+        title="Progress review"
+        description="Re-assessment, objective evaluation and review decision"
         icon="TrendingUp"
-        actions={
-          <>
-            <Button variant="ghost" onClick={onBack}><span>← Back</span></Button>
-            {isCompleted ? (
-              <>
-                {decisionBadge}
-                <StatusBadge status={review.status} />
-              </>
-            ) : (
-              <>
-                <StatusBadge status={review.status} />
-                {canManage ? (
-                  <>
-                    <Button variant="outline" onClick={() => saveDraft.mutate(form.getValues())} disabled={saveDraft.isPending}>Save draft</Button>
-                    <Button onClick={() => setConfirmOpen(true)} disabled={complete.isPending}>Sign &amp; complete</Button>
-                  </>
-                ) : null}
-              </>
-            )}
-          </>
-        }
       />
+
+      {/* Summary card */}
+      <div className="rounded-xl border bg-card p-4 shadow-sm md:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar className="h-12 w-12 rounded-xl">
+              <AvatarFallback className="rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">{initials(fullName(review.episode.patient))}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: review.episode.patient.id })}>{fullName(review.episode.patient)}</button></h2>
+                <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{review.episode.patient.patientCode}</span>
+                <StatusBadge status={review.status} />
+              </div>
+              <p className="mt-0.5 truncate text-sm text-muted-foreground">{review.episode.title}</p>
+            </div>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:shrink-0">
+            {[
+              { l: "Trigger", v: `After ${review.triggerSessions} sessions` },
+              { l: "Since last review", v: `${review.episode.sessionsSinceReview}/${review.episode.reviewThreshold}` },
+              { l: "Therapist", v: review.episode.therapist ? fullName(review.episode.therapist) : "—" },
+              { l: "Decision", v: review.decision ? labelize(review.decision) : "Pending" },
+            ].map((x) => (
+              <div key={x.l} className="min-w-0">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+                <dd className="truncate text-sm font-semibold">{x.v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
 
       {!isCompleted && review.episode.reviewDue ? (
         <Alert className="border-amber-200 bg-amber-50 text-amber-800">
@@ -474,134 +538,108 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
         </Alert>
       ) : null}
 
+      <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+        <div className="flex min-w-0 flex-col gap-4">
       {/* A — Previous clinical info (read-only) */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">A · Previous clinical information</h2>
         <BaselineSection baseline={baseline} />
       </section>
 
-      {/* B — Updated clinical assessment */}
+      {/* F — Review decision */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">B · Updated clinical assessment</h2>
-        <SectionCard title="Re-assessment" icon="Activity" description="Current subjective and objective findings at review">
+        <SectionCard title="Decision" icon="Scale">
           {isCompleted ? (
             <div className="space-y-1">
-              <DetailRow label="Pain (current / worst)" value={[review.painCurrent, review.painWorst].map((v) => (v === null || v === undefined ? "—" : `${v}/10`)).join(" / ")} />
-              <DetailRow label="ROM summary" value={review.romSummary} />
-              <DetailRow label="Strength summary" value={review.strengthSummary} />
-              <DetailRow label="Functional summary" value={review.functionalSummary} />
-              <DetailRow label="Vitals" value={review.vitals} />
-              <DetailRow label="New findings" value={review.newFindings} />
+              <DetailRow label="Decision" value={decisionBadge} />
+              <DetailRow label="Decision notes" value={review.decisionNotes} />
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                 <Controller
                   control={form.control}
-                  name="painCurrent"
+                  name="decision"
                   render={({ field }) => (
-                    <div className="space-y-2">
-                      <Label>Pain now (0–10)</Label>
-                      <div className="flex items-center gap-3">
-                        <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
-                        <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.current ?? "—"}{baseline.assessment?.pain.current !== null && baseline.assessment?.pain.current !== undefined ? "/10" : ""}</p>
+                    <div className="space-y-1.5">
+                      <Label>Decision</Label>
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Select a decision…" /></SelectTrigger>
+                        <SelectContent>
+                          {REVIEW_DECISIONS.map((d) => <SelectItem key={d} value={d}>{labelize(d)}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 />
-                <Controller
-                  control={form.control}
-                  name="painWorst"
-                  render={({ field }) => (
-                    <div className="space-y-2">
-                      <Label>Pain at worst since last review (0–10)</Label>
-                      <div className="flex items-center gap-3">
-                        <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
-                        <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.worst ?? "—"}{baseline.assessment?.pain.worst !== null && baseline.assessment?.pain.worst !== undefined ? "/10" : ""}</p>
-                    </div>
-                  )}
-                />
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="romSummary">ROM summary</Label>
-                  <Textarea id="romSummary" rows={3} placeholder="e.g. Knee flexion (L) improved from 100° to 115° active…" {...form.register("romSummary")} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="strengthSummary">Strength summary</Label>
-                  <Textarea id="strengthSummary" rows={3} placeholder="e.g. Quadriceps (L) grade 3 → 4 MRC…" {...form.register("strengthSummary")} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="functionalSummary">Functional summary</Label>
-                  <Textarea id="functionalSummary" rows={3} placeholder="e.g. Walking 30m with quad stick; dressing with minimal help…" {...form.register("functionalSummary")} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="vitals">Vitals</Label>
-                  <Input id="vitals" placeholder="BP, HR, SpO₂, weight…" {...form.register("vitals")} />
-                  <div className="space-y-1.5 pt-2">
-                    <Label htmlFor="newFindings">New findings</Label>
-                    <Textarea id="newFindings" rows={2} placeholder="Any new observations since last review…" {...form.register("newFindings")} />
-                  </div>
+                  <Label htmlFor="decisionNotes">Decision notes</Label>
+                  <Input id="decisionNotes" placeholder="Optional notes supporting this decision…" {...form.register("decisionNotes")} />
                 </div>
               </div>
+              {decision === "REVISE_PLAN" ? (
+                <Alert className="border-sky-200 bg-sky-50 text-sky-800">
+                  <AlertTitle>Plan revision expected</AlertTitle>
+                  <AlertDescription>After completing, you will be taken to Treatment Plans to create the revised plan for this episode.</AlertDescription>
+                </Alert>
+              ) : null}
+              {decision === "DISCHARGE" ? (
+                <Alert className="border-rose-200 bg-rose-50 text-rose-800">
+                  <AlertTitle>Discharge workflow next</AlertTitle>
+                  <AlertDescription>After completing, you will be taken to Discharges to start the discharge record for this episode.</AlertDescription>
+                </Alert>
+              ) : null}
+              {decision === "REFER" ? (
+                <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+                  <AlertTitle>Referral</AlertTitle>
+                  <AlertDescription>Record the referral details in the decision notes and recommendations above.</AlertDescription>
+                </Alert>
+              ) : null}
             </div>
           )}
         </SectionCard>
       </section>
 
       {/* C — Baseline comparison */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">C · Baseline comparison</h2>
-        <SectionCard title="Baseline vs current" icon="GitCompareArrows" description="Prefilled from the initial assessment (and chained from the previous review) — record the current value of each metric">
+      <section className="flex flex-1 flex-col">
+        <SectionCard className="flex-1" title="Baseline vs current" icon="GitCompareArrows" description="Prefilled from the initial assessment (and chained from the previous review) — record the current value of each metric">
           {comparisonArray.fields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No comparison metrics — complete an initial assessment to prefill this table.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-56">Metric</TableHead>
-                    <TableHead className="w-32">Baseline</TableHead>
-                    <TableHead className="w-36">{isCompleted ? "Current" : "Current (edit)"}</TableHead>
-                    <TableHead className="w-36">Change</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {comparisonArray.fields.map((f, idx) => {
-                    const row = watchedComparison?.[idx];
-                    const change = changeFor(row);
+            <DataTable
+              bare
+              bordered
+              maxHeight="max-h-96"
+              minWidth="min-w-136"
+              rows={comparisonArray.fields}
+              rowKey={(f) => f.id}
+              columns={[
+                { id: "metric", header: "Metric", className: "min-w-56", cell: (_f, idx) => <span className="font-medium">{watchedComparison?.[idx]?.metric}</span> },
+                { id: "baseline", header: "Baseline", className: "w-32", cell: (_f, idx) => watchedComparison?.[idx]?.baseline },
+                {
+                  id: "current", header: isCompleted ? "Current" : "Current (edit)", className: "w-36",
+                  cell: (_f, idx) => isCompleted ? watchedComparison?.[idx]?.current || "—" : <Input placeholder="e.g. 90°" {...form.register(`comparison.${idx}.current` as const)} />,
+                },
+                {
+                  id: "change", header: "Change", className: "w-36",
+                  cell: (_f, idx) => {
+                    const change = changeFor(watchedComparison?.[idx]);
                     return (
-                      <TableRow key={f.id}>
-                        <TableCell className="font-medium">{row?.metric}</TableCell>
-                        <TableCell>{row?.baseline}</TableCell>
-                        <TableCell>
-                          {isCompleted ? (
-                            row?.current || "—"
-                          ) : (
-                            <Input placeholder="e.g. 90°" {...form.register(`comparison.${idx}.current` as const)} />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className={change.tone === "success" ? "text-xs font-medium text-emerald-600" : change.tone === "danger" ? "text-xs font-medium text-rose-600" : "text-xs text-muted-foreground"}>
-                            {change.text}
-                          </span>
-                        </TableCell>
-                      </TableRow>
+                      <span className={change.tone === "success" ? "text-xs font-medium text-emerald-600" : change.tone === "danger" ? "text-xs font-medium text-rose-600" : "text-xs text-muted-foreground"}>
+                        {change.text}
+                      </span>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                  },
+                },
+              ]}
+            />
           )}
         </SectionCard>
       </section>
 
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
       {/* D — Objective & milestone evaluation */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">D · Objective &amp; milestone evaluation</h2>
+      <section className="flex flex-col gap-4">
         <SectionCard title="Objective evaluation" icon="Target" description="Record current value and result per plan objective — completing the review updates objective statuses on the plan">
           {resultsArray.fields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No plan objectives to evaluate.</p>
@@ -625,7 +663,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
                         <DetailRow label="Notes" value={row?.notes || "—"} />
                       </DetailGrid>
                     ) : (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 *:min-w-0">
                         <div className="space-y-1.5">
                           <Label>Current value</Label>
                           <Input placeholder="e.g. 120°" {...form.register(`objectiveResults.${idx}.current` as const)} />
@@ -637,7 +675,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
                             name={`objectiveResults.${idx}.result` as const}
                             render={({ field }) => (
                               <Select value={field.value} onValueChange={field.onChange}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {REVIEW_RESULT_STATUSES.map((s) => <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>)}
                                 </SelectContent>
@@ -674,7 +712,6 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
 
       {/* E — Therapist summary */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">E · Therapist summary</h2>
         <SectionCard title="Clinical summary" icon="NotebookPen">
           {isCompleted ? (
             <div className="space-y-1">
@@ -685,7 +722,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
               <DetailRow label="Recommendations" value={review.recommendations} />
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2 *:min-w-0">
               <div className="space-y-1.5">
                 <Label htmlFor="improvements">Improvements</Label>
                 <Textarea id="improvements" rows={3} {...form.register("improvements")} />
@@ -711,72 +748,87 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
         </SectionCard>
       </section>
 
-      {/* F — Review decision */}
+      {/* B — Updated clinical assessment */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">F · Review decision</h2>
-        <SectionCard title="Decision" icon="Scale">
+        <SectionCard title="Re-assessment" icon="Activity" description="Current subjective and objective findings at review">
           {isCompleted ? (
             <div className="space-y-1">
-              <DetailRow label="Decision" value={decisionBadge} />
-              <DetailRow label="Decision notes" value={review.decisionNotes} />
+              <DetailRow label="Pain (current / worst)" value={[review.painCurrent, review.painWorst].map((v) => (v === null || v === undefined ? "—" : `${v}/10`)).join(" / ")} />
+              <DetailRow label="ROM summary" value={review.romSummary} />
+              <DetailRow label="Strength summary" value={review.strengthSummary} />
+              <DetailRow label="Functional summary" value={review.functionalSummary} />
+              <DetailRow label="Vitals" value={review.vitals} />
+              <DetailRow label="New findings" value={review.newFindings} />
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
                 <Controller
                   control={form.control}
-                  name="decision"
+                  name="painCurrent"
                   render={({ field }) => (
-                    <div className="space-y-1.5">
-                      <Label>Decision</Label>
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
-                        <SelectTrigger><SelectValue placeholder="Select a decision…" /></SelectTrigger>
-                        <SelectContent>
-                          {REVIEW_DECISIONS.map((d) => <SelectItem key={d} value={d}>{labelize(d)}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-2">
+                      <Label>Pain now (0–10)</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
+                        <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.current ?? "—"}{baseline.assessment?.pain.current !== null && baseline.assessment?.pain.current !== undefined ? "/10" : ""}</p>
                     </div>
                   )}
                 />
+                <Controller
+                  control={form.control}
+                  name="painWorst"
+                  render={({ field }) => (
+                    <div className="space-y-2">
+                      <Label>Pain at worst since last review (0–10)</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
+                        <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.worst ?? "—"}{baseline.assessment?.pain.worst !== null && baseline.assessment?.pain.worst !== undefined ? "/10" : ""}</p>
+                    </div>
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2 *:min-w-0">
                 <div className="space-y-1.5">
-                  <Label htmlFor="decisionNotes">Decision notes</Label>
-                  <Input id="decisionNotes" placeholder="Optional notes supporting this decision…" {...form.register("decisionNotes")} />
+                  <Label htmlFor="romSummary">ROM summary</Label>
+                  <Textarea id="romSummary" rows={3} placeholder="e.g. Knee flexion (L) improved from 100° to 115° active…" {...form.register("romSummary")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="strengthSummary">Strength summary</Label>
+                  <Textarea id="strengthSummary" rows={3} placeholder="e.g. Quadriceps (L) grade 3 → 4 MRC…" {...form.register("strengthSummary")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="functionalSummary">Functional summary</Label>
+                  <Textarea id="functionalSummary" rows={3} placeholder="e.g. Walking 30m with quad stick; dressing with minimal help…" {...form.register("functionalSummary")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="vitals">Vitals</Label>
+                  <Input id="vitals" placeholder="BP, HR, SpO₂, weight…" {...form.register("vitals")} />
+                  <div className="space-y-1.5 pt-2">
+                    <Label htmlFor="newFindings">New findings</Label>
+                    <Textarea id="newFindings" rows={2} placeholder="Any new observations since last review…" {...form.register("newFindings")} />
+                  </div>
                 </div>
               </div>
-              {decision === "REVISE_PLAN" ? (
-                <Alert className="border-sky-200 bg-sky-50 text-sky-800">
-                  <AlertTitle>Plan revision expected</AlertTitle>
-                  <AlertDescription>After completing, you will be taken to Treatment Plans to create the revised plan for this episode.</AlertDescription>
-                </Alert>
-              ) : null}
-              {decision === "DISCHARGE" ? (
-                <Alert className="border-rose-200 bg-rose-50 text-rose-800">
-                  <AlertTitle>Discharge workflow next</AlertTitle>
-                  <AlertDescription>After completing, you will be taken to Discharges to start the discharge record for this episode.</AlertDescription>
-                </Alert>
-              ) : null}
-              {decision === "REFER" ? (
-                <Alert className="border-amber-200 bg-amber-50 text-amber-800">
-                  <AlertTitle>Referral</AlertTitle>
-                  <AlertDescription>Record the referral details in the decision notes and recommendations above.</AlertDescription>
-                </Alert>
-              ) : null}
             </div>
           )}
         </SectionCard>
       </section>
 
       {/* G — Sign & complete */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">G · Sign &amp; complete</h2>
-        <SectionCard title="Therapist sign-off" icon="Signature" description={isCompleted ? `Completed ${formatDate(review.completedAt)}` : "Completing the review is final and resets the episode review counter"}>
+      <section className="flex flex-1 flex-col">
+        <SectionCard className="flex-1" title="Therapist sign-off" icon="Signature" description={isCompleted ? `Completed ${formatDate(review.completedAt)}` : "Completing the review is final and resets the episode review counter"}>
           {isCompleted ? (
             <div className="space-y-1">
               <DetailRow label="Signature" value={review.therapistSignature} />
               <DetailRow label="Completed at" value={formatDate(review.completedAt)} />
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
               <div className="space-y-1.5">
                 <Label htmlFor="therapistSignature">Therapist signature</Label>
                 <Input id="therapistSignature" placeholder="Type your full name to sign" {...form.register("therapistSignature")} />
@@ -793,6 +845,42 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
           )}
         </SectionCard>
       </section>
+
+        </div>
+      </div>
+
+      {!isCompleted && canManage ? (
+        <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Completing the review is final and resets the episode review counter.</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => saveDraft.mutate(form.getValues())} disabled={saveDraft.isPending}>
+                {saveDraft.isPending ? "Saving…" : "Save draft"}
+              </Button>
+              <Button size="sm" onClick={() => setConfirmOpen(true)} disabled={complete.isPending}>Sign &amp; complete</Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+
+      <Dialog open={leaveOpen} onOpenChange={(v) => { setLeaveOpen(v); if (!v) pendingLeave.current = null; }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave this review?</DialogTitle>
+            <DialogDescription>You have unsaved changes. Save a draft to keep them, or leave and discard them.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setLeaveOpen(false)}>Keep editing</Button>
+            <Button variant="outline" className="text-rose-600 hover:text-rose-700" onClick={finishLeave}>Discard &amp; leave</Button>
+            {canManage ? (
+              <Button disabled={saveDraft.isPending} onClick={() => saveDraft.mutate(form.getValues(), { onSuccess: finishLeave })}>
+                {saveDraft.isPending ? "Saving…" : "Save draft & leave"}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

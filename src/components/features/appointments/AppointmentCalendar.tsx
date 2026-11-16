@@ -79,6 +79,8 @@ function TimeBlock({ appt, lane, lanes, compact, onClick }: {
   const top = Math.max(0, (appt.startMin - GRID_START_MIN) * PX_PER_MIN);
   const height = Math.max(16, (Math.min(appt.endMin, GRID_END_MIN) - Math.max(appt.startMin, GRID_START_MIN)) * PX_PER_MIN - 2);
   const widthPct = 100 / lanes;
+  // a 30-minute slot is only ~26px tall: two text lines don't fit
+  const short = height < 40;
   return (
     <button
       type="button"
@@ -91,13 +93,25 @@ function TimeBlock({ appt, lane, lanes, compact, onClick }: {
       style={{ top, height, left: `calc(${lane * widthPct}% + 1px)`, width: `calc(${widthPct}% - 3px)` }}
       title={`${minutesToTime(appt.startMin)}–${minutesToTime(appt.endMin)} · ${patientName(appt)}`}
     >
-      <span className={cn("flex items-center gap-1 font-medium", tone.chip)}>
-        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)} />
-        <span className="truncate">{minutesToTime(appt.startMin)}</span>
-        {appt.walkIn ? <AtomIcon name="Zap" className="h-3 w-3 shrink-0" /> : null}
-      </span>
-      <span className={cn("block truncate font-medium", tone.chip)}>{compact ? appt.patient.lastName : patientName(appt)}</span>
-      {!compact && appt.purpose ? <span className="block truncate text-[10px] opacity-70">{appt.purpose}</span> : null}
+      {short ? (
+        // too short for two lines: time and name share one row
+        <span className={cn("flex h-full items-center gap-1 font-medium", tone.chip)}>
+          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)} />
+          <span className="shrink-0">{minutesToTime(appt.startMin)}</span>
+          {appt.walkIn ? <AtomIcon name="Zap" className="h-3 w-3 shrink-0" /> : null}
+          <span className="truncate">· {compact ? appt.patient.lastName : patientName(appt)}</span>
+        </span>
+      ) : (
+        <>
+          <span className={cn("flex items-center gap-1 font-medium", tone.chip)}>
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)} />
+            <span className="truncate">{minutesToTime(appt.startMin)}</span>
+            {appt.walkIn ? <AtomIcon name="Zap" className="h-3 w-3 shrink-0" /> : null}
+          </span>
+          <span className={cn("block truncate font-medium", tone.chip)}>{compact ? appt.patient.lastName : patientName(appt)}</span>
+          {!compact && appt.purpose && height >= 56 ? <span className="block truncate text-[10px] opacity-70">{appt.purpose}</span> : null}
+        </>
+      )}
     </button>
   );
 }
@@ -111,7 +125,7 @@ function DayGrid({ anchorDate, items, loading, onSelect }: Omit<CalendarProps, "
   const isToday = anchorKey === ymd(new Date());
   const showNowLine = isToday && nowMin() >= GRID_START_MIN && nowMin() <= GRID_END_MIN;
 
-  if (loading) return <Skeleton className="h-[480px] w-full" />;
+  if (loading) return <Skeleton className="h-120 w-full" />;
   if (dayItems.length === 0) {
     return <EmptyState icon="CalendarOff" title="No appointments scheduled" description="This day is clear — use “New appointment” to book a slot." />;
   }
@@ -201,11 +215,11 @@ function WeekGrid({ anchorDate, items, loading, onSelect }: Omit<CalendarProps, 
   const gridHeight = ((GRID_END_MIN - GRID_START_MIN) / 60) * HOUR_HEIGHT;
   const todayKey = ymd(new Date());
 
-  if (loading) return <Skeleton className="h-[480px] w-full" />;
+  if (loading) return <Skeleton className="h-120 w-full" />;
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
-      <div className="min-w-[860px]">
+      <div className="min-w-215">
         {/* header */}
         <div className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-border">
           <div />
@@ -264,7 +278,7 @@ function MonthGrid({ anchorDate, items, loading, onSelect, onDayClick }: Omit<Ca
   const todayKey = ymd(new Date());
   const anchorMonth = anchorDate.getMonth();
 
-  if (loading) return <Skeleton className="h-[420px] w-full" />;
+  if (loading) return <Skeleton className="h-105 w-full" />;
 
   return (
     <div>
@@ -284,7 +298,7 @@ function MonthGrid({ anchorDate, items, loading, onSelect, onDayClick }: Omit<Ca
               type="button"
               onClick={() => onDayClick(key)}
               className={cn(
-                "min-h-[92px] border-b border-r border-border/70 p-1.5 text-left align-top transition-colors hover:bg-muted/50 [&:nth-child(7n)]:border-r-0",
+                "min-h-23 border-b border-r border-border/70 p-1.5 text-left align-top transition-colors hover:bg-muted/50 nth-[7n]:border-r-0",
                 !inMonth && "bg-muted/30 text-muted-foreground",
                 key === todayKey && "bg-teal-50/50",
               )}

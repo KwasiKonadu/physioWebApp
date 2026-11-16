@@ -1,6 +1,7 @@
 "use client";
-// MOLECULE: page header with title, description, breadcrumbs and action buttons
+// MOLECULE: page header — renders the title, actions and tabs/filters into the sticky TopBar
 import { AtomIcon } from "@/components/atoms/icon";
+import { TopBarActions, TopBarTabs, TopBarTitle } from "@/components/templates/topbar-slots";
 
 interface PageHeaderProps {
   title: string;
@@ -12,22 +13,22 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, icon, actions, filters }: PageHeaderProps) {
   return (
-    <div className="mb-5 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+    <>
+      <TopBarTitle>
+        <div className="flex min-w-0 items-center gap-3">
           {icon ? (
-            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary">
+            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary sm:flex">
               <AtomIcon name={icon} className="h-5 w-5" />
             </div>
           ) : null}
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">{title}</h1>
-            {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold leading-tight tracking-tight text-foreground md:text-xl">{title}</h1>
+            {description ? <p className="truncate text-xs text-muted-foreground md:text-sm">{description}</p> : null}
           </div>
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
-      {filters ? <div className="flex flex-wrap items-center gap-2">{filters}</div> : null}
-    </div>
+      </TopBarTitle>
+      {actions ? <TopBarActions><div className="flex flex-wrap items-center justify-end gap-2">{actions}</div></TopBarActions> : null}
+      {filters ? <TopBarTabs><div className="flex flex-wrap items-center gap-2">{filters}</div></TopBarTabs> : null}
+    </>
   );
 }

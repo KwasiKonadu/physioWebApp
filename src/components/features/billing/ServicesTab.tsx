@@ -1,11 +1,12 @@
 "use client";
 // ============ Services tab: catalogue management (price book) ============
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { AtomIcon } from "@/components/atoms/icon";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
-import { TablePagination } from "@/components/molecules/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,9 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney, fromCents } from "@/lib/format";
@@ -24,6 +23,8 @@ import { PERMS, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/constants";
 import { inputToCents, type ListResponse, type ServiceLite } from "./billing-shared";
 
 const ARRANGEMENT_LABELS: Record<string, string> = { PAYG: "PayG", PACKAGE: "Pkg", INSURANCE: "Ins" };
+
+const NEW_CATEGORY = "__new_category__";
 
 function ServiceDialog({
   open,
@@ -45,6 +46,10 @@ function ServiceDialog({
   const [arrangements, setArrangements] = useState<string[]>(() => (initial?.arrangements?.length ? initial.arrangements : ["PAYG"]));
   const [active, setActive] = useState(() => (initial ? initial.active : true));
   const [error, setError] = useState<string | null>(null);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  // existing categories, plus the current value if it isn't in the list yet (e.g. editing an older service)
+  const categoryOptions = Array.from(new Set([...categories, ...(category && !addingCategory ? [category] : [])])).sort();
 
 
   const saveM = useMutation({
@@ -87,10 +92,42 @@ function ServiceDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Category *</Label>
-            <Input list="billing-service-categories" value={category} onChange={(e) => setCategory(e.target.value.toUpperCase())} placeholder="TREATMENT" />
-            <datalist id="billing-service-categories">
-              {categories.map((c) => <option key={c} value={c} />)}
-            </datalist>
+            {addingCategory ? (
+              <div className="relative">
+                <Input
+                  autoFocus
+                  className="pr-9"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value.toUpperCase())}
+                  placeholder="NEW CATEGORY NAME"
+                />
+                <button
+                  type="button"
+                  aria-label="Cancel — choose an existing category"
+                  title="Choose an existing category"
+                  onClick={() => { setAddingCategory(false); setCategory(""); setTimeout(() => setCategoryOpen(true), 0); }}
+                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <AtomIcon name="X" className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Select
+                open={categoryOpen}
+                onOpenChange={setCategoryOpen}
+                value={category || undefined}
+                onValueChange={(v) => {
+                  if (v === NEW_CATEGORY) { setAddingCategory(true); setCategory(""); }
+                  else setCategory(v);
+                }}
+              >
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select a category…" /></SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((c) => <SelectItem key={c} value={c}>{labelize(c)}</SelectItem>)}
+                  <SelectItem value={NEW_CATEGORY}>＋ New category…</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Standard price (₵) *</Label>
@@ -124,7 +161,7 @@ function ServiceDialog({
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={() => { setError(null); saveM.mutate(); }}
-            disabled={saveM.isPending || !name.trim() || inputToCents(priceText) <= 0 || arrangements.length === 0}
+            disabled={saveM.isPending || !name.trim() || !category.trim() || inputToCents(priceText) <= 0 || arrangements.length === 0}
           >
             {saveM.isPending ? "Saving…" : initial ? "Save changes" : "Create service"}
           </Button>
@@ -175,86 +212,64 @@ export default function ServicesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
         <DataToolbar
           search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search services…" }}
           onRefresh={() => qc.invalidateQueries({ queryKey: ["billing", "services"] })}
           refreshing={listQ.isFetching}
           filters={
             <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectTrigger className="w-42.5"><SelectValue placeholder="Category" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {categories.map((c) => <SelectItem key={c} value={c}>{labelize(c)}</SelectItem>)}
               </SelectContent>
             </Select>
           }
-        />
-        {canManage ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>New service</Button> : null}
+        >
+          {canManage ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>New service</Button> : null}
+        </DataToolbar>
       </div>
 
-      <div className="rounded-lg border bg-white shadow-sm">
-        {listQ.isLoading ? (
-          <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-        ) : rows.length === 0 ? (
-          <div className="p-6">
-            <EmptyState icon="ClipboardList" title="No services found" description={search || category !== "all" ? "Try adjusting the filters." : "Add your first service to build the price book."} />
-          </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="hidden text-right md:table-cell">Duration</TableHead>
-                  <TableHead>Arrangements</TableHead>
-                  <TableHead className="text-right">Active</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((s) => (
-                  <TableRow
-                    key={s.id}
-                    className={canManage ? "cursor-pointer" : ""}
-                    onClick={() => { if (canManage) { setEditing(s); setDialogOpen(true); } }}
-                  >
-                    <TableCell>
-                      <p className="text-sm font-medium">{s.name}</p>
-                      {s.description ? <p className="max-w-[320px] truncate text-xs text-muted-foreground">{s.description}</p> : null}
-                    </TableCell>
-                    <TableCell><Badge variant="outline">{labelize(s.category)}</Badge></TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatMoney(s.standardPriceCents)}</TableCell>
-                    <TableCell className="hidden text-right text-sm text-muted-foreground md:table-cell">{s.defaultDurationMin} min</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {s.arrangements.map((a) => (
-                          <Badge key={a} variant="outline" className="text-[10px]">{ARRANGEMENT_LABELS[a] || a}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      {canManage ? (
-                        <Switch checked={s.active} onCheckedChange={() => toggleM.mutate(s)} aria-label={`Toggle ${s.name}`} />
-                      ) : (
-                        <span className="text-sm">{s.active ? "Yes" : "No"}</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              page={page}
-              pageSize={pageSize}
-              total={listQ.data?.total || 0}
-              onPageChange={setPage}
-              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
-            />
-          </>
-        )}
-      </div>
+      <DataTable
+        rows={rows}
+        rowKey={(s: ServiceLite) => s.id}
+        loading={listQ.isLoading}
+        minWidth="min-w-160"
+        onRowClick={canManage ? (s) => { setEditing(s); setDialogOpen(true); } : undefined}
+        empty={<EmptyState icon="ClipboardList" title="No services found" description={search || category !== "all" ? "Try adjusting the filters." : "Add your first service to build the price book."} />}
+        pagination={{ page, pageSize, total: listQ.data?.total || 0, onPageChange: setPage, onPageSizeChange: (size) => { setPageSize(size); setPage(1); } }}
+        columns={[
+          {
+            id: "service", header: "Service",
+            cell: (s) => (
+              <>
+                <p className="text-sm font-medium">{s.name}</p>
+                {s.description ? <p className="max-w-80 truncate text-xs text-muted-foreground">{s.description}</p> : null}
+              </>
+            ),
+          },
+          { id: "category", header: "Category", cell: (s) => <Badge variant="outline">{labelize(s.category)}</Badge> },
+          { id: "price", header: "Price", align: "right", cell: (s) => <span className="font-medium tabular-nums">{formatMoney(s.standardPriceCents)}</span> },
+          { id: "duration", header: "Duration", align: "right", hideBelow: "md", cell: (s) => <span className="text-sm text-muted-foreground">{s.defaultDurationMin} min</span> },
+          {
+            id: "arrangements", header: "Arrangements",
+            cell: (s) => (
+              <div className="flex flex-wrap gap-1">
+                {s.arrangements.map((a) => <Badge key={a} variant="outline" className="text-[10px]">{ARRANGEMENT_LABELS[a] || a}</Badge>)}
+              </div>
+            ),
+          },
+          {
+            id: "active", header: "Active", align: "right",
+            cell: (s) => (
+              <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                {canManage ? <Switch checked={s.active} onCheckedChange={() => toggleM.mutate(s)} aria-label={`Toggle ${s.name}`} /> : <span className="text-sm">{s.active ? "Yes" : "No"}</span>}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {dialogOpen && <ServiceDialog open initial={editing} categories={categories} onClose={() => setDialogOpen(false)} />}
     </div>

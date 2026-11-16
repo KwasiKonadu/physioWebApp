@@ -11,6 +11,10 @@ import {
   PERMS, MEDICAL_HISTORY_TYPES, labelize,
 } from "@/lib/constants";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
+import { BookingDialog } from "../appointments/BookingDialog";
+import { useTherapists as useAppointmentTherapists } from "../appointments/appointments-shared";
+import { DataTable } from "@/components/molecules/data-table";
+import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
 import { DetailGrid, DetailRow } from "@/components/molecules/detail-row";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { SectionCard } from "@/components/molecules/section-card";
@@ -30,8 +34,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePatient, useTherapists, useInsuranceProviders,
   type EmergencyContactDto, type EpisodeDto, type InsuranceDto, type MedicalHistoryDto } from "./hooks";
@@ -63,6 +66,8 @@ export default function PatientProfile({ patientId, onBack }: Props) {
   const canBill = hasPermission(user, PERMS.billingManage);
 
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const appointmentTherapists = useAppointmentTherapists();
   const [contactDraft, setContactDraft] = useState<ContactDraft[] | null>(null);
   const [historyDraft, setHistoryDraft] = useState<HistoryDraft[] | null>(null);
   const [insuranceDialog, setInsuranceDialog] = useState<{ open: boolean; entry: InsuranceDto | null }>({ open: false, entry: null });
@@ -191,12 +196,13 @@ export default function PatientProfile({ patientId, onBack }: Props) {
   })).filter((g) => g.entries.length > 0);
 
   return (
+    <div>
+      <PageBreadcrumb items={[{ label: "Patients", onClick: onBack }, { label: name }]} />
     <div className="space-y-5">
-      {/* ---------- header card ---------- */}
-      <div className="rounded-xl border bg-card p-4 shadow-sm md:p-6">
-        <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={onBack}>
-          <AtomIcon name="ArrowLeft" className="mr-1.5 h-4 w-4" /> All patients
-        </Button>
+      <Tabs defaultValue="overview" className="gap-5">
+      {/* ---------- summary + tabs: one card ---------- */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="p-4 md:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <Avatar className="h-14 w-14 rounded-xl">
@@ -236,7 +242,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
               </Button>
             ) : null}
             {canBook ? (
-              <Button variant="outline" onClick={() => navigate("appointments", { patientId })}>
+              <Button variant="outline" onClick={() => setBookingOpen(true)}>
                 <AtomIcon name="CalendarPlus" className="mr-2 h-4 w-4" /> Book appointment
               </Button>
             ) : null}
@@ -247,19 +253,17 @@ export default function PatientProfile({ patientId, onBack }: Props) {
             ) : null}
           </div>
         </div>
+        </div>
+        <UnderlineTabsList className="border-0 px-4 md:px-6">
+          <UnderlineTabsTrigger value="overview"><AtomIcon name="User" className="h-4 w-4" />Overview</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="episodes"><AtomIcon name="Stethoscope" className="h-4 w-4" />Episodes ({bundle.episodes.length})</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="appointments"><AtomIcon name="CalendarDays" className="h-4 w-4" />Appointments</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="billing"><AtomIcon name="Receipt" className="h-4 w-4" />Billing</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="history"><AtomIcon name="HeartPulse" className="h-4 w-4" />Medical history</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="contacts"><AtomIcon name="PhoneCall" className="h-4 w-4" />Contacts & consent</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="referrals"><AtomIcon name="Share2" className="h-4 w-4" />Referrals</UnderlineTabsTrigger>
+        </UnderlineTabsList>
       </div>
-
-      {/* ---------- tabs ---------- */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview"><AtomIcon name="User" className="mr-1.5 h-3.5 w-3.5" /> Overview</TabsTrigger>
-          <TabsTrigger value="episodes"><AtomIcon name="Stethoscope" className="mr-1.5 h-3.5 w-3.5" /> Episodes ({bundle.episodes.length})</TabsTrigger>
-          <TabsTrigger value="appointments"><AtomIcon name="CalendarDays" className="mr-1.5 h-3.5 w-3.5" /> Appointments</TabsTrigger>
-          <TabsTrigger value="billing"><AtomIcon name="Receipt" className="mr-1.5 h-3.5 w-3.5" /> Billing</TabsTrigger>
-          <TabsTrigger value="history"><AtomIcon name="HeartPulse" className="mr-1.5 h-3.5 w-3.5" /> Medical history</TabsTrigger>
-          <TabsTrigger value="contacts"><AtomIcon name="PhoneCall" className="mr-1.5 h-3.5 w-3.5" /> Contacts & consent</TabsTrigger>
-          <TabsTrigger value="referrals"><AtomIcon name="Share2" className="mr-1.5 h-3.5 w-3.5" /> Referrals</TabsTrigger>
-        </TabsList>
 
         {/* ============ OVERVIEW ============ */}
         <TabsContent value="overview" className="space-y-4">
@@ -428,81 +432,47 @@ export default function PatientProfile({ patientId, onBack }: Props) {
 
         {/* ============ APPOINTMENTS ============ */}
         <TabsContent value="appointments">
-          <SectionCard title="Recent appointments" icon="CalendarDays" description="Latest 20 appointments — click a row to open it in the appointments module.">
-            {bundle.appointments.length === 0 ? (
-              <EmptyState icon="CalendarDays" title="No appointments" description="Book an appointment from the appointments module." />
-            ) : (
-              <div className="max-h-[520px] overflow-y-auto custom-scrollbar">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Therapist</TableHead>
-                      <TableHead>Episode</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bundle.appointments.map((a) => (
-                      <TableRow
-                        key={a.id}
-                        className="cursor-pointer"
-                        onClick={() => navigate("appointments", { patientId, appointmentId: a.id })}
-                      >
-                        <TableCell className="text-sm">{formatDate(a.date)}</TableCell>
-                        <TableCell className="text-sm">{minutesToTime(a.startMin)}–{minutesToTime(a.endMin)}</TableCell>
-                        <TableCell className="text-sm">{a.therapist ? fullName({ firstName: a.therapist.firstName, lastName: a.therapist.lastName }) : "—"}</TableCell>
-                        <TableCell className="text-sm">{a.episode ? a.episode.title : "—"}</TableCell>
-                        <TableCell className="text-sm">{a.purpose || "—"}</TableCell>
-                        <TableCell><StatusBadge status={a.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+          <SectionCard title="Recent appointments" icon="CalendarDays" description="Latest 20 appointments — click a row to open it in the appointments module." noPadding>
+            <DataTable
+              bare
+              maxHeight="max-h-130"
+              minWidth="min-w-160"
+              rows={bundle.appointments}
+              rowKey={(a) => a.id}
+              onRowClick={(a) => navigate("appointments", { patientId, appointmentId: a.id })}
+              empty={<EmptyState icon="CalendarDays" title="No appointments" description="Book an appointment from the appointments module." />}
+              columns={[
+                { id: "date", header: "Date", cell: (a) => <span className="text-sm">{formatDate(a.date)}</span> },
+                { id: "time", header: "Time", cell: (a) => <span className="text-sm">{minutesToTime(a.startMin)}–{minutesToTime(a.endMin)}</span> },
+                { id: "therapist", header: "Therapist", cell: (a) => <span className="text-sm">{a.therapist ? fullName({ firstName: a.therapist.firstName, lastName: a.therapist.lastName }) : "—"}</span> },
+                { id: "episode", header: "Episode", cell: (a) => <span className="text-sm">{a.episode ? a.episode.title : "—"}</span> },
+                { id: "purpose", header: "Purpose", cell: (a) => <span className="text-sm">{a.purpose || "—"}</span> },
+                { id: "status", header: "Status", cell: (a) => <StatusBadge status={a.status} /> },
+              ]}
+            />
           </SectionCard>
         </TabsContent>
 
         {/* ============ BILLING ============ */}
         <TabsContent value="billing" className="space-y-4">
           <SectionCard title="Invoices" icon="Receipt" description="Latest 20 invoices — click a row to open it in the billing module.">
-            {bundle.invoices.length === 0 ? (
-              <EmptyState icon="Receipt" title="No invoices" description="Invoices issued for this patient will appear here." />
-            ) : (
-              <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Issued</TableHead>
-                      <TableHead>Arrangement</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Paid</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bundle.invoices.map((inv) => (
-                      <TableRow
-                        key={inv.id}
-                        className="cursor-pointer"
-                        onClick={() => navigate("billing", { patientId, invoiceId: inv.id, focusTab: "invoices" })}
-                      >
-                        <TableCell className="font-mono text-xs">{inv.invoiceNumber}</TableCell>
-                        <TableCell className="text-sm">{formatDate(inv.issuedAt)}</TableCell>
-                        <TableCell className="text-sm">{labelize(inv.arrangement)}</TableCell>
-                        <TableCell className="text-right text-sm">{formatMoney(inv.totalCents)}</TableCell>
-                        <TableCell className="text-right text-sm">{formatMoney(inv.paidCents)}</TableCell>
-                        <TableCell><StatusBadge status={inv.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <DataTable
+              bare
+              maxHeight="max-h-105"
+              minWidth="min-w-160"
+              rows={bundle.invoices}
+              rowKey={(inv) => inv.id}
+              onRowClick={(inv) => navigate("billing", { patientId, invoiceId: inv.id, focusTab: "invoices" })}
+              empty={<EmptyState icon="Receipt" title="No invoices" description="Invoices issued for this patient will appear here." />}
+              columns={[
+                { id: "invoice", header: "Invoice", cell: (inv) => <span className="font-mono text-xs">{inv.invoiceNumber}</span> },
+                { id: "issued", header: "Issued", cell: (inv) => <span className="text-sm">{formatDate(inv.issuedAt)}</span> },
+                { id: "arrangement", header: "Arrangement", cell: (inv) => <span className="text-sm">{labelize(inv.arrangement)}</span> },
+                { id: "total", header: "Total", align: "right", cell: (inv) => <span className="text-sm">{formatMoney(inv.totalCents)}</span> },
+                { id: "paid", header: "Paid", align: "right", cell: (inv) => <span className="text-sm">{formatMoney(inv.paidCents)}</span> },
+                { id: "status", header: "Status", cell: (inv) => <StatusBadge status={inv.status} /> },
+              ]}
+            />
           </SectionCard>
 
           {bundle.patientPackages.length > 0 ? (
@@ -740,6 +710,12 @@ export default function PatientProfile({ patientId, onBack }: Props) {
       </Tabs>
 
       {/* ---------- new episode dialog ---------- */}
+      <BookingDialog
+        open={bookingOpen}
+        onOpenChange={(o) => { setBookingOpen(o); if (!o) invalidate(); }}
+        presetPatientId={patientId}
+        therapists={appointmentTherapists.data || []}
+      />
       <NewEpisodeDialog open={newEpisodeOpen} onOpenChange={setNewEpisodeOpen} patientId={patientId} patientName={name} onCreated={invalidate} />
 
       {/* ---------- insurance dialog (remounted per target entry) ---------- */}
@@ -753,6 +729,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
           saving={patchMutation.isPending}
         />
       ) : null}
+    </div>
     </div>
   );
 }

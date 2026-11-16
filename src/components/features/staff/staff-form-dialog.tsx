@@ -1,17 +1,15 @@
 "use client";
 // FEATURE: Staff — add/edit form dialog (RHF + zod, therapist extras, remuneration, account creation)
 import { useEffect, useMemo, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { get, useForm, useFieldArray, useWatch, type FieldPath, type PathValue } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS, labelize } from "@/lib/constants";
 import { toCents, fromCents } from "@/lib/format";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -37,6 +35,7 @@ export interface StaffFormTarget {
   staffRole: string;
   employmentDate: string | null;
   employmentStatus: string;
+  branchId?: string | null;
   professionalDesignation: string | null;
   specialization: string | null;
   qualifications: string[];
@@ -56,6 +55,7 @@ const schema = z
     staffRole: z.enum(STAFF_ROLES),
     employmentDate: z.string(),
     employmentStatus: z.enum(EMPLOYMENT_STATUSES),
+    branchId: z.string(),
     professionalDesignation: z.string(),
     specialization: z.string(),
     qualifications: z.array(z.object({ value: z.string().min(1, "Empty qualification") })),
@@ -98,6 +98,13 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const branchesQ = useQuery({
+    queryKey: ["branches", "active"],
+    queryFn: () => apiFetch<{ items: { id: string; name: string; active: boolean }[] }>("/api/branches"),
+    enabled: open,
+  });
+  // active branches, plus the staff member's current one even if it has since been switched off
+  const branchOptions = (branchesQ.data?.items || []).filter((b) => b.active || b.id === target?.branchId);
 
   const defaults = useMemo<FormValues>(
     () => ({
@@ -110,6 +117,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
       staffRole: (target?.staffRole as FormValues["staffRole"]) || "PHYSIOTHERAPIST",
       employmentDate: target?.employmentDate ? new Date(target.employmentDate).toISOString().slice(0, 10) : "",
       employmentStatus: (target?.employmentStatus as FormValues["employmentStatus"]) || "ACTIVE",
+      branchId: target?.branchId || "NONE",
       professionalDesignation: target?.professionalDesignation || "",
       specialization: target?.specialization || "",
       qualifications: (target?.qualifications || []).map((q) => ({ value: q })),
@@ -126,7 +134,11 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
     resolver: zodResolver(schema),
     defaultValues: defaults,
   });
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = form;
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = form;
+
+  const watchedValues = useWatch({ control: form.control });
+  const watch = <P extends FieldPath<FormValues>>(name: P) =>
+    get(watchedValues, name) as PathValue<FormValues, P>;
 
   const qualArray = useFieldArray({ control: form.control, name: "qualifications" });
   const availArray = useFieldArray({ control: form.control, name: "availability" });
@@ -161,19 +173,21 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
         staffRole: values.staffRole,
         employmentDate: values.employmentDate || null,
         employmentStatus: values.employmentStatus,
+        branchId: values.branchId === "NONE" ? null : values.branchId,
       };
+      // pay applies to every staff member; only therapists can be paid per session / per patient, everyone else is salaried
+      const method = isTherapist ? values.remunerationMethod : "FIXED";
+      const rate = parseFloat(values.remunerationRate || "0");
+      base.remunerationMethod = method;
+      base.remunerationRateCents = rate > 0 ? toCents(rate) : null;
       if (isTherapist) {
         base.professionalDesignation = values.professionalDesignation || null;
         base.specialization = values.specialization || null;
         base.qualifications = values.qualifications.map((q) => q.value.trim()).filter(Boolean);
         base.availability = values.availability.map((a) => ({ day: a.day, start: a.start, end: a.end }));
-        base.remunerationMethod = values.remunerationMethod;
-        base.remunerationRateCents = values.remunerationMethod === "FIXED" ? null : toCents(parseFloat(values.remunerationRate || "0"));
       } else {
         base.qualifications = [];
         base.availability = [];
-        base.remunerationMethod = "FIXED";
-        base.remunerationRateCents = null;
       }
 
       if (isEdit && target) {
@@ -198,17 +212,17 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
   });
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto custom-scrollbar sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? `Edit staff — ${target?.firstName} ${target?.lastName}` : "Add staff"}</DialogTitle>
-          <DialogDescription>
-            {isEdit ? "Update profile, employment and remuneration details." : "Create a staff profile. Therapists get workload tracking and remuneration."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <>
+    <SidePanel
+      open={open}
+      onOpenChange={(v) => (!v ? onClose() : null)}
+      size="lg"
+      title={isEdit ? `Edit staff — ${target?.firstName} ${target?.lastName}` : "Add staff"}
+      description={isEdit ? "Update profile, employment and remuneration details." : "Create a staff profile. Therapists get workload tracking and remuneration."}
+    >
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <SidePanelBody className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">
             <Field label="First name" error={errors.firstName?.message}>
               <Input {...register("firstName")} placeholder="Ama" />
             </Field>
@@ -229,7 +243,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
             </Field>
             <Field label="Staff role">
               <Select value={staffRole} onValueChange={(v) => setValue("staffRole", v as FormValues["staffRole"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {STAFF_ROLES.map((r) => (
                     <SelectItem key={r} value={r}>{labelize(r)}</SelectItem>
@@ -239,7 +253,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
             </Field>
             <Field label="Employment status">
               <Select value={watch("employmentStatus")} onValueChange={(v) => setValue("employmentStatus", v as FormValues["employmentStatus"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {EMPLOYMENT_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
@@ -249,6 +263,17 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
             </Field>
             <Field label="Employment date">
               <Input type="date" {...register("employmentDate")} />
+            </Field>
+            <Field label="Branch">
+              <Select value={watch("branchId")} onValueChange={(v) => setValue("branchId", v)}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="No branch" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">— No branch —</SelectItem>
+                  {branchOptions.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}{b.active ? "" : " (inactive)"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 
@@ -260,7 +285,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
                   <AtomIcon name="Stethoscope" className="h-4 w-4 text-teal-600" />
                   Clinical profile
                 </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">
                   <Field label="Professional designation">
                     <Input {...register("professionalDesignation")} placeholder="BSc Physiotherapy" />
                   </Field>
@@ -278,7 +303,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
                     )}
                     {qualArray.fields.map((f, i) => (
                       <div key={f.id} className="flex items-center gap-2">
-                        <Input {...register(`qualifications.${i}.value`)} placeholder="BSc Physiotherapy — University" />
+                        <Input className="min-w-0 flex-1" {...register(`qualifications.${i}.value`)} placeholder="BSc Physiotherapy — University" />
                         <Button type="button" variant="ghost" size="icon" onClick={() => qualArray.remove(i)} aria-label="Remove">
                           <AtomIcon name="X" className="h-4 w-4 text-rose-500" />
                         </Button>
@@ -300,19 +325,19 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
                     {availArray.fields.map((f, i) => (
                       <div key={f.id} className="flex items-center gap-2">
                         <Select
-                          value={form.watch(`availability.${i}.day`)}
+                          value={watch(`availability.${i}.day`)}
                           onValueChange={(v) => setValue(`availability.${i}.day`, v)}
                         >
-                          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-24 shrink-0"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {DAYS.map((d) => (
                               <SelectItem key={d} value={d}>{d}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <Input type="time" {...register(`availability.${i}.start`)} className="w-32" />
+                        <Input type="time" {...register(`availability.${i}.start`)} className="min-w-0 flex-1" />
                         <span className="text-xs text-muted-foreground">to</span>
-                        <Input type="time" {...register(`availability.${i}.end`)} className="w-32" />
+                        <Input type="time" {...register(`availability.${i}.end`)} className="min-w-0 flex-1" />
                         <Button type="button" variant="ghost" size="icon" onClick={() => availArray.remove(i)} aria-label="Remove">
                           <AtomIcon name="X" className="h-4 w-4 text-rose-500" />
                         </Button>
@@ -325,35 +350,44 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
                 </div>
               </div>
 
-              <Separator />
-              <div>
-                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy-800">
-                  <AtomIcon name="Wallet" className="h-4 w-4 text-teal-600" />
-                  Remuneration
-                </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="Method">
-                    <Select value={remunerationMethod} onValueChange={(v) => setValue("remunerationMethod", v as FormValues["remunerationMethod"])}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {REMUNERATION_METHODS.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m === "FIXED" ? "Fixed salary" : m === "PER_PATIENT" ? "Per unique patient" : "Per completed session"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  {remunerationMethod !== "FIXED" && (
-                    <Field label="Rate (GHS)" error={errors.remunerationRate?.message}>
-                      <Input type="number" step="0.01" min="0" {...register("remunerationRate")}
-                        placeholder={remunerationMethod === "PER_SESSION" ? "30.00 per session" : "150.00 per patient"} />
-                    </Field>
-                  )}
-                </div>
-              </div>
             </>
           )}
+
+          <Separator />
+          <div>
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy-800">
+              <AtomIcon name="Wallet" className="h-4 w-4 text-teal-600" />
+              Remuneration
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">
+              {isTherapist ? (
+                <Field label="Method">
+                  <Select value={remunerationMethod} onValueChange={(v) => setValue("remunerationMethod", v as FormValues["remunerationMethod"])}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {REMUNERATION_METHODS.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m === "FIXED" ? "Fixed monthly salary" : m === "PER_PATIENT" ? "Per unique patient" : "Per completed session"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
+              <Field
+                label={!isTherapist || remunerationMethod === "FIXED" ? "Monthly salary (GHS)" : "Rate (GHS)"}
+                error={errors.remunerationRate?.message}
+              >
+                <Input
+                  type="number" step="0.01" min="0" {...register("remunerationRate")}
+                  placeholder={
+                    !isTherapist || remunerationMethod === "FIXED" ? "e.g. 2500.00 per month"
+                      : remunerationMethod === "PER_SESSION" ? "30.00 per session" : "150.00 per patient"
+                  }
+                />
+              </Field>
+            </div>
+          </div>
 
           {!isEdit && (
             <>
@@ -384,13 +418,16 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
             </>
           )}
 
-          <DialogFooter className="gap-2 pt-2">
+          </SidePanelBody>
+          <SidePanelFooter className="justify-end">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-navy-800 hover:bg-navy-900">
+            <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : isEdit ? "Save changes" : "Add staff"}
             </Button>
-          </DialogFooter>
+          </SidePanelFooter>
         </form>
+
+    </SidePanel>
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent>
@@ -410,8 +447,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </DialogContent>
-    </Dialog>
+    </>
   );
 }
 

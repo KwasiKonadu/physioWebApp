@@ -1,19 +1,16 @@
 "use client";
 // ============ AssessmentsPage: clinical assessments + diagnoses module (default export) ============
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/molecules/page-header";
-import { SectionCard } from "@/components/molecules/section-card";
 import { StatCard } from "@/components/molecules/stat-card";
+import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
-import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -21,61 +18,45 @@ import { PERMS } from "@/lib/constants";
 import { formatDate, fullName } from "@/lib/format";
 import { useAuthStore, useUIStore, hasPermission } from "@/stores/app-store";
 import * as API from "./assessments-api";
-import AssessmentForm, { type AssessmentFormTarget } from "./AssessmentForm";
+import type { AssessmentFormTarget } from "./AssessmentForm";
 import DiagnosesTab from "./DiagnosesTab";
 
 export default function AssessmentsPage() {
-  const qc = useQueryClient();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.clinicalManage);
   const navOpts = useUIStore((s) => s.navOpts);
   const clearOpts = useUIStore((s) => s.clearOpts);
 
   const [tab, setTab] = useState<"assessments" | "diagnoses">("assessments");
-  const [mode, setMode] = useState<"list" | "form">("list");
-  const [formTarget, setFormTarget] = useState<AssessmentFormTarget>({});
 
-  // consume navigation options (e.g. patients page → open assessment for episode)
+  // consume navigation options (e.g. patients page → start an assessment for an episode)
   useEffect(() => {
     if (!navOpts) return;
-    /* eslint-disable react-hooks/set-state-in-effect -- spec pattern: consume navOpts in effect + clearOpts */
+    // one-shot navigation hint from another page: switch tab, then clear it
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (navOpts.focusTab === "diagnoses") setTab("diagnoses");
     if (navOpts.episodeId) {
-      setTab("assessments");
-      setMode("form");
-      setFormTarget({ patientId: navOpts.patientId, episodeId: navOpts.episodeId });
+      const q = new URLSearchParams();
+      if (navOpts.patientId) q.set("patientId", navOpts.patientId);
+      q.set("episodeId", navOpts.episodeId);
+      router.push(`/assessments/new?${q.toString()}`);
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
     clearOpts();
-  }, [navOpts, clearOpts]);
+  }, [navOpts, clearOpts, router]);
 
-  const openForm = (t: AssessmentFormTarget) => {
-    setFormTarget(t);
-    setMode("form");
+  // open an existing assessment, or start a new one (own URLs: /assessments/[id], /assessments/new)
+  const openForm = (target: AssessmentFormTarget) => {
+    if (target.assessmentId) {
+      router.push(`/assessments/${target.assessmentId}`);
+      return;
+    }
+    const q = new URLSearchParams();
+    if (target.patientId) q.set("patientId", target.patientId);
+    if (target.episodeId) q.set("episodeId", target.episodeId);
+    const qs = q.toString();
+    router.push(qs ? `/assessments/new?${qs}` : "/assessments/new");
   };
-  const backToList = () => {
-    setMode("list");
-    setFormTarget({});
-    qc.invalidateQueries({ queryKey: ["assessments"] });
-  };
-  const formDone = () => {
-    setMode("list");
-    setFormTarget({});
-    qc.invalidateQueries({ queryKey: ["assessments"] });
-    qc.invalidateQueries({ queryKey: ["patients"] });
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
-  };
-
-  if (mode === "form") {
-    return (
-      <AssessmentForm
-        target={formTarget}
-        onTargetChange={setFormTarget}
-        onDone={formDone}
-        onBack={backToList}
-      />
-    );
-  }
 
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as "assessments" | "diagnoses")} className="space-y-1">
@@ -83,11 +64,6 @@ export default function AssessmentsPage() {
         title="Assessments"
         description="Clinical assessments and diagnoses for every treatment episode"
         icon="ClipboardList"
-        actions={
-          tab === "assessments" && canManage ? (
-            <Button onClick={() => openForm({})}><AtomIcon name="Plus" className="h-4 w-4" />New assessment</Button>
-          ) : undefined
-        }
         filters={
           <TabsList>
             <TabsTrigger value="assessments"><AtomIcon name="ClipboardList" className="h-4 w-4" />Assessments</TabsTrigger>
@@ -186,111 +162,83 @@ function AssessmentsList({ canManage, onOpen }: {
         </div>
       ) : null}
 
-      <SectionCard title="Assessment records" description="All initial and re-assessments across episodes" icon="ClipboardList" noPadding>
-        <div className="border-b px-4 py-3">
-          <DataToolbar
-            search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search patient, code, complaint…" }}
-            filters={(
-              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            onRefresh={() => listQ.refetch()}
-            refreshing={listQ.isFetching}
+      <div className="mb-3">
+        <DataToolbar
+          search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search patient, code, complaint…" }}
+          filters={(
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          onRefresh={() => listQ.refetch()}
+          refreshing={listQ.isFetching}
+        >
+          {canManage ? (
+            <Button onClick={() => onOpen({})}><AtomIcon name="Plus" className="h-4 w-4" />New assessment</Button>
+          ) : null}
+        </DataToolbar>
+      </div>
+      <DataTable
+        rows={items}
+        rowKey={(a) => a.id}
+        loading={listQ.isLoading}
+        minWidth="min-w-220"
+        onRowClick={(a) => onOpen({ assessmentId: a.id })}
+        empty={
+          <EmptyState
+          icon="ClipboardList"
+          title={hasFilters ? "No assessments match your filters" : "No assessments yet"}
+          description={hasFilters ? "Try adjusting the search or status filter." : "Start the first assessment for a patient episode."}
+          action={canManage && !hasFilters ? <Button onClick={() => onOpen({})}>New assessment</Button> : hasFilters ? <Button variant="outline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Clear filters</Button> : undefined}
           />
-        </div>
-
-        {listQ.isLoading ? (
-          <div className="space-y-2 p-4">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-11 w-full" />)}
-          </div>
-        ) : total === 0 ? (
-          <div className="p-4">
-            <EmptyState
-              icon="ClipboardList"
-              title={hasFilters ? "No assessments match your filters" : "No assessments yet"}
-              description={hasFilters ? "Try adjusting the search or status filter." : "Start the first assessment for a patient episode."}
-              action={canManage && !hasFilters ? <Button onClick={() => onOpen({})}>New assessment</Button> : hasFilters ? <Button variant="outline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Clear filters</Button> : undefined}
-            />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto custom-scrollbar">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs">Patient</TableHead>
-                    <TableHead className="text-xs">Episode</TableHead>
-                    <TableHead className="text-xs">Therapist</TableHead>
-                    <TableHead className="text-xs">Pain (current / worst)</TableHead>
-                    <TableHead className="text-xs">Measures</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((a) => (
-                    <TableRow
-                      key={a.id}
-                      className="cursor-pointer"
-                      onClick={() => onOpen({ assessmentId: a.id })}
-                    >
-                      <TableCell className="whitespace-nowrap text-xs">{formatDate(a.assessmentDate)}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <p className="text-sm font-medium">{fullName(a.episode?.patient || {}) || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{a.episode?.patient?.patientCode || ""}</p>
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">{a.episode?.title || "—"}</TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{a.therapist ? fullName(a.therapist) : (a.therapistName || "—")}</TableCell>
-                      <TableCell className="whitespace-nowrap text-xs">
-                        {a.painCurrent != null || a.painWorst != null ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{a.painCurrent ?? "—"}/10</Badge>
-                            <span className="text-muted-foreground">/</span>
-                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">{a.painWorst ?? "—"}/10</Badge>
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {a._count ? `${a._count.romMeasurements || 0} ROM · ${a._count.strengthMeasurements || 0} str · ${a._count.functionalItems || 0} fn` : "—"}
-                      </TableCell>
-                      <TableCell><StatusBadge status={a.status} /></TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); onOpen({ assessmentId: a.id }); }}
-                        >
-                          {a.status === "DRAFT" ? (
-                            <><AtomIcon name="Play" className="h-3.5 w-3.5" />Continue</>
-                          ) : (
-                            <><AtomIcon name="Eye" className="h-3.5 w-3.5" />Open</>
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <TablePagination
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-            />
-          </>
-        )}
-      </SectionCard>
+        }
+        pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (s) => { setPageSize(s); setPage(1); } }}
+        columns={[
+          { id: "date", header: "Date", className: "whitespace-nowrap", cell: (a) => <span className="text-xs">{formatDate(a.assessmentDate)}</span> },
+          {
+            id: "patient", header: "Patient", className: "whitespace-nowrap",
+            cell: (a) => (
+              <>
+                <p className="text-sm font-medium">{fullName(a.episode?.patient || {}) || "—"}</p>
+                <p className="text-xs text-muted-foreground">{a.episode?.patient?.patientCode || ""}</p>
+              </>
+            ),
+          },
+          { id: "episode", header: "Episode", className: "max-w-45 truncate", cell: (a) => <span className="text-xs text-muted-foreground">{a.episode?.title || "—"}</span> },
+          { id: "therapist", header: "Therapist", className: "whitespace-nowrap", cell: (a) => <span className="text-xs text-muted-foreground">{a.therapist ? fullName(a.therapist) : (a.therapistName || "—")}</span> },
+          {
+            id: "pain", header: "Pain (current / worst)", className: "whitespace-nowrap",
+            cell: (a) =>
+              a.painCurrent != null || a.painWorst != null ? (
+                <span className="inline-flex items-center gap-1 text-xs">
+                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{a.painCurrent ?? "—"}/10</Badge>
+                  <span className="text-muted-foreground">/</span>
+                  <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">{a.painWorst ?? "—"}/10</Badge>
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              ),
+          },
+          {
+            id: "measures", header: "Measures", className: "whitespace-nowrap",
+            cell: (a) => <span className="text-xs text-muted-foreground">{a._count ? `${a._count.romMeasurements || 0} ROM · ${a._count.strengthMeasurements || 0} str · ${a._count.functionalItems || 0} fn` : "—"}</span>,
+          },
+          { id: "status", header: "Status", cell: (a) => <StatusBadge status={a.status} /> },
+          {
+            id: "actions", header: "", align: "right",
+            cell: (a) => (
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onOpen({ assessmentId: a.id }); }}>
+                {a.status === "DRAFT" ? <><AtomIcon name="Play" className="h-3.5 w-3.5" />Continue</> : <><AtomIcon name="Eye" className="h-3.5 w-3.5" />Open</>}
+              </Button>
+            ),
+          },
+        ]}
+      />
       <p className="text-[11px] text-muted-foreground">
         Completed assessments are immutable — use “Start correction” on a completed record to create an audited new draft.
       </p>

@@ -63,4 +63,37 @@ function TabsContent({
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+/** Underline-style tab list — for tabs that sit at the bottom edge of a header or card. */
+function UnderlineTabsList({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.List>) {
+  return (
+    <TabsPrimitive.List
+      data-slot="tabs-list"
+      className={cn(
+        "flex w-full items-end gap-6 overflow-x-auto border-b border-slate-200 bg-transparent",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function UnderlineTabsTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  return (
+    <TabsPrimitive.Trigger
+      data-slot="tabs-trigger"
+      className={cn(
+        "-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-1 pb-3 pt-2 text-sm font-medium whitespace-nowrap text-slate-500 transition-colors hover:text-navy-800 focus-visible:outline-none focus-visible:text-navy-900 data-[state=active]:border-navy-900 data-[state=active]:font-semibold data-[state=active]:text-navy-900 [&_svg]:size-4 [&_svg]:shrink-0",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, UnderlineTabsList, UnderlineTabsTrigger }

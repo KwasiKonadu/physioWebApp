@@ -34,8 +34,8 @@ export const GET = route(async (req) => {
   if (search) {
     where.AND = search.trim().split(/\s+/).filter(Boolean).map((t) => ({
       OR: [
-        { invoiceNumber: { contains: t } },
-        { patient: { OR: [{ firstName: { contains: t } }, { middleName: { contains: t } }, { lastName: { contains: t } }, { patientCode: { contains: t } }, { phone: { contains: t } }] } },
+        { invoiceNumber: { contains: t, mode: "insensitive" } },
+        { patient: { OR: [{ firstName: { contains: t, mode: "insensitive" } }, { middleName: { contains: t, mode: "insensitive" } }, { lastName: { contains: t, mode: "insensitive" } }, { patientCode: { contains: t, mode: "insensitive" } }, { phone: { contains: t, mode: "insensitive" } }] } },
       ],
     }));
   }

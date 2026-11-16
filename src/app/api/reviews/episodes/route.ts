@@ -18,12 +18,12 @@ export const GET = route(async (req) => {
     ...(q
       ? {
           AND: tokenizedSearchAnd(q, (t) => [
-            { title: { contains: t } },
+            { title: { contains: t, mode: "insensitive" } },
             { patient: { OR: [
-              { firstName: { contains: t } },
-              { middleName: { contains: t } },
-              { lastName: { contains: t } },
-              { patientCode: { contains: t } },
+              { firstName: { contains: t, mode: "insensitive" } },
+              { middleName: { contains: t, mode: "insensitive" } },
+              { lastName: { contains: t, mode: "insensitive" } },
+              { patientCode: { contains: t, mode: "insensitive" } },
             ] } },
           ]),
         }

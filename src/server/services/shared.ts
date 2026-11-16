@@ -40,7 +40,7 @@ const PATIENT_TOKEN_FIELDS = ["firstName", "middleName", "lastName", "patientCod
 
 /** OR-group over patient fields for one token, optionally nested under a relation (e.g. "patient"). */
 export function patientTokenOR(token: string, prefix?: string): Record<string, unknown> {
-  const or = PATIENT_TOKEN_FIELDS.map((f) => ({ [f]: { contains: token } }));
+  const or = PATIENT_TOKEN_FIELDS.map((f) => ({ [f]: { contains: token, mode: "insensitive" } }));
   return prefix ? { [prefix]: { OR: or } } : { OR: or };
 }
 

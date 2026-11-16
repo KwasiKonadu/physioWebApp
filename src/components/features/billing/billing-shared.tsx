@@ -8,7 +8,6 @@ import { fromCents, toCents, fullName, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -238,7 +237,7 @@ export function PatientPicker({
           <AtomIcon name="ChevronsUpDown" className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[360px] p-0" align="start">
+      <PopoverContent className="w-90 p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput placeholder="Name, code or phone…" value={query} onValueChange={setQuery} />
           <CommandList className="custom-scrollbar">

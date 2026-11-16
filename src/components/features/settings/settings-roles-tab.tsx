@@ -1,15 +1,17 @@
 "use client";
-// SETTINGS: Roles tab — permission matrix editor per role (with confirm dialog)
-import { useEffect, useMemo, useState } from "react";
+// SETTINGS: Manage roles — a pop-up to pick the role, then a side panel to edit its permissions as pills (with confirm dialog)
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { SectionCard } from "@/components/molecules/section-card";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { AtomIcon } from "@/components/atoms/icon";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -59,130 +61,163 @@ const PERM_GROUPS: { label: string; perms: { key: string; label: string }[] }[] 
   { label: "Settings", perms: [{ key: "settings.manage", label: "Manage settings" }] },
 ];
 
-export default function SettingsRolesTab() {
+export default function ManageRolesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["roles"],
     queryFn: () => apiFetch<{ items: RoleRow[] }>("/api/roles"),
+    enabled: open,
   });
+  const roles = data?.items || [];
 
-  // local draft state per role: roleId → permissions array
-  const [drafts, setDrafts] = useState<Record<string, string[]>>({});
-  const [confirmRole, setConfirmRole] = useState<RoleRow | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
+  // step 1: pop-up to pick the role; step 2: side panel to edit it
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [roleId, setRoleId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (data?.items) {
-      const map: Record<string, string[]> = {};
-      for (const r of data.items) map[r.id] = r.permissions;
-      setDrafts(map);
-    }
-  }, [data]);
+  // the picker follows the parent's `open`; selecting a role hands over to the panel
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    setPickerOpen(open);
+    if (open) setRoleId(null);
+  }
 
-  const isDirty = useMemo(() => {
-    if (!data?.items) return false;
-    return data.items.some((r) => {
-      const d = drafts[r.id];
-      if (!d) return false;
-      return d.length !== r.permissions.length || d.some((p) => !r.permissions.includes(p));
-    });
-  }, [data, drafts]);
+  const role = roles.find((r) => r.id === roleId) ?? null;
+  const dirty = !!role && (draft.length !== role.permissions.length || draft.some((p) => !role.permissions.includes(p)));
 
-  const toggle = (roleId: string, perm: string) => {
-    setDrafts((prev) => {
-      const cur = prev[roleId] || [];
-      return { ...prev, [roleId]: cur.includes(perm) ? cur.filter((p) => p !== perm) : [...cur, perm] };
-    });
+  const pick = (r: RoleRow) => {
+    setRoleId(r.id);
+    setDraft(r.permissions);
+    setPickerOpen(false);
   };
 
-  const save = async (role: RoleRow) => {
-    setSavingId(role.id);
+  const toggle = (perm: string) =>
+    setDraft((cur) => (cur.includes(perm) ? cur.filter((p) => p !== perm) : [...cur, perm]));
+
+  const closePanel = () => {
+    setRoleId(null);
+    setConfirmOpen(false);
+    onClose();
+  };
+
+  const save = async () => {
+    if (!role) return;
+    setSaving(true);
     try {
-      await apiFetch(`/api/roles/${role.id}`, { method: "PATCH", json: { permissions: drafts[role.id] || [] } });
+      await apiFetch(`/api/roles/${role.id}`, { method: "PATCH", json: { permissions: draft } });
       toast.success(`Permissions saved for "${role.name}"`);
       await qc.invalidateQueries({ queryKey: ["roles"] });
-      setConfirmRole(null);
+      closePanel();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save permissions");
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-56 w-full" />)}
-      </div>
-    );
-  }
-
-  const roles = data?.items || [];
-  if (roles.length === 0) {
-    return <EmptyState icon="ShieldCheck" title="No roles configured" />;
-  }
-
   return (
-    <div className={cn("space-y-5", isDirty && "ring-0")}>
-      {roles.map((role) => {
-        const draft = drafts[role.id] || role.permissions;
-        const dirty = draft.length !== role.permissions.length || draft.some((p) => !role.permissions.includes(p));
-        return (
-          <SectionCard
-            key={role.id}
-            title={role.name}
-            icon="ShieldCheck"
-            description={role.description || undefined}
-            actions={
-              <div className="flex items-center gap-2">
-                {role.system && (
-                  <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-700">System</Badge>
-                )}
-                <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{role.userCount} users</Badge>
-                <Badge variant="outline" className="bg-teal-50 text-teal-700">{draft.length} permissions</Badge>
-                {dirty && (
-                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Unsaved</Badge>
-                )}
-                <Button
-                  size="sm"
-                  variant={dirty ? "default" : "outline"}
-                  className={dirty ? "bg-navy-800 hover:bg-navy-900" : ""}
-                  onClick={() => setConfirmRole(role)}
-                  disabled={!dirty}
-                >
-                  Save
-                </Button>
-              </div>
-            }
-          >
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {PERM_GROUPS.map((g) => (
-                <div key={g.label} className="rounded-lg border bg-muted/20 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-700">{g.label}</p>
-                  <div className="space-y-2">
-                    {g.perms.map((p) => (
-                      <label key={p.key} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={draft.includes(p.key)}
-                          onCheckedChange={() => toggle(role.id, p.key)}
-                        />
-                        <span className={draft.includes(p.key) ? "font-medium" : "text-muted-foreground"}>{p.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+    <>
+      {/* step 1 — choose the role */}
+      <Dialog open={pickerOpen} onOpenChange={(v) => { if (!v) { setPickerOpen(false); if (!roleId) onClose(); } }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto custom-scrollbar sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage roles</DialogTitle>
+            <DialogDescription>Choose the role whose permissions you want to change.</DialogDescription>
+          </DialogHeader>
+          {isLoading ? (
+            <Skeleton className="h-40 w-full" />
+          ) : roles.length === 0 ? (
+            <EmptyState icon="ShieldCheck" title="No roles configured" />
+          ) : (
+            <ul className="space-y-2">
+              {roles.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onClick={() => pick(r)}
+                    className="group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:border-teal-500/60 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-800">
+                      <AtomIcon name="ShieldCheck" className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                        {r.name}
+                        {r.system ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-700">System</Badge> : null}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {r.userCount} user{r.userCount === 1 ? "" : "s"} · {r.permissions.length} permissions
+                      </span>
+                    </span>
+                    <AtomIcon name="ChevronRight" className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </li>
               ))}
-            </div>
-          </SectionCard>
-        );
-      })}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPickerOpen(false); onClose(); }}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <AlertDialog open={!!confirmRole} onOpenChange={(v) => (!v ? setConfirmRole(null) : null)}>
+      {/* step 2 — edit that role in the side panel */}
+      <SidePanel
+        open={!!role}
+        onOpenChange={(v) => (!v ? closePanel() : null)}
+        size="lg"
+        title={role ? `Edit role — ${role.name}` : "Edit role"}
+        description={role?.description || "Switch permissions on or off. Changes apply to everyone with this role once saved."}
+        headerExtra={role?.system ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-700">System</Badge> : null}
+      >
+        <SidePanelBody className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{role?.userCount ?? 0} users</Badge>
+            <Badge variant="outline" className="bg-teal-50 text-teal-700">{draft.length} permissions on</Badge>
+            {dirty ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Unsaved changes</Badge> : null}
+          </div>
+          {PERM_GROUPS.map((g) => (
+            <div key={g.label}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-700">{g.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {g.perms.map((p) => {
+                  const on = draft.includes(p.key);
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggle(p.key)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400",
+                        on
+                          ? "border-teal-600 bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                          : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </SidePanelBody>
+        <SidePanelFooter className="justify-end">
+          <Button variant="outline" onClick={closePanel}>Cancel</Button>
+          <Button onClick={() => setConfirmOpen(true)} disabled={!dirty || saving}>Save permissions</Button>
+        </SidePanelFooter>
+      </SidePanel>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Save permissions for “{confirmRole?.name}”?</AlertDialogTitle>
+            <AlertDialogTitle>Save permissions for “{role?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmRole?.system
+              {role?.system
                 ? "This is a system role — users with this role gain/lose access immediately after saving. The change is recorded in the audit log."
                 : "Users with this role gain or lose access immediately. The change is recorded in the audit log."}
             </AlertDialogDescription>
@@ -192,15 +227,15 @@ export default function SettingsRolesTab() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                if (confirmRole) void save(confirmRole);
+                void save();
               }}
-              disabled={savingId !== null}
+              disabled={saving}
             >
-              {savingId ? "Saving…" : "Save permissions"}
+              {saving ? "Saving…" : "Save permissions"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

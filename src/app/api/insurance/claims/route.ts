@@ -16,6 +16,9 @@ export const GET = route(async (req) => {
   const where: Record<string, unknown> = { clinicId: auth.clinicId };
   if (providerId) where.providerId = providerId;
   if (status) where.status = status;
+  // stats follow the provider filter (but not the status filter) so a provider page shows its own totals
+  const statsWhere: Record<string, unknown> = { clinicId: auth.clinicId };
+  if (providerId) statsWhere.providerId = providerId;
 
   const [items, total, draft, submitted, approved, partiallyApproved, rejected, paid, claimedAgg, approvedAgg] = await Promise.all([
     db.insuranceClaim.findMany({
@@ -34,14 +37,14 @@ export const GET = route(async (req) => {
       },
     }),
     db.insuranceClaim.count({ where }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "DRAFT" } }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "SUBMITTED" } }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "APPROVED" } }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "PARTIALLY_APPROVED" } }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "REJECTED" } }),
-    db.insuranceClaim.count({ where: { clinicId: auth.clinicId, status: "PAID" } }),
-    db.insuranceClaim.aggregate({ where: { clinicId: auth.clinicId }, _sum: { claimedCents: true } }),
-    db.insuranceClaim.aggregate({ where: { clinicId: auth.clinicId }, _sum: { approvedCents: true } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "DRAFT" } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "SUBMITTED" } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "APPROVED" } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "PARTIALLY_APPROVED" } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "REJECTED" } }),
+    db.insuranceClaim.count({ where: { ...statsWhere, status: "PAID" } }),
+    db.insuranceClaim.aggregate({ where: statsWhere, _sum: { claimedCents: true } }),
+    db.insuranceClaim.aggregate({ where: statsWhere, _sum: { approvedCents: true } }),
   ]);
 
   return json({

@@ -5,6 +5,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/molecules/page-header";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
+import { CardGrid } from "@/components/molecules/card-grid";
+import { ViewToggle } from "@/components/molecules/view-toggle";
+import { DataTable } from "@/components/molecules/data-table";
 import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
@@ -12,18 +15,16 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { calcAge, formatDate, fullName, initials } from "@/lib/format";
 import { PERMS, PATIENT_STATUSES, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/constants";
 import { hasPermission, useAuthStore } from "@/stores/app-store";
 import { useDebounced, usePatientList, useTherapists, type PatientListItem } from "./hooks";
+import { usePersistentState } from "@/hooks/use-persistent-state";
+import { PatientCard } from "./PatientCard";
 import PatientRegistrationDialog from "./PatientRegistrationDialog";
 
 const PAYMENT_TONES: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
   const [sort, setSort] = useState("createdAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [view, setView] = usePersistentState<"table" | "grid">("gmrs-patients-view", "table", ["table", "grid"]);
 
   const search = useDebounced(searchInput, 300);
   const therapists = useTherapists();
@@ -80,21 +82,6 @@ export default function PatientsDirectory({ onOpen }: Props) {
     resetPage();
   };
 
-  const renderSortHead = (field: string, label: string, className?: string) => (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-        onClick={() => toggleSort(field)}
-      >
-        {label}
-        {sort === field ? (
-          <AtomIcon name={order === "asc" ? "ArrowUp" : "ArrowDown"} className="h-3 w-3" />
-        ) : null}
-      </button>
-    </TableHead>
-  );
-
   const handleRegistered = (patientId: string) => {
     toast.success("Patient registered", { description: "The profile is ready." });
     void queryClient.invalidateQueries({ queryKey: ["patients"] });
@@ -102,170 +89,8 @@ export default function PatientsDirectory({ onOpen }: Props) {
     onOpen(patientId);
   };
 
-  return (
-    <div>
-      <PageHeader
-        title="Patients"
-        description="Register new patients, manage records and open treatment profiles"
-        icon="Users"
-        actions={
-          canManage ? (
-            <Button onClick={() => setRegisterOpen(true)}>
-              <AtomIcon name="UserPlus" className="mr-2 h-4 w-4" />
-              Register patient
-            </Button>
-          ) : null
-        }
-      />
-
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="p-4">
-          <DataToolbar
-            search={{
-              value: searchInput,
-              onChange: (v) => {
-                setSearchInput(v);
-                resetPage();
-              },
-              placeholder: "Search name, ID or phone…",
-            }}
-            filters={
-              <>
-                <Select
-                  value={status}
-                  onValueChange={(v) => {
-                    setStatus(v);
-                    resetPage();
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-[150px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {PATIENT_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={arrangement}
-                  onValueChange={(v) => {
-                    setArrangement(v);
-                    resetPage();
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-[150px]">
-                    <SelectValue placeholder="Payment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All arrangements</SelectItem>
-                    {PAYMENT_ARRANGEMENTS.map((p) => (
-                      <SelectItem key={p} value={p}>{labelize(p)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={therapistId}
-                  onValueChange={(v) => {
-                    setTherapistId(v);
-                    resetPage();
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-[170px]">
-                    <SelectValue placeholder="Therapist" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All therapists</SelectItem>
-                    {therapists.data?.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            }
-            onRefresh={() => void list.refetch()}
-            refreshing={list.isFetching}
-          />
-        </div>
-
-        <div className="max-h-[600px] overflow-auto custom-scrollbar">
-          <Table className="min-w-[880px]">
-            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
-              <TableRow>
-                {renderSortHead("patientCode", "Patient ID")}
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Gender</TableHead>
-                <TableHead className="text-right">Age</TableHead>
-                {renderSortHead("createdAt", "Registered")}
-                <TableHead>Payment</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Therapist</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {list.isLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: 10 }).map((_, j) => (
-                        <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                : items.map((p: PatientListItem) => (
-                    <TableRow
-                      key={p.id}
-                      className="cursor-pointer"
-                      onClick={() => onOpen(p.id)}
-                    >
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.patientCode}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarFallback className="rounded-lg bg-navy-50 text-xs font-semibold text-navy-800">
-                              {initials(fullName({ firstName: p.firstName, middleName: p.middleName, lastName: p.lastName }))}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{fullName({ firstName: p.firstName, middleName: p.middleName, lastName: p.lastName })}</p>
-                            {p.activeEpisodeTitle ? (
-                              <p className="truncate text-xs text-muted-foreground">{p.activeEpisodeTitle}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{p.phone}</TableCell>
-                      <TableCell className="text-sm">{p.gender ? labelize(p.gender) : "—"}</TableCell>
-                      <TableCell className="text-right text-sm">{calcAge(p.dateOfBirth)}</TableCell>
-                      <TableCell className="text-sm">{formatDate(p.createdAt)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={PAYMENT_TONES[p.paymentArrangement] || ""}>
-                          {labelize(p.paymentArrangement)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><StatusBadge status={p.currentStatus} /></TableCell>
-                      <TableCell className="text-sm">{p.assignedTherapist?.name || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpen(p.id);
-                          }}
-                        >
-                          Open
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-            </TableBody>
-          </Table>
-
-          {!list.isLoading && items.length === 0 ? (
-            <div className="p-4">
+  const emptyBlock = (
+    <div className="p-4">
               <EmptyState
                 icon="Users"
                 title="No patients found"
@@ -284,20 +109,172 @@ export default function PatientsDirectory({ onOpen }: Props) {
                 }
               />
             </div>
-          ) : null}
-        </div>
+  );
 
-        <TablePagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            resetPage();
+  const paginationEl = (
+    <TablePagination
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      onPageChange={setPage}
+      onPageSizeChange={(s) => {
+        setPageSize(s);
+        resetPage();
+      }}
+    />
+  );
+
+  return (
+    <div>
+      <PageHeader
+        title="Patients"
+        description="Register new patients, manage records and open treatment profiles"
+        icon="Users"
+      />
+
+      <div className="mb-3">
+        <DataToolbar
+          search={{
+            value: searchInput,
+            onChange: (v) => {
+              setSearchInput(v);
+              resetPage();
+            },
+            placeholder: "Search name, ID or phone…",
           }}
-        />
+          filters={
+            <>
+              <Select
+                value={status}
+                onValueChange={(v) => {
+                  setStatus(v);
+                  resetPage();
+                }}
+              >
+                <SelectTrigger className="h-9 w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {PATIENT_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{labelize(s)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={arrangement}
+                onValueChange={(v) => {
+                  setArrangement(v);
+                  resetPage();
+                }}
+              >
+                <SelectTrigger className="h-9 w-[150px]">
+                  <SelectValue placeholder="Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All arrangements</SelectItem>
+                  {PAYMENT_ARRANGEMENTS.map((p) => (
+                    <SelectItem key={p} value={p}>{labelize(p)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={therapistId}
+                onValueChange={(v) => {
+                  setTherapistId(v);
+                  resetPage();
+                }}
+              >
+                <SelectTrigger className="h-9 w-[170px]">
+                  <SelectValue placeholder="Therapist" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All therapists</SelectItem>
+                  {therapists.data?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          }
+          onRefresh={() => void list.refetch()}
+          refreshing={list.isFetching}
+        >
+          <ViewToggle
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "table", label: "Table", icon: "Table2" },
+              { value: "grid", label: "Grid", icon: "LayoutGrid" },
+            ]}
+          />
+          {canManage ? (
+            <Button onClick={() => setRegisterOpen(true)}>
+              <AtomIcon name="UserPlus" className="mr-2 h-4 w-4" />
+              Register patient
+            </Button>
+          ) : null}
+        </DataToolbar>
       </div>
+      {view === "grid" ? (
+        <>
+          {list.isLoading ? (
+            <CardGrid>
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
+            </CardGrid>
+          ) : items.length === 0 ? (
+            <div className="rounded-xl border bg-card shadow-sm">{emptyBlock}</div>
+          ) : (
+            <CardGrid minItemWidth={290}>
+              {items.map((p: PatientListItem) => <PatientCard key={p.id} patient={p} onOpen={onOpen} />)}
+            </CardGrid>
+          )}
+          <div className="mt-4 overflow-hidden rounded-xl border bg-card shadow-sm">{paginationEl}</div>
+        </>
+      ) : (
+        <DataTable
+          rows={items}
+          rowKey={(p: PatientListItem) => p.id}
+          loading={list.isLoading}
+          minWidth="min-w-220"
+          onRowClick={(p) => onOpen(p.id)}
+          sort={{ field: sort, order }}
+          onSort={toggleSort}
+          empty={emptyBlock}
+          pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (s) => { setPageSize(s); resetPage(); } }}
+          columns={[
+            { id: "code", header: "Patient ID", sortField: "patientCode", cell: (p) => <span className="font-mono text-xs text-muted-foreground">{p.patientCode}</span> },
+            {
+              id: "name", header: "Name",
+              cell: (p) => {
+                const name = fullName({ firstName: p.firstName, middleName: p.middleName, lastName: p.lastName });
+                return (
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarFallback className="rounded-lg bg-navy-50 text-xs font-semibold text-navy-800">{initials(name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{name}</p>
+                      {p.activeEpisodeTitle ? <p className="truncate text-xs text-muted-foreground">{p.activeEpisodeTitle}</p> : null}
+                    </div>
+                  </div>
+                );
+              },
+            },
+            { id: "phone", header: "Phone", cell: (p) => <span className="text-sm">{p.phone}</span> },
+            { id: "gender", header: "Gender", cell: (p) => <span className="text-sm">{p.gender ? labelize(p.gender) : "—"}</span> },
+            { id: "age", header: "Age", align: "right", cell: (p) => <span className="text-sm">{calcAge(p.dateOfBirth)}</span> },
+            { id: "registered", header: "Registered", sortField: "createdAt", cell: (p) => <span className="text-sm">{formatDate(p.createdAt)}</span> },
+            { id: "payment", header: "Payment", cell: (p) => <Badge variant="outline" className={PAYMENT_TONES[p.paymentArrangement] || ""}>{labelize(p.paymentArrangement)}</Badge> },
+            { id: "status", header: "Status", cell: (p) => <StatusBadge status={p.currentStatus} /> },
+            { id: "therapist", header: "Therapist", cell: (p) => <span className="text-sm">{p.assignedTherapist?.name || "—"}</span> },
+            {
+              id: "actions", header: "Actions", align: "right",
+              cell: (p) => <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onOpen(p.id); }}>Open</Button>,
+            },
+          ]}
+        />
+      )}
 
       <PatientRegistrationDialog
         open={registerOpen}
