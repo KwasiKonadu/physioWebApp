@@ -1,6 +1,6 @@
 "use client";
 // SETTINGS: Manage roles — a pop-up to pick the role, then a side panel to edit its permissions as pills (with confirm dialog)
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";

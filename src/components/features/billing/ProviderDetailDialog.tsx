@@ -15,7 +15,6 @@ import { formatMoney } from "@/lib/format";
 import { labelize } from "@/lib/constants";
 import { inputToCents, centsToInput, type ListResponse, type ServiceLite, type ProviderLite, type RateItem } from "./billing-shared";
 
-
 // ---- Provider detail: negotiated rates ----
 export function ProviderDetailDialog({
   providerId,

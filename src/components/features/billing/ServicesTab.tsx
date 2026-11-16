@@ -51,7 +51,6 @@ function ServiceDialog({
   // existing categories, plus the current value if it isn't in the list yet (e.g. editing an older service)
   const categoryOptions = Array.from(new Set([...categories, ...(category && !addingCategory ? [category] : [])])).sort();
 
-
   const saveM = useMutation({
     mutationFn: () => {
       const payload = {

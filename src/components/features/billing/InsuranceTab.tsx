@@ -19,7 +19,6 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
 import { PERMS, CLAIM_STATUSES, labelize } from "@/lib/constants";
 import { patientName, type ListResponse, type ProviderLite, type ClaimItem } from "./billing-shared";
-
 import { ARRANGEMENT_TONE } from "./insurance-shared";
 import { ProviderDialog } from "./ProviderDialog";
 import { ProviderDetailDialog } from "./ProviderDetailDialog";

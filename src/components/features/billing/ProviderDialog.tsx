@@ -12,7 +12,6 @@ import { apiFetch } from "@/lib/api-client";
 import { labelize } from "@/lib/constants";
 import { type ProviderLite } from "./billing-shared";
 
-
 // ---- Provider add/edit ----
 export function ProviderDialog({
   open,

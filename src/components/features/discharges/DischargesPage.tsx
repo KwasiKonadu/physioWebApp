@@ -25,7 +25,6 @@ export default function DischargesPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const navigate = useUIStore((s) => s.navigate);
   const navOpts = useUIStore((s) => s.navOpts);
   const clearOpts = useUIStore((s) => s.clearOpts);
   const canManage = hasPermission(user, PERMS.clinicalManage);

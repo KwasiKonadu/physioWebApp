@@ -19,7 +19,7 @@ import {
 import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
 import { PageHeader } from "@/components/molecules/page-header";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PatientSearchSelect } from "../assessments/AssessmentForm";
+import { PatientSearchSelect } from "../assessments/PatientSearchSelect";
 import type { PatientLite } from "../assessments/assessments-api";
 import { apiFetch } from "@/lib/api-client";
 import { setNavGuard, useUIStore } from "@/stores/app-store";

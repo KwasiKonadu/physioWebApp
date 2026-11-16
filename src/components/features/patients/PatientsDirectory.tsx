@@ -151,7 +151,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
                   resetPage();
                 }}
               >
-                <SelectTrigger className="h-9 w-[150px]">
+                <SelectTrigger className="h-9 w-37.5">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,7 +168,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
                   resetPage();
                 }}
               >
-                <SelectTrigger className="h-9 w-[150px]">
+                <SelectTrigger className="h-9 w-37.5">
                   <SelectValue placeholder="Payment" />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +185,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
                   resetPage();
                 }}
               >
-                <SelectTrigger className="h-9 w-[170px]">
+                <SelectTrigger className="h-9 w-42.5">
                   <SelectValue placeholder="Therapist" />
                 </SelectTrigger>
                 <SelectContent>

@@ -11,20 +11,14 @@ import { StatCard } from "@/components/molecules/stat-card";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-
-
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { Switch } from "@/components/ui/switch";
-
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney, formatDate } from "@/lib/format";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
 import { PERMS, labelize } from "@/lib/constants";
 import { patientName, type ListResponse, type PackageDef, type PatientPackageItem } from "./billing-shared";
-
 import { PackageDefDialog } from "./PackageDefDialog";
 import { AssignPackageDialog } from "./AssignPackageDialog";
 import { LedgerDialog } from "./LedgerDialog";

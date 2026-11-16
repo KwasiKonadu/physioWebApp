@@ -4,13 +4,10 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { PERMS, REMUNERATION_METHODS, labelize } from "@/lib/constants";
-import { formatDate, formatMoney, toCents } from "@/lib/format";
+import { PERMS, labelize } from "@/lib/constants";
+import { toCents } from "@/lib/format";
 import { hasPermission, useAuthStore } from "@/stores/app-store";
 import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
-import { DetailGrid, DetailRow } from "@/components/molecules/detail-row";
-import { SectionCard } from "@/components/molecules/section-card";
-import { StatCard } from "@/components/molecules/stat-card";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -19,79 +16,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ReportBarChart } from "@/components/features/reports/ReportBarChart";
-import { ReportDonut } from "@/components/features/reports/ReportDonut";
 import StaffFormDialog, { type StaffFormTarget } from "./staff-form-dialog";
 import { STAFF_ROLE_TONES } from "./StaffCard";
 import StaffPatientsTab from "./StaffPatientsTab";
-
-interface StaffDetail {
-  staff: {
-    id: string; staffCode: string; firstName: string; lastName: string;
-    email: string | null; phone: string | null; jobTitle: string; department: string | null;
-    staffRole: string; employmentStatus: string; employmentDate: string | null;
-    professionalDesignation: string | null; specialization: string | null;
-    qualifications: string[]; availability: { day: string; start?: string; end?: string }[];
-    remunerationMethod: string; remunerationRateCents: number | null; isTherapist: boolean;
-    branchId: string | null;
-  };
-  branchName: string | null;
-  account: { id: string; email: string; name: string; active: boolean; roleName: string } | null;
-  stats: { completedSessions: number; uniquePatients: number; activeEpisodes: number };
-}
-
-interface StatsResponse {
-  stats: {
-    completedSessions: number; uniquePatients: number; activeEpisodes: number;
-    appointmentsCompleted: number; noShows: number; upcomingAppointments: number;
-  };
-  remuneration: { method: string; rateCents: number | null; computedCents: number | null };
-  trend: { month: string; sessions: number }[];
-  monthly: { month: string; sessions: number; patients: number; booked: number; completed: number; noShows: number; cancelled: number }[];
-  statusBreakdown: { status: string; count: number }[];
-  byWeekday: { day: string; sessions: number }[];
-}
-
-const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "this_week", label: "This week" },
-  { value: "last_week", label: "Last week" },
-  { value: "last_7", label: "Last 7 days" },
-  { value: "last_30", label: "Last 30 days" },
-  { value: "this_month", label: "This month" },
-  { value: "last_month", label: "Last month" },
-  { value: "last_3", label: "Last 3 months" },
-  { value: "this_year", label: "This year" },
-] as const;
-type Period = (typeof PERIODS)[number]["value"];
-
-function periodRange(p: Period): { from: string; to: string } {
-  const n = new Date();
-  const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-  const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-  const addDays = (d: Date, k: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + k);
-  const today = sod(n);
-  const monday = addDays(today, -((today.getDay() + 6) % 7)); // weeks run Monday–Sunday
-  const range = (from: Date, to: Date) => ({ from: from.toISOString(), to: eod(to).toISOString() });
-  switch (p) {
-    case "today": return range(today, today);
-    case "yesterday": return range(addDays(today, -1), addDays(today, -1));
-    case "this_week": return range(monday, today);
-    case "last_week": return range(addDays(monday, -7), addDays(monday, -1));
-    case "last_7": return range(addDays(today, -6), today);
-    case "last_30": return range(addDays(today, -29), today);
-    case "last_month": return range(new Date(n.getFullYear(), n.getMonth() - 1, 1), new Date(n.getFullYear(), n.getMonth(), 0));
-    case "last_3": return range(new Date(n.getFullYear(), n.getMonth() - 2, 1), today);
-    case "this_year": return range(new Date(n.getFullYear(), 0, 1), today);
-    default: return range(new Date(n.getFullYear(), n.getMonth(), 1), today);
-  }
-}
+import { StaffDetail, StatsResponse, PERIODS, Period, periodRange } from "./staff-profile-model";
+import { StaffOverviewTab } from "./StaffOverviewTab";
+import { StaffWorkloadTab } from "./StaffWorkloadTab";
+import { StaffRemunerationTab } from "./StaffRemunerationTab";
+import { StaffAccountTab } from "./StaffAccountTab";
 
 export default function StaffProfile({ staffId, onBack }: { staffId: string; onBack: () => void }) {
   const user = useAuthStore((s) => s.user);
@@ -321,70 +257,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
           </div>
 
           {/* ============ OVERVIEW ============ */}
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {s.isTherapist ? (
-                <>
-                  <StatCard label="Active episodes" value={data.stats.activeEpisodes} icon="GitBranch" tone="navy" />
-                  <StatCard label="Completed sessions" value={data.stats.completedSessions} icon="Activity" tone="teal" hint="all time" />
-                  <StatCard label="Unique patients" value={data.stats.uniquePatients} icon="Users" tone="sky" hint="all time" />
-                </>
-              ) : (
-                <StatCard label="Role" value={labelize(s.staffRole)} icon="BadgeCheck" tone="navy" />
-              )}
-              <StatCard label="Employed since" value={s.employmentDate ? formatDate(s.employmentDate) : "—"} icon="CalendarDays" tone="emerald" />
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <SectionCard title="Employment details" icon="Briefcase" className="flex-1">
-                <DetailGrid cols={1}>
-                  <DetailRow label="Full name" value={name} />
-                  <DetailRow label="Staff ID" value={<span className="font-mono text-xs">{s.staffCode}</span>} />
-                  <DetailRow label="Job title" value={s.jobTitle} />
-                  <DetailRow label="Department" value={s.department} />
-                  <DetailRow label="Role" value={<Badge variant="outline" className={STAFF_ROLE_TONES[s.staffRole] || ""}>{labelize(s.staffRole)}</Badge>} />
-                  <DetailRow label="Status" value={<StatusBadge status={s.employmentStatus} />} />
-                  <DetailRow label="Branch" value={data.branchName} />
-                  <DetailRow label="Employed since" value={s.employmentDate ? formatDate(s.employmentDate) : undefined} />
-                  <DetailRow label="Email" value={s.email} />
-                  <DetailRow label="Phone" value={s.phone} />
-                  <DetailRow label="Therapist" value={s.isTherapist ? "Yes — workload tracked" : "No"} />
-                </DetailGrid>
-              </SectionCard>
-
-              <div className="flex flex-col gap-4">
-                <SectionCard title="Qualifications" icon="GraduationCap">
-                  {s.professionalDesignation || s.specialization || s.qualifications.length > 0 ? (
-                    <div className="space-y-2">
-                      {s.professionalDesignation ? <p className="text-sm"><span className="text-muted-foreground">Designation:</span> {s.professionalDesignation}</p> : null}
-                      {s.specialization ? <p className="text-sm"><span className="text-muted-foreground">Specialization:</span> {s.specialization}</p> : null}
-                      {s.qualifications.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {s.qualifications.map((q, i) => <Badge key={i} variant="outline" className="bg-muted/50 font-normal">{q}</Badge>)}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No qualifications recorded.</p>
-                  )}
-                </SectionCard>
-
-                <SectionCard title="Availability" icon="Clock" className="flex-1">
-                  {s.availability.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.availability.map((a, i) => (
-                        <Badge key={i} variant="outline" className="border-teal-200 bg-teal-50 font-normal text-teal-700">
-                          {a.day} {a.start || ""}{a.end ? `–${a.end}` : ""}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No availability set.</p>
-                  )}
-                </SectionCard>
-              </div>
-            </div>
-          </TabsContent>
+          <StaffOverviewTab data={data} s={s} stats={stats} name={name} />
 
           {/* ============ PATIENTS (clients of this therapist) ============ */}
           {s.isTherapist ? (
@@ -395,186 +268,14 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
 
           {/* ============ WORKLOAD ============ */}
           {s.isTherapist ? (
-            <TabsContent value="workload" className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">Completed sessions only count towards workload.</p>
-                <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-                  <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PERIODS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-                <StatCard label="Sessions" value={stats?.stats.completedSessions ?? 0} icon="Activity" tone="teal" hint={periodLabel} loading={!stats} />
-                <StatCard label="Unique patients" value={stats?.stats.uniquePatients ?? 0} icon="Users" tone="sky" hint={periodLabel} loading={!stats} />
-                <StatCard label="Active episodes" value={stats?.stats.activeEpisodes ?? 0} icon="GitBranch" tone="navy" loading={!stats} />
-                <StatCard label="Appts completed" value={stats?.stats.appointmentsCompleted ?? 0} icon="CheckCircle2" tone="emerald" hint={completionHint} loading={!stats} />
-                <StatCard label="No-shows" value={stats?.stats.noShows ?? 0} icon="UserX" tone="rose" hint={noShowHint} loading={!stats} />
-                <StatCard label="Upcoming" value={stats?.stats.upcomingAppointments ?? 0} icon="Clock" tone="amber" loading={!stats} />
-              </div>
-              <SectionCard
-                title="Activity — last 6 months"
-                icon="BarChart3"
-                description="Switch metrics on and off with the chips above the chart"
-              >
-                {!stats ? (
-                  <Skeleton className="h-72 w-full" />
-                ) : (
-                  <ReportBarChart
-                    data={stats.monthly}
-                    xKey="month"
-                    height={260}
-                    series={[
-                      { key: "sessions", name: "Sessions completed", color: "#0e9f8a" },
-                      { key: "patients", name: "Unique patients", color: "#123c66" },
-                      { key: "booked", name: "Appointments booked", color: "#0ea5e9" },
-                      { key: "noShows", name: "No-shows", color: "#ef4444" },
-                      { key: "cancelled", name: "Cancelled", color: "#f59e0b" },
-                    ]}
-                    defaultHidden={["cancelled"]}
-                  />
-                )}
-              </SectionCard>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <SectionCard title="Appointment outcomes" icon="PieChart" description={periodLabel}>
-                  {!stats ? (
-                    <Skeleton className="h-52 w-full" />
-                  ) : stats.statusBreakdown.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted-foreground">No appointments in this period.</p>
-                  ) : (
-                    <ReportDonut
-                      data={stats.statusBreakdown.map((r) => ({ name: r.status, value: r.count }))}
-                      formatName={labelize}
-                      centreLabel="Appointments"
-                    />
-                  )}
-                </SectionCard>
-                <SectionCard title="Busiest days" icon="CalendarDays" description={`Completed sessions by weekday · ${periodLabel}`}>
-                  {!stats ? (
-                    <Skeleton className="h-52 w-full" />
-                  ) : (
-                    <ReportBarChart
-                      data={stats.byWeekday}
-                      xKey="day"
-                      height={208}
-                      series={[{ key: "sessions", name: "Sessions", color: "#0e9f8a" }]}
-                    />
-                  )}
-                </SectionCard>
-              </div>
-            </TabsContent>
+            <StaffWorkloadTab data={data} stats={stats} name={name} period={period} setPeriod={setPeriod} periodLabel={periodLabel} completionHint={completionHint} noShowHint={noShowHint} />
           ) : null}
 
           {/* ============ REMUNERATION ============ */}
-          <TabsContent value="remuneration" className="space-y-4">
-            <div className="grid gap-4 xl:grid-cols-2">
-              <SectionCard title="Pay" icon="Wallet">
-                {canManage ? (
-                  <div className="space-y-3">
-                    {s.isTherapist ? (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Method</Label>
-                        <Select value={method} onValueChange={setMethod}>
-                          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {REMUNERATION_METHODS.map((m) => (
-                              <SelectItem key={m} value={m}>
-                                {m === "FIXED" ? "Fixed monthly salary" : m === "PER_PATIENT" ? "Per unique patient" : "Per completed session"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : null}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {effMethod === "FIXED" ? "Monthly salary (GHS)" : `Rate (GHS ${effMethod === "PER_SESSION" ? "per session" : "per unique patient"})`}
-                      </Label>
-                      <Input type="number" min="0" step="0.01" value={rateGhs} onChange={(e) => setRateGhs(e.target.value)} placeholder="0.00" />
-                    </div>
-                    <Button size="sm" onClick={() => void saveRemuneration()} disabled={savingRem}>
-                      {savingRem ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                ) : (
-                  <DetailGrid cols={1}>
-                    <DetailRow label="Method" value={s.remunerationMethod === "FIXED" ? "Fixed monthly salary" : labelize(s.remunerationMethod)} />
-                    <DetailRow label={s.remunerationMethod === "FIXED" ? "Monthly salary" : "Rate"} value={s.remunerationRateCents ? formatMoney(s.remunerationRateCents) : undefined} />
-                  </DetailGrid>
-                )}
-              </SectionCard>
-
-              <SectionCard title="Computed remuneration" icon="Calculator" description={periodLabel}>
-                <div className="mb-3 flex justify-end">
-                  <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-                    <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PERIODS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {!stats ? (
-                  <Skeleton className="h-16 w-full" />
-                ) : stats.remuneration.computedCents !== null ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {stats.remuneration.method === "FIXED"
-                        ? `${formatMoney(stats.remuneration.rateCents ?? 0)} / month, pro-rated by days`
-                        : `${stats.stats.completedSessions} sessions · ${stats.stats.uniquePatients} unique patients`}
-                    </span>
-                    <span className="text-xl font-semibold text-navy-800">{formatMoney(stats.remuneration.computedCents)}</span>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No pay rate recorded yet{canManage ? " — set it on the left." : "."}</p>
-                )}
-              </SectionCard>
-            </div>
-          </TabsContent>
+          <StaffRemunerationTab s={s} stats={stats} period={period} setPeriod={setPeriod} periodLabel={periodLabel} canManage={canManage} effMethod={effMethod} method={method} rateGhs={rateGhs} savingRem={savingRem} saveRemuneration={saveRemuneration} setMethod={setMethod} setRateGhs={setRateGhs} />
 
           {/* ============ LOGIN ACCOUNT ============ */}
-          <TabsContent value="account" className="space-y-4">
-            <SectionCard title="Login account" icon="ShieldCheck">
-              {data.account ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{data.account.email}</p>
-                      <p className="text-xs text-muted-foreground">{data.account.roleName}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{data.account.active ? "Active" : "Inactive"}</span>
-                      <Switch checked={data.account.active} onCheckedChange={(v) => void toggleAccount(v)} disabled={!canManageUsers && !canManage} />
-                    </div>
-                  </div>
-                  {!data.account.active ? <p className="text-xs text-amber-600">Deactivated users cannot sign in until reactivated.</p> : null}
-                  {canManageUsers ? (
-                    resetOpen ? (
-                      <div className="flex w-full max-w-md items-center gap-2">
-                        <Input type="password" placeholder="New password (min 8 chars)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                        <Button size="sm" onClick={() => void resetPassword()} disabled={busy}>Save</Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setResetOpen(false); setNewPassword(""); }}>Cancel</Button>
-                      </div>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={() => setResetOpen(true)}>
-                        <AtomIcon name="KeyRound" className="mr-1.5 h-3.5 w-3.5" /> Reset password
-                      </Button>
-                    )
-                  ) : null}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">No login account linked to this staff profile.</p>
-                  {canManageUsers ? (
-                    <Button size="sm" variant="outline" onClick={() => { setCreateEmail(s.email || ""); setCreateRoleId(""); setCreateOpen(true); }}>
-                      <AtomIcon name="UserPlus" className="mr-1.5 h-3.5 w-3.5" /> Create account
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-            </SectionCard>
-          </TabsContent>
+          <StaffAccountTab data={data} s={s} name={name} canManage={canManage} canManageUsers={canManageUsers} busy={busy} newPassword={newPassword} resetOpen={resetOpen} resetPassword={resetPassword} toggleAccount={toggleAccount} setCreateEmail={setCreateEmail} setCreateRoleId={setCreateRoleId} setNewPassword={setNewPassword} setCreateOpen={setCreateOpen} setResetOpen={setResetOpen} />
         </Tabs>
       </div>
 
