@@ -156,6 +156,14 @@ export async function deductPackageForSession(tx: Tx, opts: {
  * - deducts a package session when the patient pays by package (Business Rule 17)
  * - notifies therapist
  */
+/** Business rule: therapy sessions require a completed assessment (episode must have reached AWAITING_PLAN or later). */
+export const ASSESSMENT_PENDING_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS"];
+export function assertAssessmentCompleted(status: string) {
+  if (ASSESSMENT_PENDING_STATUSES.includes(status)) {
+    throw new ApiError(409, "Complete the patient's assessment before starting or completing therapy sessions for this episode");
+  }
+}
+
 export async function completeTherapySessionTx(opts: {
   sessionId: string;
   clinicId: string;
@@ -176,6 +184,7 @@ export async function completeTherapySessionTx(opts: {
     if (txSession.status === "COMPLETED") throw new ApiError(409, "Session is already completed");
     if (txSession.status === "CANCELLED" || txSession.status === "NO_SHOW") throw new ApiError(409, "Cannot complete a cancelled/no-show session");
 
+    assertAssessmentCompleted(txSession.episode.status);
     const txThreshold = txSession.episode.reviewThreshold || 15;
 
     const updated = await tx.therapySession.update({

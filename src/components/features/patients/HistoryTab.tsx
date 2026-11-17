@@ -76,7 +76,7 @@ export function HistoryTab({ bundle, canManagePatients, historyByType, historyDr
           <div className="space-y-4">
             {historyByType.map((group) => (
               <div key={group.type}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{labelize(group.type)}</p>
+                <p className="label-caps mb-2">{labelize(group.type)}</p>
                 <ul className="space-y-2">
                   {group.entries.map((m: MedicalHistoryDto) => (
                     <li key={m.id} className="rounded-lg border px-3 py-2">

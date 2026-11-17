@@ -304,9 +304,9 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
             </div>
           </div>
           <dl className="flex flex-wrap gap-x-8 gap-y-1">
-            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Date</dt><dd className="text-sm font-medium">{detail ? formatDate(detail.assessmentDate) : formatDate(new Date())}</dd></div>
-            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Therapist</dt><dd className="text-sm font-medium">{therapistName ? fullName(therapistName) : "—"}</dd></div>
-            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</dt><dd className="text-sm font-medium">{detail?.status ? labelize(detail.status) : "Draft"}</dd></div>
+            <div><dt className="label-caps-sm">Date</dt><dd className="text-sm font-medium">{detail ? formatDate(detail.assessmentDate) : formatDate(new Date())}</dd></div>
+            <div><dt className="label-caps-sm">Therapist</dt><dd className="text-sm font-medium">{therapistName ? fullName(therapistName) : "—"}</dd></div>
+            <div><dt className="label-caps-sm">Status</dt><dd className="text-sm font-medium">{detail?.status ? labelize(detail.status) : "Draft"}</dd></div>
           </dl>
         </div>
       ) : null}
@@ -433,7 +433,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
               })}
             </nav>
               <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Case summary</p>
+                <p className="label-caps-sm">Case summary</p>
                 <div className="grid grid-cols-3 gap-2 *:min-w-0">
                   {[{ l: "Now", v: values.painCurrent }, { l: "Worst", v: values.painWorst }, { l: "Lowest", v: values.painLowest }].map((p) => (
                     <div key={p.l} className="rounded-lg border bg-slate-50/70 px-2 py-1.5 text-center">
@@ -482,7 +482,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
 
               {/* sticky action bar */}
               <div className="sticky bottom-0 z-10 mt-5 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="toolbar-row">
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="sm" onClick={requestLeave}>
                       <AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list

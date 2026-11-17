@@ -72,7 +72,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
             <div className="space-y-3">
               {baseline.diagnoses.map((d) => (
                 <div key={d.id} className="rounded-lg border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="toolbar-row">
                     <p className="text-sm font-semibold">{d.title}</p>
                     <div className="flex gap-1.5">
                       <Badge variant="outline" className="text-xs">{labelize(d.category)}</Badge>
@@ -92,7 +92,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
         {a ? (
           <div className="grid gap-4 lg:grid-cols-3 *:min-w-0">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">ROM</p>
+              <p className="label-caps mb-2">ROM</p>
               {a.rom.length === 0 ? <p className="text-xs text-muted-foreground">None recorded</p> : (
                 <ul className="space-y-1.5">
                   {a.rom.map((r, i) => (
@@ -105,7 +105,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
               )}
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Strength (MRC)</p>
+              <p className="label-caps mb-2">Strength (MRC)</p>
               {a.strength.length === 0 ? <p className="text-xs text-muted-foreground">None recorded</p> : (
                 <ul className="space-y-1.5">
                   {a.strength.map((s, i) => (
@@ -118,7 +118,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
               )}
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Function</p>
+              <p className="label-caps mb-2">Function</p>
               {a.functional.length === 0 ? <p className="text-xs text-muted-foreground">None recorded</p> : (
                 <ul className="space-y-1.5">
                   {a.functional.map((f, i) => (
@@ -144,7 +144,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
         {plan ? (
           <div className="space-y-4">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objectives (baseline → target)</p>
+              <p className="label-caps mb-2">Objectives (baseline → target)</p>
               {plan.objectives.length === 0 ? <p className="text-xs text-muted-foreground">No objectives defined.</p> : (
                 <ul className="space-y-1.5">
                   {plan.objectives.map((o) => (
@@ -159,7 +159,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
             </div>
             {plan.milestones.length > 0 ? (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Milestones</p>
+                <p className="label-caps mb-2">Milestones</p>
                 <ul className="space-y-1.5">
                   {plan.milestones.map((m) => (
                     <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs">
@@ -173,7 +173,7 @@ export function BaselineSection({ baseline }: { baseline: ClinicalBaseline }) {
             ) : null}
             {baseline.previousReviews.length > 0 ? (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Previous reviews</p>
+                <p className="label-caps mb-2">Previous reviews</p>
                 <ul className="space-y-1.5">
                   {baseline.previousReviews.map((r) => (
                     <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs">

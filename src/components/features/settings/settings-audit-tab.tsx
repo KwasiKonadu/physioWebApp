@@ -121,13 +121,13 @@ export default function SettingsAuditTab() {
         expandedId === log.id ? (
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Previous values</p>
+              <p className="label-caps mb-1.5">Previous values</p>
               <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-navy-800">
                 {pretty(log.previousValues)}
               </pre>
             </div>
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">New values</p>
+              <p className="label-caps mb-1.5">New values</p>
               <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-teal-800">
                 {pretty(log.newValues)}
               </pre>

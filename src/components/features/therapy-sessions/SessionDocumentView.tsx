@@ -76,7 +76,7 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
       <PageHeader title="Therapy session" description="Document the treatment delivered, vitals and clinical record" icon="Activity" />
 
       {/* Summary card */}
-      <div className="rounded-xl border bg-card p-4 shadow-sm md:p-5">
+      <div className="panel">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar className="h-12 w-12 rounded-xl">
@@ -94,7 +94,7 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
                     {patientName}
                   </button>
                 </h2>
-                <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{patient.patientCode}</span>
+                <span className="code-chip">{patient.patientCode}</span>
                 <StatusBadge status={session.status} />
               </div>
               <p className="mt-0.5 truncate text-sm text-muted-foreground">{session.episode.title}</p>
@@ -108,7 +108,7 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
               { l: "Review cycle", v: `${session.episode.sessionsSinceReview}/${session.episode.reviewThreshold}${session.episode.reviewDue ? " · due" : ""}`, warn: session.episode.reviewDue },
             ].map((x) => (
               <div key={x.l} className="min-w-0">
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+                <dt className="label-caps-sm">{x.l}</dt>
                 <dd className={cn("truncate text-sm font-semibold", x.warn && "text-amber-600")}>{x.v}</dd>
               </div>
             ))}
@@ -162,7 +162,7 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
               This session was not delivered. It does not count toward progress-review thresholds and does not deduct any package sessions.
             </AlertDescription>
           </Alert>
-          <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+          <div className="split-grid">
             <SectionCard title="Session record" icon="FileText" className="h-full">
               <DetailGrid cols={1}>
                 <DetailRow label="Scheduled for" value={`${formatDate(session.date)} ${minutesToTime(session.timeMin)}`} />

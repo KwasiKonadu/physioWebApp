@@ -248,7 +248,7 @@ export function ReviewStep({ form, mode, objectives, milestones, interventions, 
           ) : null}
           {(objectives || []).length > 0 ? (
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objectives</p>
+              <p className="label-caps mb-1.5">Objectives</p>
               <ul className="space-y-1">
                 {(objectives || []).map((o, i) => (
                   <li key={i} className="text-sm text-foreground">• {o?.description}</li>
@@ -258,7 +258,7 @@ export function ReviewStep({ form, mode, objectives, milestones, interventions, 
           ) : null}
           {(interventions || []).length > 0 ? (
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interventions</p>
+              <p className="label-caps mb-1.5">Interventions</p>
               <div className="flex flex-wrap gap-1.5">
                 {(interventions || []).map((iv, i) => (
                   iv?.name ? <Badge key={i} variant="outline">{iv.name}{iv.frequency ? ` · ${iv.frequency}` : ""}</Badge> : null

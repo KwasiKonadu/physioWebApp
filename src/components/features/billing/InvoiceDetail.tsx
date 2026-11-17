@@ -19,6 +19,7 @@ import { apiFetch } from "@/lib/api-client";
 import { formatMoney, formatDateTime, relativeTime } from "@/lib/format";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
 import { PERMS, labelize } from "@/lib/constants";
+import { patientShare } from "@/lib/invoice-share";
 import { ArrangementBadge, patientName, type InvoiceDetail } from "./billing-shared";
 import { RecordPaymentDialog, RefundDialog, CreateClaimDialog, ClaimInsurancePaymentDialog } from "./InvoiceDialogs";
 
@@ -59,6 +60,8 @@ export default function InvoiceDetailSheet({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const pShare = patientShare(invoice ? { ...invoice, claimStatus: invoice.claim?.status } : { totalCents: 0, insuranceCoveredCents: 0, arrangement: "", payments: [] });
 
   const totals = useMemo(() => {
     if (!invoice) return null;
@@ -163,6 +166,9 @@ export default function InvoiceDetailSheet({
                   <div className="flex justify-between"><span className="text-muted-foreground">Insurance covers</span><span className="tabular-nums text-sky-700">-{formatMoney(invoice.insuranceCoveredCents)}</span></div>
                 )}
                 <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{formatMoney(invoice.totalCents)}</span></div>
+                {pShare.insured && (
+                  <div className="flex justify-between font-semibold"><span>Patient pays (co-pay)</span><span className="tabular-nums">{formatMoney(pShare.shareCents)}</span></div>
+                )}
                 <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="tabular-nums text-emerald-700">{formatMoney(invoice.paidCents)}</span></div>
                 <div className="flex justify-between font-semibold">
                   <span>Balance</span>
@@ -252,7 +258,7 @@ export default function InvoiceDetailSheet({
 
         {invoice && (
           <>
-            <RecordPaymentDialog invoice={invoice} open={payOpen} onClose={() => setPayOpen(false)} defaultAmountCents={invoice.totalCents - invoice.paidCents} />
+            <RecordPaymentDialog invoice={invoice} open={payOpen} onClose={() => setPayOpen(false)} defaultAmountCents={pShare.insured ? pShare.remainingCents : invoice.totalCents - invoice.paidCents} />
             <RefundDialog invoice={invoice} open={refundOpen} onClose={() => setRefundOpen(false)} />
             <CreateClaimDialog invoice={invoice} open={claimOpen} onClose={() => setClaimOpen(false)} />
             {invoice.claim ? (

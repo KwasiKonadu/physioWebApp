@@ -4,10 +4,10 @@
 import { SectionCard } from "@/components/molecules/section-card";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { StaffDetail } from "./staff-profile-model";
+import { PasswordInput } from "@/components/molecules/password-input";
 
 export function StaffAccountTab({ data, s, name, canManage, canManageUsers, busy, newPassword, resetOpen, resetPassword, toggleAccount, setCreateEmail, setCreateRoleId, setNewPassword, setCreateOpen, setResetOpen }: { data: StaffDetail; s: StaffDetail["staff"]; name: string; canManage: boolean; canManageUsers: boolean; busy: boolean; newPassword: string; resetOpen: boolean; resetPassword: () => void; toggleAccount: (active: boolean) => void; setCreateEmail: (v: string) => void; setCreateRoleId: (v: string) => void; setNewPassword: (v: string) => void; setCreateOpen: (v: boolean) => void; setResetOpen: (v: boolean) => void }) {
   return (
@@ -29,7 +29,7 @@ export function StaffAccountTab({ data, s, name, canManage, canManageUsers, busy
             {canManageUsers ? (
               resetOpen ? (
                 <div className="flex w-full max-w-md items-center gap-2">
-                  <Input type="password" placeholder="New password (min 8 chars)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  <PasswordInput placeholder="New password (min 8 chars)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                   <Button size="sm" onClick={() => void resetPassword()} disabled={busy}>Save</Button>
                   <Button size="sm" variant="ghost" onClick={() => { setResetOpen(false); setNewPassword(""); }}>Cancel</Button>
                 </div>

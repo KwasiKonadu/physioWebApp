@@ -37,7 +37,7 @@ export function RecommendationsSection({ form, editable, isCompleted, recommenda
               const row = watchedRecommendations?.[idx];
               return (
                 <div key={f.id} className="rounded-lg border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="toolbar-row">
                     <p className="text-sm font-semibold">{idx + 1}. {row?.exerciseName || <span className="text-muted-foreground">Unnamed exercise</span>}</p>
                     {editable ? (
                       <Button variant="ghost" size="sm" className="text-rose-600 hover:text-rose-700" onClick={() => recommendationsArray.remove(idx)}>

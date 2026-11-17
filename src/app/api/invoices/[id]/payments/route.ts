@@ -4,6 +4,7 @@ import {
   db, route, json, parseBody, ApiError, audit,
   requirePermission, recalcInvoiceStatus,
 } from "@/server/api-exports";
+import { patientShare } from "@/lib/invoice-share";
 import { PERMS } from "@/lib/constants";
 import { PAYMENT_METHOD_LIST } from "../../_lib";
 
@@ -21,7 +22,12 @@ export const POST = route(async (req, ctx) => {
 
   const invoice = await db.invoice.findFirst({
     where: { id, clinicId: auth.clinicId },
-    include: { patient: { select: { id: true, firstName: true, lastName: true, patientCode: true } } },
+    include: {
+      patient: { select: { id: true, firstName: true, lastName: true, patientCode: true } },
+      payments: { select: { amountCents: true, method: true } },
+      refunds: { select: { amountCents: true } },
+      claim: { select: { status: true } },
+    },
   });
   if (!invoice) throw new ApiError(404, "Invoice not found");
   if (invoice.status === "DRAFT") throw new ApiError(409, "Issue the invoice before recording payments");
@@ -30,6 +36,12 @@ export const POST = route(async (req, ctx) => {
   const remaining = invoice.totalCents - invoice.paidCents;
   if (body.amountCents > remaining) {
     throw new ApiError(400, `Payment exceeds the outstanding balance (₵${(remaining / 100).toFixed(2)} remaining)`);
+  }
+
+  // Insurance invoices: the patient only owes their co-pay (total - insurer share); the rest is settled via the claim
+  const share = patientShare({ ...invoice, claimStatus: invoice.claim?.status });
+  if (share.insured && body.method !== "INSURANCE" && body.amountCents > share.remainingCents) {
+    throw new ApiError(400, `Patient's share is ₵${(share.shareCents / 100).toFixed(2)} (insurance covers ₵${(invoice.insuranceCoveredCents / 100).toFixed(2)}) — ₵${(share.remainingCents / 100).toFixed(2)} remaining. The insurer's part is recorded through the claim.`);
   }
 
   const payment = await db.$transaction(async (tx) => {

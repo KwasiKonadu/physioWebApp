@@ -367,8 +367,8 @@ export function PlanForm({
             </div>
           </div>
           <dl className="flex flex-wrap gap-x-8 gap-y-1">
-            <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Mode</dt><dd className="text-sm font-medium">{mode === "create" ? "New plan" : mode === "edit" ? "Editing draft" : "Revising"}</dd></div>
-            {source ? <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Version</dt><dd className="text-sm font-medium">v{source.version}</dd></div> : null}
+            <div><dt className="label-caps-sm">Mode</dt><dd className="text-sm font-medium">{mode === "create" ? "New plan" : mode === "edit" ? "Editing draft" : "Revising"}</dd></div>
+            {source ? <div><dt className="label-caps-sm">Version</dt><dd className="text-sm font-medium">v{source.version}</dd></div> : null}
           </dl>
         </div>
       ) : null}
@@ -405,7 +405,7 @@ export function PlanForm({
           </nav>
 
           <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Plan summary</p>
+            <p className="label-caps-sm">Plan summary</p>
             <div className="grid grid-cols-3 gap-2 text-center text-xs *:min-w-0">
               <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(objectivesWatch || []).filter((o) => o?.description?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Objectives</p></div>
               <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(milestonesWatch || []).filter((m) => m?.description?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Milestones</p></div>
@@ -463,7 +463,7 @@ export function PlanForm({
 
       {/* ---------- sticky action bar ---------- */}
       <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="toolbar-row">
           <div className="flex items-center gap-3">
             <Button type="button" variant="ghost" size="sm" onClick={requestLeave} disabled={submitMutation.isPending}>
               <AtomIcon name="ArrowLeft" className="h-4 w-4" />Back to list
@@ -523,8 +523,9 @@ export function PlanForm({
                     <SelectTrigger className="w-full"><SelectValue placeholder="Select episode…" /></SelectTrigger>
                     <SelectContent>
                       {episodesQuery.data.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
+                        <SelectItem key={e.id} value={e.id} disabled={["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS"].includes(e.status)}>
                           {e.episodeNumber ? `#${e.episodeNumber} · ` : ""}{e.title} · {e.status.replace(/_/g, " ").toLowerCase()}
+                          {["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS"].includes(e.status) ? " — complete assessment first" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

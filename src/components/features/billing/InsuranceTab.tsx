@@ -164,7 +164,7 @@ export default function InsuranceTab() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="truncate text-lg font-semibold tracking-tight">{selected.name}</h2>
-                  <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{selected.code}</span>
+                  <span className="code-chip">{selected.code}</span>
                   <Badge variant="outline" className={ARRANGEMENT_TONE[selected.billingArrangement] || ""}>{labelize(selected.billingArrangement)}</Badge>
                   <span className={`text-xs font-medium ${selected.active ? "text-emerald-700" : "text-muted-foreground"}`}>{selected.active ? "Active" : "Inactive"}</span>
                 </div>

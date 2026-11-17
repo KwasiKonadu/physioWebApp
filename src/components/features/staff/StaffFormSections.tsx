@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import type { FieldErrors, UseFieldArrayReturn, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { Field } from "./StaffFormField";
 import { FormValues, DAYS } from "./staff-form-model";
+import { PasswordInput } from "@/components/molecules/password-input";
 
 type Watch = <P extends FieldPath<FormValues>>(name: P) => PathValue<FormValues, P>;
 
@@ -221,7 +222,7 @@ export function StaffAccountSection({ isEdit, register, errors, setValue, create
               </p>
               {createUser && (
                 <div className="mt-2 w-full max-w-xs">
-                  <Input type="password" {...register("createPassword")} placeholder="Initial password (min 8 chars)" />
+                  <PasswordInput {...register("createPassword")} placeholder="Initial password (min 8 chars)" />
                   {errors.createPassword && (
                     <p className="mt-1 text-xs text-rose-600">{errors.createPassword.message}</p>
                   )}

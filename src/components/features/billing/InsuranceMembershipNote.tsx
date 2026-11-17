@@ -15,8 +15,8 @@ export function InsuranceMembershipNote({ selectedMembership, membershipExpired,
     <div className="sm:col-span-6">
       {selectedMembership ? (
         <div className={`rounded-lg border px-3 py-2.5 text-sm ${membershipExpired || selectedMembership.status !== "ACTIVE" ? "border-amber-200 bg-amber-50" : "border-sky-200 bg-sky-50/60"}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Insurance membership on file</p>
+          <div className="toolbar-row">
+            <p className="label-caps-sm">Insurance membership on file</p>
             {membershipExpired ? (
               <span className="text-xs font-medium text-amber-700">Expired {formatDate(selectedMembership.validTo as string)} — check with the patient</span>
             ) : selectedMembership.status !== "ACTIVE" ? (

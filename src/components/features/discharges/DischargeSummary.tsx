@@ -18,7 +18,7 @@ export function DischargeSummary({ discharge, baseline, isCompleted, outstanding
   return (
     <>
     {/* Summary card */}
-    <div className="rounded-xl border bg-card p-4 shadow-sm md:p-5">
+    <div className="panel">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <Avatar className="h-12 w-12 rounded-xl">
@@ -27,7 +27,7 @@ export function DischargeSummary({ discharge, baseline, isCompleted, outstanding
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: discharge.patientId })}>{fullName(discharge.patient)}</button></h2>
-              <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{discharge.patient.patientCode}</span>
+              <span className="code-chip">{discharge.patient.patientCode}</span>
               <StatusBadge status={discharge.status} />
             </div>
             <p className="mt-0.5 truncate text-sm text-muted-foreground">{discharge.episode.title}</p>
@@ -41,7 +41,7 @@ export function DischargeSummary({ discharge, baseline, isCompleted, outstanding
             { l: "Episode", v: labelize(discharge.episode.status) },
           ].map((x) => (
             <div key={x.l} className="min-w-0">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+              <dt className="label-caps-sm">{x.l}</dt>
               <dd className="truncate text-sm font-semibold">{x.v}</dd>
             </div>
           ))}
@@ -58,7 +58,7 @@ export function DischargeSummary({ discharge, baseline, isCompleted, outstanding
 
     {/* Outstanding balance — informational only (never blocks discharge) */}
     <div className={`rounded-lg border px-4 py-3 ${outstanding.outstandingCents > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="toolbar-row">
         <p className="flex items-center gap-2 text-sm font-medium">
           <AtomIcon name="Receipt" className="h-4 w-4" />
           Outstanding balance: {formatMoney(outstanding.outstandingCents)}

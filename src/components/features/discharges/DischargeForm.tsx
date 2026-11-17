@@ -200,7 +200,7 @@ export default function DischargeForm({ dischargeId, onBack }: { dischargeId: st
 
       <DischargeSummary discharge={discharge} baseline={baseline} isCompleted={isCompleted} outstanding={outstanding} />
 
-      <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+      <div className="split-grid">
         <div className="flex min-w-0 flex-col gap-4">
       <FinalAssessmentSection form={form} discharge={discharge} isCompleted={isCompleted} />
 

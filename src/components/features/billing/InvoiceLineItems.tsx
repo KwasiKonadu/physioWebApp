@@ -29,7 +29,7 @@ export function InvoiceLineItems({ items, services, onAdd, onRemove, onUpdate }:
       {items.map((it, idx) => (
         <div key={it.key} className="space-y-3 rounded-lg border bg-muted/10 p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Line {idx + 1}</span>
+            <span className="label-caps">Line {idx + 1}</span>
             <Button
               type="button" variant="ghost" size="sm" aria-label="Remove line"
               className="h-7 text-rose-600 hover:text-rose-700"

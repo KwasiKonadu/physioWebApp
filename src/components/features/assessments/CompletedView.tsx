@@ -70,7 +70,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="min-w-0"><button type="button" title="Open patient profile" disabled={!patient?.id} className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => patient?.id && navigate("patients", { patientId: patient.id })}>{patient ? fullName(patient) : "Patient"}</button></h2>
                 {patient?.patientCode ? (
-                  <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{patient.patientCode}</span>
+                  <span className="code-chip">{patient.patientCode}</span>
                 ) : null}
                 <StatusBadge status={detail.status} />
               </div>
@@ -85,7 +85,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
               { l: "Signed by", v: detail.therapistSignature || "—" },
             ].map((x) => (
               <div key={x.l} className="min-w-0">
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+                <dt className="label-caps-sm">{x.l}</dt>
                 <dd className="truncate text-sm font-semibold">{x.v}</dd>
                 {x.sub ? <dd className="truncate text-xs text-muted-foreground">{x.sub}</dd> : null}
               </div>
@@ -110,7 +110,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
         <StatCard label="Measurements" value={rom.length + strength.length + functional.length} icon="Ruler" tone="teal" hint={`${rom.length} ROM · ${strength.length} strength · ${functional.length} functional`} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+      <div className="split-grid">
         {/* ---------- left: narrative + examination ---------- */}
         <div className="flex min-w-0 flex-col gap-4">
           <SectionCard title="Presenting complaint" icon="MessageSquareText">
@@ -139,7 +139,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
             </DetailGrid>
             {rom.length ? (
               <div className="mt-4">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Range of motion</h4>
+                <h4 className="label-caps mb-2">Range of motion</h4>
                 <div className="overflow-hidden rounded-lg border">
                   <MeasurementTable rows={rom} columns={[
                     ["Body part", (r) => r.bodyPart], ["Movement", (r) => r.movement], ["Side", (r) => labelize(r.side)],
@@ -151,7 +151,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
             ) : null}
             {strength.length ? (
               <div className="mt-4">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Muscle strength (MRC)</h4>
+                <h4 className="label-caps mb-2">Muscle strength (MRC)</h4>
                 <div className="overflow-hidden rounded-lg border">
                   <MeasurementTable rows={strength} columns={[
                     ["Body part", (r) => r.bodyPart], ["Muscle group", (r) => r.muscleGroup], ["Side", (r) => labelize(r.side)],

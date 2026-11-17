@@ -113,6 +113,8 @@ export interface InvoiceListItem {
   patient: PatientLite;
   episode?: { id: string; title: string; episodeNumber: number } | null;
   _count?: { items: number };
+  payments?: { amountCents: number; method: string }[];
+  refunds?: { amountCents: number }[];
   claim?: { id: string; claimNumber: string; status: string } | null;
 }
 

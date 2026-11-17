@@ -226,7 +226,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
       />
 
       {/* Summary card */}
-      <div className="rounded-xl border bg-card p-4 shadow-sm md:p-5">
+      <div className="panel">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar className="h-12 w-12 rounded-xl">
@@ -235,7 +235,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: review.episode.patient.id })}>{fullName(review.episode.patient)}</button></h2>
-                <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{review.episode.patient.patientCode}</span>
+                <span className="code-chip">{review.episode.patient.patientCode}</span>
                 <StatusBadge status={review.status} />
               </div>
               <p className="mt-0.5 truncate text-sm text-muted-foreground">{review.episode.title}</p>
@@ -249,7 +249,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
               { l: "Decision", v: review.decision ? labelize(review.decision) : "Pending" },
             ].map((x) => (
               <div key={x.l} className="min-w-0">
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.l}</dt>
+                <dt className="label-caps-sm">{x.l}</dt>
                 <dd className="truncate text-sm font-semibold">{x.v}</dd>
               </div>
             ))}
@@ -266,7 +266,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+      <div className="split-grid">
         <div className="flex min-w-0 flex-col gap-4">
       {/* A — Previous clinical info (read-only) */}
       <section className="space-y-2">
@@ -292,7 +292,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
 
       {!isCompleted && canManage ? (
         <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="toolbar-row">
             <p className="text-xs text-muted-foreground">Completing the review is final and resets the episode review counter.</p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => saveDraft.mutate(form.getValues())} disabled={saveDraft.isPending}>

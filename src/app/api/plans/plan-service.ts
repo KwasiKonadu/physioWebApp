@@ -74,6 +74,9 @@ export async function findPlanableEpisode(episodeId: string, clinicId: string) {
     include: { patient: { select: { firstName: true, lastName: true } } },
   });
   if (!episode) throw new ApiError(404, "Treatment episode not found");
+  if (episode.status === "AWAITING_ASSESSMENT" || episode.status === "ASSESSMENT_IN_PROGRESS") {
+    throw new ApiError(409, "Complete this patient's assessment before creating a treatment plan");
+  }
   if (!PLANABLE_EPISODE_STATUSES.includes(episode.status)) {
     throw new ApiError(409, `Plans can only be created for episodes awaiting plan, in active treatment, under review or on hold (current: ${episode.status})`);
   }

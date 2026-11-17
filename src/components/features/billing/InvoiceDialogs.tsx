@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import { PAYMENT_METHODS, labelize } from "@/lib/constants";
 import { inputToCents, centsToInput, type InvoiceDetail, type ProviderLite } from "./billing-shared";
+import { patientShare } from "@/lib/invoice-share";
 import { Field } from "@/components/molecules/field";
 
 export function RecordPaymentDialog({
@@ -26,7 +27,8 @@ export function RecordPaymentDialog({
   defaultAmountCents: number;
 }) {
   const qc = useQueryClient();
-  const [amountText, setAmountText] = useState(() => centsToInput(defaultAmountCents));
+  const share = patientShare({ ...invoice, claimStatus: invoice.claim?.status });
+  const [amountText, setAmountText] = useState(() => centsToInput(share.insured ? Math.min(defaultAmountCents, share.remainingCents) : defaultAmountCents));
   const [method, setMethod] = useState("CASH");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -55,7 +57,9 @@ export function RecordPaymentDialog({
           <Field label="Amount (₵)">
             <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
             <p className="text-xs text-muted-foreground">
-              Outstanding balance {formatMoney(invoice.totalCents - invoice.paidCents)} · partial payments supported
+              {share.insured
+                ? `Patient's share ${formatMoney(share.shareCents)} (insurance covers ${formatMoney(invoice.insuranceCoveredCents)}) · ${formatMoney(share.remainingCents)} remaining`
+                : `Outstanding balance ${formatMoney(invoice.totalCents - invoice.paidCents)} · partial payments supported`}
             </p>
           </Field>
           <Field label="Method">

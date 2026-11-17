@@ -1,12 +1,12 @@
 "use client";
 // ============ Invoices tab: filters + list + new invoice builder + detail sheet ============
+import { patientShare } from "@/lib/invoice-share";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -130,10 +130,10 @@ export default function InvoicesTab({ prefillPatientId }: { prefillPatientId?: s
           {
             id: "invoice", header: "Invoice",
             cell: (inv) => (
-              <span className="font-medium">
-                {inv.invoiceNumber}
-                {inv.claim ? <Badge variant="outline" className="ml-1.5 text-[10px]">{inv.claim.claimNumber}</Badge> : null}
-              </span>
+              <>
+                <p className="text-sm font-medium">{inv.invoiceNumber}</p>
+                {inv.claim ? <p className="text-xs text-muted-foreground">{inv.claim.claimNumber}</p> : null}
+              </>
             ),
           },
           {
@@ -148,6 +148,18 @@ export default function InvoicesTab({ prefillPatientId }: { prefillPatientId?: s
           { id: "episode", header: "Episode", hideBelow: "md", className: "max-w-40 truncate", cell: (inv) => <span className="text-sm text-muted-foreground">{inv.episode ? inv.episode.title : "—"}</span> },
           { id: "arrangement", header: "Arrangement", cell: (inv) => <ArrangementBadge arrangement={inv.arrangement} /> },
           { id: "total", header: "Total", align: "right", cell: (inv) => <span className="tabular-nums">{formatMoney(inv.totalCents)}</span> },
+          {
+            id: "share", header: "Patient share", align: "right",
+            cell: (inv) => {
+              const s = patientShare({ ...inv, payments: inv.payments ?? [], claimStatus: inv.claim?.status });
+              return (
+                <>
+                  <p className="tabular-nums">{formatMoney(s.shareCents)}</p>
+                  {s.insured ? <p className="text-xs text-muted-foreground">Insurer {formatMoney(inv.insuranceCoveredCents)}</p> : null}
+                </>
+              );
+            },
+          },
           { id: "paid", header: "Paid", align: "right", cell: (inv) => <span className="tabular-nums text-emerald-700">{formatMoney(inv.paidCents)}</span> },
           { id: "balance", header: "Balance", align: "right", cell: (inv) => <span className="font-medium tabular-nums">{formatMoney(inv.totalCents - inv.paidCents)}</span> },
           { id: "status", header: "Status", cell: (inv) => <StatusBadge status={inv.status} /> },

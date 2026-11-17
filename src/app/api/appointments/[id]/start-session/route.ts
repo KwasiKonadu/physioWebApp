@@ -1,5 +1,6 @@
 // ============ Start a therapy session from an appointment (idempotent bridge to Therapy Sessions module) ============
 // A therapy session is ONLY created here — completing an appointment never auto-creates one.
+import { assertAssessmentCompleted } from "@/server/services/shared";
 import { db, route, json, ApiError, audit, notify, requirePermission } from "@/server/api-exports";
 import { PERMS } from "@/lib/constants";
 
@@ -45,6 +46,8 @@ export const POST = route(async (req, ctx) => {
 
   const episode = await db.treatmentEpisode.findFirst({ where: { id: appointment.episodeId, clinicId: auth.clinicId } });
   if (!episode) throw new ApiError(404, "Treatment episode not found");
+
+  assertAssessmentCompleted(episode.status);
 
   const session = await db.therapySession.create({
     data: {

@@ -69,7 +69,7 @@ export default function EpisodeCard({ episode, patientId, onChanged }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">
+            <span className="code-chip">
               EP{String(episode.episodeNumber).padStart(2, "0")}
             </span>
             <h3 className="truncate text-sm font-semibold">{episode.title}</h3>

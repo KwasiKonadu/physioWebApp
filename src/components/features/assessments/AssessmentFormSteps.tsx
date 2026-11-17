@@ -151,7 +151,7 @@ export function ExaminationStep({ form, values, romArr, strengthArr }: { form: U
         )}
       >
         {romArr.fields.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No ROM measurements yet — add a row to begin.</p>
+          <p className="empty-note">No ROM measurements yet — add a row to begin.</p>
         ) : (
           <div className="space-y-3">
             {romArr.fields.map((f, idx) => (
@@ -210,7 +210,7 @@ export function ExaminationStep({ form, values, romArr, strengthArr }: { form: U
         )}
       >
         {strengthArr.fields.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">No strength measurements yet — add a row to begin.</p>
+          <p className="empty-note">No strength measurements yet — add a row to begin.</p>
         ) : (
           <div className="space-y-3">
             {strengthArr.fields.map((f, idx) => (
@@ -304,7 +304,7 @@ export function FunctionalStep({ form, values, fnArr, activityOptions, customAct
         </Button>
       </div>
       {fnArr.fields.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">No activities recorded yet — add one above or use “Add activity”.</p>
+        <p className="empty-note">No activities recorded yet — add one above or use “Add activity”.</p>
       ) : (
         <div className="space-y-2">
           {fnArr.fields.map((f, idx) => (

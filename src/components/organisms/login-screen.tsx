@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { useAuthStore, type AuthUser } from "@/stores/app-store";
-import { AtomIcon } from "@/components/atoms/icon";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/molecules/field";
+import { PasswordInput } from "@/components/molecules/password-input";
 
 interface LoginResponse {
   accessToken: string;
@@ -83,7 +83,7 @@ export function LoginScreen({ slideIn = false }: { slideIn?: boolean }) {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </Field>
             <Field label="Password" htmlFor="password">
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+              <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </Field>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign in"}

@@ -41,7 +41,7 @@ export function ClinicalTab({ report, prev, prevLabel }: { report: ClinicalRepor
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Discharge reasons</p>
+              <p className="label-caps">Discharge reasons</p>
               {report.dischargeStats.byReason.length === 0 ? (
                 <EmptyStateCompact message="No discharges in period" />
               ) : (

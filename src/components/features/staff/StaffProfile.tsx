@@ -28,6 +28,7 @@ import { StaffWorkloadTab } from "./StaffWorkloadTab";
 import { StaffRemunerationTab } from "./StaffRemunerationTab";
 import { StaffAccountTab } from "./StaffAccountTab";
 import { Field } from "@/components/molecules/field";
+import { PasswordInput } from "@/components/molecules/password-input";
 
 export default function StaffProfile({ staffId, onBack }: { staffId: string; onBack: () => void }) {
   const user = useAuthStore((s) => s.user);
@@ -217,7 +218,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold tracking-tight md:text-xl">{name}</h2>
-                      <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{s.staffCode}</span>
+                      <span className="code-chip">{s.staffCode}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span>{s.jobTitle}{s.department ? ` · ${s.department}` : ""}</span>
@@ -292,7 +293,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
               <Input value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="user@gmrsphysio.com.gh" />
             </Field>
             <Field label="Initial password">
-              <Input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="Min 8 characters" />
+              <PasswordInput value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="Min 8 characters" />
             </Field>
             <Field label="Role">
               <Select value={createRoleId} onValueChange={setCreateRoleId}>

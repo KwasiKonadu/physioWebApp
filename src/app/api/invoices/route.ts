@@ -55,6 +55,8 @@ export const GET = route(async (req) => {
         episode: { select: { id: true, title: true, episodeNumber: true } },
         _count: { select: { items: true } },
         claim: { select: { id: true, claimNumber: true, status: true } },
+        payments: { select: { amountCents: true, method: true } },
+        refunds: { select: { amountCents: true } },
       },
     }),
     db.invoice.count({ where }),

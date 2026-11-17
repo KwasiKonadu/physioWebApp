@@ -111,7 +111,7 @@ export function OverviewTab({ bundle, canManagePatients, consent, contacts, name
           <ul className="space-y-3">
             {bundle.insurances.map((ins) => (
               <li key={ins.id} className="rounded-lg border px-3 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="toolbar-row">
                   <p className="text-sm font-medium">{ins.provider?.name || "Unknown provider"}</p>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={ins.status} />

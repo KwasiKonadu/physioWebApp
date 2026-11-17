@@ -196,7 +196,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-semibold tracking-tight md:text-xl">{name}</h2>
-                <span className="rounded-md bg-navy-50 px-2 py-0.5 font-mono text-xs font-semibold text-navy-800">{patient.patientCode}</span>
+                <span className="code-chip">{patient.patientCode}</span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><AtomIcon name="Phone" className="h-3.5 w-3.5" /> {patient.phone}</span>

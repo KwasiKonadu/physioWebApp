@@ -1,4 +1,5 @@
 // ============ API: Therapy sessions — list (+ header stats) & manual creation ============
+import { assertAssessmentCompleted } from "@/server/services/shared";
 import { z } from "zod";
 import { PERMS, SESSION_STATUSES, labelize } from "@/lib/constants";
 import {
@@ -105,6 +106,8 @@ export const POST = route(async (req) => {
   if (CLOSED_EPISODE_STATUSES.includes(episode.status)) {
     throw new ApiError(409, `Cannot add sessions to a ${labelize(episode.status)} episode`);
   }
+
+  assertAssessmentCompleted(episode.status);
 
   const therapistId = body.therapistId || episode.therapistId;
   if (!therapistId) {

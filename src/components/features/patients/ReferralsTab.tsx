@@ -20,7 +20,7 @@ export function ReferralsTab({ bundle, patient }: { bundle: PatientBundle; patie
           <ul className="space-y-3">
             {bundle.referrals.map((r) => (
               <li key={r.id} className="rounded-lg border px-3 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="toolbar-row">
                   <Badge variant="outline" className="border-slate-200 bg-navy-50 text-navy-800">{labelize(r.source)}</Badge>
                   <span className="text-xs text-muted-foreground">{formatDate(r.referralDate)}</span>
                 </div>

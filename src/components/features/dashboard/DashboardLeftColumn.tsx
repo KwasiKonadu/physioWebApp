@@ -63,7 +63,7 @@ export function DashboardLeftColumn({ windowLabel, windowRevenue, avgRevenue, to
           )}
           {(data?.recentlyDischarged || []).length > 0 && (
             <div className="mt-3 border-t pt-2.5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recently discharged</p>
+              <p className="label-caps mb-2">Recently discharged</p>
               <div className="flex flex-wrap gap-2">
                 {(data?.recentlyDischarged || []).map((d) => (
                   <span key={d.id} className="rounded-full border bg-slate-50 px-3 py-1 text-xs">

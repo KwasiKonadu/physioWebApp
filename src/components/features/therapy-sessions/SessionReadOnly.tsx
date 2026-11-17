@@ -12,7 +12,7 @@ import { SessionDetail, PackageTx } from "./session-form";
 // ---- Read-only components ----
 export function ReadOnlyDocumentation({ session, aside, hasAside }: { session: SessionDetail; aside: React.ReactNode; hasAside: boolean }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[3fr_2fr] *:min-w-0">
+    <div className="split-grid">
       <div className="flex min-w-0 flex-col gap-4">
       <SectionCard title="Interventions delivered" icon="Activity" description="What was actually delivered in this session" noPadding>
         <DataTable

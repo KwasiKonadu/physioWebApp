@@ -53,7 +53,7 @@ export function RowShell({ index, label, onRemove, children }: {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label} {index + 1}</span>
+        <span className="label-caps">{label} {index + 1}</span>
         <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={onRemove} aria-label={`Remove ${label}`}>
           <AtomIcon name="Trash2" className="h-3.5 w-3.5" />
         </Button>

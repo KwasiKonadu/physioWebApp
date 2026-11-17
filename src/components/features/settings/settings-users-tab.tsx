@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Field } from "@/components/molecules/field";
+import { PasswordInput } from "@/components/molecules/password-input";
 
 interface UserRow {
   id: string;
@@ -254,7 +255,7 @@ function AddUserDialog({ open, onClose, roles, staff }: {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ama Boateng" />
           </Labeled>
           <Labeled label="Password">
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 characters" />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 characters" />
           </Labeled>
           <Labeled label="Role">
             <Select value={roleId} onValueChange={setRoleId}>
@@ -340,7 +341,7 @@ function EditUserDialog({ target, onClose, roles }: {
             </Select>
           </Labeled>
           <Labeled label="Reset password (leave blank to keep current)">
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password (min 8 chars)" />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password (min 8 chars)" />
           </Labeled>
         </div>
         <DialogFooter>
