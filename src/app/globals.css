@@ -176,13 +176,18 @@
   }
 }
 
-/* Splash screen loading bar */
-@keyframes splash-bar {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(300%); }
+/* Splash screen heart monitor: the trace draws left to right, holds, then fades. */
+@keyframes ecg-trace {
+  0%   { stroke-dashoffset: 1; opacity: 1; }
+  65%  { stroke-dashoffset: 0; opacity: 1; }
+  88%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
 }
-.splash-bar {
-  animation: splash-bar 1.2s ease-in-out infinite;
+.ecg-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ecg-trace 2.6s linear infinite;
+  filter: drop-shadow(0 0 4px rgb(45 212 191 / 0.8));
 }
 
 /* Shared class groups used across pages (kept here so the markup stays short). */

@@ -70,7 +70,7 @@ export default function DashboardPage() {
       />
 
       {/* Summary metrics */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <StatCard label="Patients" value={m?.totalPatients ?? 0} icon="Users" tone="navy" loading={isLoading} hint={`+${m?.newPatients ?? 0} new`} onClick={() => navigate("patients")} />
         <StatCard label="Active episodes" value={m?.activeEpisodes ?? 0} icon="GitBranch" tone="teal" loading={isLoading} onClick={() => navigate("patients")} />
         <StatCard label="Appts today" value={m?.todaysAppointments ?? 0} icon="CalendarDays" tone="sky" loading={isLoading} onClick={() => navigate("appointments")} />
