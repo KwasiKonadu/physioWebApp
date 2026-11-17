@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { TabsContent } from "@/components/ui/tabs";
 import { type EmergencyContactDto } from "./hooks";
 import type { PatientBundle } from "./hooks";
 import { ContactDraft, EmptyStateCompact } from "./patient-profile-shared";
+import { Field } from "@/components/molecules/field";
 
 export function ContactsTab({ canManagePatients, consent, contactDraft, contacts, name, patchMutation, saveContacts, setContactDraft, startContactEdit }: { canManagePatients: boolean; consent: PatientBundle["consents"][number] | undefined; contactDraft: ContactDraft[] | null; contacts: PatientBundle["emergencyContacts"]; name: string; patchMutation: { isPending: boolean; mutate: (body: Record<string, unknown>, opts?: { onSuccess?: () => void }) => void }; saveContacts: () => void; setContactDraft: (v: ContactDraft[] | null) => void; startContactEdit: () => void }) {
   return (
@@ -43,26 +43,21 @@ export function ContactsTab({ canManagePatients, consent, contactDraft, contacts
             {contactDraft.map((row, i) => (
               <div key={i} className="rounded-lg border bg-muted/20 p-3">
                 <div className="grid gap-3 sm:grid-cols-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Name *</Label>
+                  <Field label="Name" required>
                     <Input className="h-9" value={row.fullName} onChange={(e) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, fullName: e.target.value } : r)))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Relationship *</Label>
+                  </Field>
+                  <Field label="Relationship" required>
                     <Input className="h-9" value={row.relationship} onChange={(e) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, relationship: e.target.value } : r)))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Phone *</Label>
+                  </Field>
+                  <Field label="Phone" required>
                     <Input className="h-9" value={row.phone} onChange={(e) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, phone: e.target.value } : r)))} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Alt. phone</Label>
+                  </Field>
+                  <Field label="Alt. phone">
                     <Input className="h-9" value={row.altPhone} onChange={(e) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, altPhone: e.target.value } : r)))} />
-                  </div>
-                  <div className="space-y-1 sm:col-span-3">
-                    <Label className="text-xs">Address</Label>
+                  </Field>
+                  <Field label="Address" className="sm:col-span-3">
                     <Input className="h-9" value={row.address} onChange={(e) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, address: e.target.value } : r)))} />
-                  </div>
+                  </Field>
                   <div className="flex items-end justify-between gap-2 sm:justify-end">
                     <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Checkbox checked={row.isNextOfKin} onCheckedChange={(v) => setContactDraft(contactDraft.map((r, j) => (j === i ? { ...r, isNextOfKin: v === true } : r)))} />

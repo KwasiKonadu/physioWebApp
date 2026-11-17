@@ -7,12 +7,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 import { useInsuranceProviders, type InsuranceDto } from "./hooks";
+import { Field } from "@/components/molecules/field";
 
 export function InsuranceDialog({ open, entry, onOpenChange, onSave, saving }: {
   open: boolean;
@@ -39,8 +39,7 @@ export function InsuranceDialog({ open, entry, onOpenChange, onSave, saving }: {
           <DialogDescription>The policy list is replaced on save.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label>Provider *</Label>
+          <Field label="Provider" required>
             <Select value={providerId} onValueChange={setProviderId}>
               <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
               <SelectContent>
@@ -49,32 +48,26 @@ export function InsuranceDialog({ open, entry, onOpenChange, onSave, saving }: {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Membership number *</Label>
+          </Field>
+          <Field label="Membership number" required>
             <Input value={membershipNumber} onChange={(e) => setMembershipNumber(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Policy number</Label>
+          </Field>
+          <Field label="Policy number">
             <Input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Principal member</Label>
+          </Field>
+          <Field label="Principal member">
             <Input value={principalMember} onChange={(e) => setPrincipalMember(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Relationship to principal</Label>
+          </Field>
+          <Field label="Relationship to principal">
             <Input value={relationshipToPrincipal} onChange={(e) => setRelationshipToPrincipal(e.target.value)} />
-          </div>
+          </Field>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Valid from</Label>
+            <Field label="Valid from">
               <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Valid to</Label>
+            </Field>
+            <Field label="Valid to">
               <Input type="date" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
-            </div>
+            </Field>
           </div>
         </div>
         <DialogFooter>

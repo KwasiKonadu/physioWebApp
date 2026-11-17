@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     "Physiotherapy Clinic Management System — patient records, appointments, clinical assessments, treatment plans, therapy sessions, progress reviews, discharges, billing, packages, insurance, staff and reports.",
   keywords: ["physiotherapy", "clinic management", "GMRS", "healthcare", "Next.js"],
   icons: {
-    icon: "/logo.svg",
+    icon: "/appicon.svg",
   },
 };
 

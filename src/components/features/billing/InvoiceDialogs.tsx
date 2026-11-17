@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import { PAYMENT_METHODS, labelize } from "@/lib/constants";
 import { inputToCents, centsToInput, type InvoiceDetail, type ProviderLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 export function RecordPaymentDialog({
   invoice,
@@ -52,30 +52,26 @@ export function RecordPaymentDialog({
           <DialogTitle>Record payment — {invoice.invoiceNumber}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Amount (₵)</Label>
+          <Field label="Amount (₵)">
             <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
             <p className="text-xs text-muted-foreground">
               Outstanding balance {formatMoney(invoice.totalCents - invoice.paidCents)} · partial payments supported
             </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Method</Label>
+          </Field>
+          <Field label="Method">
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.filter((x) => x !== "INSURANCE").map((x) => <SelectItem key={x} value={x}>{labelize(x)}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reference</Label>
+          </Field>
+          <Field label="Reference">
             <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Receipt / transaction ref (optional)" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
+          </Field>
+          <Field label="Notes">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-          </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -125,15 +121,13 @@ export function RefundDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Refund amount (₵)</Label>
+          <Field label="Refund amount (₵)">
             <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
             <p className="text-xs text-muted-foreground">Maximum {formatMoney(invoice.paidCents)} (amount paid)</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reason *</Label>
+          </Field>
+          <Field label="Reason" required>
             <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this refund being issued?" />
-          </div>
+          </Field>
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -193,8 +187,7 @@ export function CreateClaimDialog({
             <div className="flex justify-between"><span className="text-muted-foreground">Invoice</span><span className="font-medium">{invoice.invoiceNumber}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Claimable (covered)</span><span className="font-medium tabular-nums text-sky-700">{formatMoney(invoice.insuranceCoveredCents)}</span></div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Provider</Label>
+          <Field label="Provider">
             <Select value={providerId} onValueChange={setProviderId}>
               <SelectTrigger><SelectValue placeholder="Auto-detect from invoice rates" /></SelectTrigger>
               <SelectContent>
@@ -204,11 +197,10 @@ export function CreateClaimDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">Leave unset to infer from the rates applied on the invoice.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
+          </Field>
+          <Field label="Notes">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-          </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -258,15 +250,13 @@ export function ClaimInsurancePaymentDialog({
           <DialogTitle>Record insurance payment — {claim.claimNumber}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Amount received (₵)</Label>
+          <Field label="Amount received (₵)">
             <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
             <p className="text-xs text-muted-foreground">Outstanding on invoice {formatMoney(remaining)}</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reference</Label>
+          </Field>
+          <Field label="Reference">
             <Input value={reference} onChange={(e) => setReference(e.target.value)} />
-          </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>

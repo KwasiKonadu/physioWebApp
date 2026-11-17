@@ -15,7 +15,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +27,7 @@ import { StaffOverviewTab } from "./StaffOverviewTab";
 import { StaffWorkloadTab } from "./StaffWorkloadTab";
 import { StaffRemunerationTab } from "./StaffRemunerationTab";
 import { StaffAccountTab } from "./StaffAccountTab";
+import { Field } from "@/components/molecules/field";
 
 export default function StaffProfile({ staffId, onBack }: { staffId: string; onBack: () => void }) {
   const user = useAuthStore((s) => s.user);
@@ -288,23 +288,20 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
             <DialogDescription>Links the new user to {name}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</Label>
+            <Field label="Email">
               <Input value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="user@gmrsphysio.com.gh" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Initial password</Label>
+            </Field>
+            <Field label="Initial password">
               <Input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="Min 8 characters" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Role</Label>
+            </Field>
+            <Field label="Role">
               <Select value={createRoleId} onValueChange={setCreateRoleId}>
                 <SelectTrigger className="w-full"><SelectValue placeholder="Choose a role" /></SelectTrigger>
                 <SelectContent>
                   {(rolesQ.data?.items || []).map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>

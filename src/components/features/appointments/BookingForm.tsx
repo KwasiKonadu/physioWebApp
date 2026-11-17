@@ -5,13 +5,11 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
 import { apiFetch } from "@/lib/api-client";
 import { timeToMinutes } from "@/lib/format";
 import { APPOINTMENT_PURPOSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +18,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AtomIcon } from "@/components/atoms/icon";
 import { AppointmentDto, TherapistOption } from "./appointments-shared";
-
 import { DURATIONS, OPEN_EPISODE_BLOCKED, PatientOption, EpisodeOption, formSchema, FormValues, extractBundle } from "./booking-shared";
 import { BookingPatientPicker } from "./BookingPatientPicker";
 

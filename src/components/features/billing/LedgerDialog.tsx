@@ -9,13 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney, formatDate } from "@/lib/format";
 import { labelize } from "@/lib/constants";
 import { patientName, type PatientPackageItem } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 interface PackageTx {
   id: string;
@@ -163,8 +163,7 @@ export function LedgerDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Type</Label>
+            <Field label="Type">
               <Select value={adjustType} onValueChange={setAdjustType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -172,19 +171,16 @@ export function LedgerDialog({
                   <SelectItem value="ADJUSTMENT">Adjustment (consume sessions)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Sessions</Label>
+            </Field>
+            <Field label="Sessions">
               <Input type="number" min={1} value={adjustSessions} onChange={(e) => setAdjustSessions(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
+            </Field>
+            <Field label="Description">
               <Input value={adjustDescription} onChange={(e) => setAdjustDescription(e.target.value)} placeholder="e.g. session missed by therapist" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Reason *</Label>
+            </Field>
+            <Field label="Reason" required>
               <Input value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Why is this adjustment needed?" />
-            </div>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancel</Button>

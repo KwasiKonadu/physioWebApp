@@ -4,13 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-
-import { Label } from "@/components/ui/label";
-
-
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -29,9 +24,9 @@ import { EmptyStateCompact } from "@/components/molecules/empty-state";
 import { fullName, initials, ymd } from "@/lib/format";
 import { plansApi, fetchPatientEpisodes, searchPatients } from "./plan-api";
 import type { TreatmentPlanDto } from "./types";
-
 import { buildSchema, FormValues, emptyObjective, emptyMilestone, emptyIntervention, intOrNull, dateOrNull } from "./plan-form-schema";
 import { ObjectivesStep, MilestonesStep, InterventionsStep, ScheduleStep, PrecautionsStep, ReviewStep } from "./PlanFormSteps";
+import { Field } from "@/components/molecules/field";
 
 // ---------- main ----------
 export function PlanForm({
@@ -509,18 +504,16 @@ export function PlanForm({
             <DialogDescription>Plans are created against an open treatment episode that already has a completed assessment.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Patient</Label>
+            <Field label="Patient">
               <PatientSearchSelect
                 autoFocus
                 selected={pickedPatient}
                 onSelect={(pt) => { setPickedPatient(pt); setSelectedPatientId(pt.id); form.setValue("episodeId", ""); }}
                 onClear={() => { setPickedPatient(null); setSelectedPatientId(""); form.setValue("episodeId", ""); }}
               />
-            </div>
+            </Field>
             {selectedPatientId ? (
-              <div className="space-y-1.5">
-                <Label>Treatment episode</Label>
+              <Field label="Treatment episode">
                 {episodesQuery.isLoading ? <Skeleton className="h-9 w-full" /> : null}
                 {episodesQuery.data && episodesQuery.data.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No open episodes for this patient — open an episode in the Patients module first.</p>
@@ -537,7 +530,7 @@ export function PlanForm({
                     </SelectContent>
                   </Select>
                 ) : null}
-              </div>
+              </Field>
             ) : null}
             <p className="text-xs text-muted-foreground">Choosing an episode opens the plan form.</p>
           </div>

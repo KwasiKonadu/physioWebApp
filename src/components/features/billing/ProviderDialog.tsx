@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { apiFetch } from "@/lib/api-client";
 import { labelize } from "@/lib/constants";
 import { type ProviderLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- Provider add/edit ----
 export function ProviderDialog({
@@ -64,43 +64,35 @@ export function ProviderDialog({
           <DialogDescription>Negotiated service rates override the provider default coverage.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
-          <div className="space-y-1.5">
-            <Label>Name *</Label>
+          <Field label="Name" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Glory Health Insurance" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Code *</Label>
+          </Field>
+          <Field label="Code" required>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="GHI" disabled={!!initial} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Contact person</Label>
+          </Field>
+          <Field label="Contact person">
             <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Contact phone</Label>
+          </Field>
+          <Field label="Contact phone">
             <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email</Label>
+          </Field>
+          <Field label="Email">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="claims@provider.com" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Billing arrangement</Label>
+          </Field>
+          <Field label="Billing arrangement">
             <Select value={billingArrangement} onValueChange={setBillingArrangement}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {["DIRECT_BILLING", "REIMBURSEMENT", "CAPITATION"].map((x) => <SelectItem key={x} value={x}>{labelize(x)}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Default coverage (%)</Label>
+          </Field>
+          <Field label="Default coverage (%)">
             <Input type="number" min={0} max={100} value={coverage} onChange={(e) => setCoverage(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Active</Label>
+          </Field>
+          <Field label="Active">
             <div className="flex h-10 items-center"><Switch checked={active} onCheckedChange={setActive} /></div>
-          </div>
+          </Field>
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
         <DialogFooter>

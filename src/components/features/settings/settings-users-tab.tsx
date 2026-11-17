@@ -13,7 +13,6 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -21,6 +20,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Field } from "@/components/molecules/field";
 
 interface UserRow {
   id: string;
@@ -356,9 +356,8 @@ function EditUserDialog({ target, onClose, roles }: {
 
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</Label>
+    <Field label={<>{label}</>}>
       {children}
-    </div>
+    </Field>
   );
 }

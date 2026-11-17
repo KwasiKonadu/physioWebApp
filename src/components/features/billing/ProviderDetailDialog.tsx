@@ -7,13 +7,13 @@ import { EmptyState } from "@/components/molecules/empty-state";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import { labelize } from "@/lib/constants";
 import { inputToCents, centsToInput, type ListResponse, type ServiceLite, type ProviderLite, type RateItem } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- Provider detail: negotiated rates ----
 export function ProviderDetailDialog({
@@ -125,8 +125,7 @@ export function ProviderDetailDialog({
             <DialogDescription>Stored per provider + service. Invoicing snapshots the applied rate.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Service *</Label>
+            <Field label="Service" required>
               <Select value={serviceId} onValueChange={(v) => {
                 setServiceId(v);
                 const svc = services.find((s) => s.id === v);
@@ -139,16 +138,14 @@ export function ProviderDetailDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Rate (₵) *</Label>
+              <Field label="Rate (₵)" required>
                 <Input type="number" min={0} step="0.01" value={rateText} onChange={(e) => setRateText(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Coverage (%) *</Label>
+              </Field>
+              <Field label="Coverage (%)" required>
                 <Input type="number" min={0} max={100} value={coverage} onChange={(e) => setCoverage(e.target.value)} />
-              </div>
+              </Field>
             </div>
           </div>
           {error && <p className="text-sm font-medium text-rose-600">{error}</p>}

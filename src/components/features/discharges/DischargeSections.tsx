@@ -4,7 +4,6 @@ import { DataTable } from "@/components/molecules/data-table";
 import { Controller } from "react-hook-form";
 import { FOLLOW_UP_TYPES, labelize } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +14,7 @@ import { changeFor } from "../progress-reviews/types";
 import type { DischargeDetailResponse } from "../progress-reviews/types";
 import type { UseFieldArrayReturn, UseFormReturn } from "react-hook-form";
 import { DischargeFormValues, objectiveSummary } from "./discharge-form-model";
+import { Field } from "@/components/molecules/field";
 
 type Discharge = DischargeDetailResponse["discharge"];
 type Baseline = DischargeDetailResponse["baseline"];
@@ -28,10 +28,9 @@ export function FinalAssessmentSection({ form, discharge, isCompleted }: { form:
         {isCompleted ? (
           <p className="whitespace-pre-line text-sm">{discharge.finalAssessment || "—"}</p>
         ) : (
-          <div className="space-y-1.5">
-            <Label htmlFor="finalAssessment">Summary of final clinical status at discharge</Label>
+          <Field label="Summary of final clinical status at discharge" htmlFor="finalAssessment">
             <Textarea id="finalAssessment" rows={4} placeholder="Final presenting status, response to the episode of care, discharge judgement…" {...form.register("finalAssessment")} />
-          </div>
+          </Field>
         )}
       </SectionCard>
     </section>
@@ -103,10 +102,9 @@ export function ObjectiveOutcomesSection({ form, baseline, discharge, isComplete
         {isCompleted ? (
           <p className="whitespace-pre-line text-sm">{discharge.objectiveOutcomes || "—"}</p>
         ) : (
-          <div className="space-y-1.5">
-            <Label htmlFor="objectiveOutcomes">Outcome narrative</Label>
+          <Field label="Outcome narrative" htmlFor="objectiveOutcomes">
             <Textarea id="objectiveOutcomes" rows={3} placeholder="Describe to what extent each objective was achieved…" {...form.register("objectiveOutcomes")} />
-          </div>
+          </Field>
         )}
       </SectionCard>
     </section>
@@ -124,20 +122,18 @@ export function LimitationsSection({ form, discharge, isCompleted }: { form: Use
           {isCompleted ? (
             <p className="whitespace-pre-line text-sm">{discharge.remainingLimitations || "—"}</p>
           ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="remainingLimitations">Limitations remaining at discharge</Label>
+            <Field label="Limitations remaining at discharge" htmlFor="remainingLimitations">
               <Textarea id="remainingLimitations" rows={4} placeholder="e.g. End-range stiffness, occasional pain on stairs…" {...form.register("remainingLimitations")} />
-            </div>
+            </Field>
           )}
         </SectionCard>
         <SectionCard title="Discharge summary" icon="FileText">
           {isCompleted ? (
             <p className="whitespace-pre-line text-sm">{discharge.summary || "—"}</p>
           ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="summary">Overall episode summary</Label>
+            <Field label="Overall episode summary" htmlFor="summary">
               <Textarea id="summary" rows={4} placeholder="Course of treatment, interventions used, outcome and handover notes…" {...form.register("summary")} />
-            </div>
+            </Field>
           )}
         </SectionCard>
       </div>
@@ -163,21 +159,19 @@ export function FollowUpSection({ form, discharge, isCompleted }: { form: UseFor
               control={form.control}
               name="followUpType"
               render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label>Follow-up type</Label>
+                <Field label="Follow-up type">
                   <Select value={field.value || undefined} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full"><SelectValue placeholder="None" /></SelectTrigger>
                     <SelectContent>
                       {FOLLOW_UP_TYPES.map((t) => <SelectItem key={t} value={t}>{labelize(t)}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
               )}
             />
-            <div className="space-y-1.5">
-              <Label htmlFor="followUpDetails">Follow-up details</Label>
+            <Field label="Follow-up details" htmlFor="followUpDetails">
               <Input id="followUpDetails" placeholder="e.g. Clinic review in 6 weeks…" {...form.register("followUpDetails")} />
-            </div>
+            </Field>
           </div>
         )}
       </SectionCard>

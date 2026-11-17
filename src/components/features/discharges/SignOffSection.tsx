@@ -7,7 +7,6 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { DISCHARGE_REASONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -17,6 +16,7 @@ import { StatusBadge } from "@/components/atoms/status-badge";
 import type { DischargeDetailResponse } from "../progress-reviews/types";
 import type { UseFormReturn } from "react-hook-form";
 import { DischargeFormValues } from "./discharge-form-model";
+import { Field } from "@/components/molecules/field";
 
 type Discharge = DischargeDetailResponse["discharge"];
 type Baseline = DischargeDetailResponse["baseline"];
@@ -37,8 +37,7 @@ export function SignOffSection({ outstanding, form, discharge, editable, isCompl
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
-              <div className="space-y-1.5">
-                <Label htmlFor="reason">Discharge reason</Label>
+              <Field label="Discharge reason" htmlFor="reason">
                 <Controller
                   control={form.control}
                   name="reason"
@@ -51,15 +50,13 @@ export function SignOffSection({ outstanding, form, discharge, editable, isCompl
                     </Select>
                   )}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="dischargeDate">Discharge date</Label>
+              </Field>
+              <Field label="Discharge date" htmlFor="dischargeDate">
                 <Input id="dischargeDate" type="date" {...form.register("dischargeDate")} />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="therapistSignature">Therapist signature (required to complete)</Label>
+              </Field>
+              <Field label="Therapist signature (required to complete)" htmlFor="therapistSignature" className="sm:col-span-2">
                 <Input id="therapistSignature" placeholder="Type your full name to sign" {...form.register("therapistSignature")} />
-              </div>
+              </Field>
             </div>
             {editable ? (
               <div className="mt-4 flex flex-wrap gap-2">

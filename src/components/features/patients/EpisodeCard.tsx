@@ -22,10 +22,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import type { EpisodeDto } from "./hooks";
+import { Field } from "@/components/molecules/field";
 
 const OPEN_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS", "AWAITING_PLAN", "ACTIVE_TREATMENT", "ON_HOLD", "UNDER_REVIEW"];
 
@@ -174,14 +174,12 @@ export default function EpisodeCard({ episode, patientId, onChanged }: Props) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Reason *</Label>
+            <Field label="Reason" required>
               <Textarea value={holdReason} onChange={(e) => setHoldReason(e.target.value)} rows={3} placeholder="Why is treatment on hold?" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Notes</Label>
+            </Field>
+            <Field label="Notes">
               <Input value={holdNotes} onChange={(e) => setHoldNotes(e.target.value)} placeholder="Optional, e.g. expected return date" />
-            </div>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setHoldOpen(false)}>Cancel</Button>
@@ -204,10 +202,9 @@ export default function EpisodeCard({ episode, patientId, onChanged }: Props) {
               This permanently closes the episode as discontinued. Discharged and discontinued episodes cannot be reopened.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-1.5">
-            <Label>Reason *</Label>
+          <Field label="Reason" required>
             <Input value={discontinueReason} onChange={(e) => setDiscontinueReason(e.target.value)} placeholder="e.g. Patient relocated, declined treatment" />
-          </div>
+          </Field>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction

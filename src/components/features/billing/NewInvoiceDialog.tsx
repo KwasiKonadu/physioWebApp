@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
@@ -18,6 +17,7 @@ import { InvoiceLineItems } from "./InvoiceLineItems";
 import { InsuranceMembershipNote } from "./InsuranceMembershipNote";
 import { InvoiceTotals } from "./InvoiceTotals";
 import { inputToCents, PatientPicker, type ListResponse, type InvoiceListItem, type ServiceLite, type ProviderLite, type PatientLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 interface EpisodeLite { id: string; title: string; episodeNumber?: number; status?: string }
 
@@ -215,22 +215,19 @@ export function NewInvoiceDialog({
       <SidePanelBody className="space-y-5">
 
         <div className="grid gap-4 sm:grid-cols-6 *:min-w-0">
-          <div className="space-y-1.5 sm:col-span-4">
-            <Label>Patient *</Label>
+          <Field label="Patient" required className="sm:col-span-4">
             <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEpisodeId(""); }} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Arrangement *</Label>
+          </Field>
+          <Field label="Arrangement" required className="sm:col-span-2">
             <Select value={arrangement} onValueChange={(v) => { setArrangement(v); setProviderId(""); }}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PAYMENT_ARRANGEMENTS.map((a) => <SelectItem key={a} value={a}>{labelize(a)}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
+          </Field>
           {episodes.length > 0 && (
-            <div className="space-y-1.5 sm:col-span-3">
-              <Label>Episode (optional)</Label>
+            <Field label="Episode (optional)" className="sm:col-span-3">
               <Select value={episodeId} onValueChange={setEpisodeId}>
                 <SelectTrigger className="w-full"><SelectValue placeholder="No episode" /></SelectTrigger>
                 <SelectContent>
@@ -240,11 +237,10 @@ export function NewInvoiceDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           )}
           {arrangement === "INSURANCE" && (
-            <div className="space-y-1.5 sm:col-span-3">
-              <Label>Insurance provider</Label>
+            <Field label="Insurance provider" className="sm:col-span-3">
               <Select value={providerId} onValueChange={setProviderId}>
                 <SelectTrigger className="w-full"><SelectValue placeholder="Select provider…" /></SelectTrigger>
                 <SelectContent>
@@ -253,7 +249,7 @@ export function NewInvoiceDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           )}
           {arrangement === "INSURANCE" && patient ? (
             <InsuranceMembershipNote
@@ -274,18 +270,15 @@ export function NewInvoiceDialog({
         />
 
         <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
-          <div className="space-y-1.5">
-            <Label>Discount (₵)</Label>
+          <Field label="Discount (₵)">
             <Input type="number" min={0} step="0.01" value={discountText} onChange={(e) => setDiscountText(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Due date</Label>
+          </Field>
+          <Field label="Due date">
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Notes</Label>
+          </Field>
+          <Field label="Notes" className="sm:col-span-2">
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes on this invoice" />
-          </div>
+          </Field>
         </div>
 
         <InvoiceTotals arrangement={arrangement} subtotalCents={subtotalCents} discountCents={discountCents} coveredCents={coveredCents} totalCents={totalCents} patientDue={patientDue} />

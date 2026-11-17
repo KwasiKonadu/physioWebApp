@@ -1,21 +1,11 @@
 "use client";
 // Treatment plan detail building blocks: objective rows and version history.
 
-
 import { useMemo } from "react";
-
-
 import { Badge } from "@/components/ui/badge";
-
-
-
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
-
-
 import { formatDate, formatDateTime, relativeTime } from "@/lib/format";
-
-
 import type { PlanObjectiveDto, PlanVersionDto } from "./types";
 
 export const PRIORITY_TONE: Record<string, string> = {

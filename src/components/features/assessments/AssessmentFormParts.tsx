@@ -8,15 +8,7 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { cn } from "@/lib/utils";
 
 // ===================== small presentational helpers =====================
-export function Field({ label, children, className, hint }: { label: string; children: React.ReactNode; className?: string; hint?: string }) {
-  return (
-    <div className={cn("space-y-1.5", className)}>
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      {children}
-      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
+export { Field } from "@/components/molecules/field";
 
 export function DRow({ label, value }: { label: string; value?: string | number | null }) {
   return <DetailRow label={label} value={value === null || value === undefined || value === "" ? "—" : String(value)} />;

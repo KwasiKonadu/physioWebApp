@@ -10,13 +10,13 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 import { Textarea } from "@/components/ui/textarea";
 import { useTherapists } from "./hooks";
+import { Field } from "@/components/molecules/field";
 
 // ---------- New episode dialog ----------
 export function NewEpisodeDialog({ open, onOpenChange, patientId, patientName, onCreated }: {
@@ -61,12 +61,10 @@ export function NewEpisodeDialog({ open, onOpenChange, patientId, patientName, o
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Title *</Label>
+          <Field label="Title" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lower back pain — mechanical" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Assign therapist</Label>
+          </Field>
+          <Field label="Assign therapist">
             <Select value={therapistId} onValueChange={setTherapistId}>
               <SelectTrigger><SelectValue placeholder="Optional — assign now or later" /></SelectTrigger>
               <SelectContent>
@@ -75,11 +73,10 @@ export function NewEpisodeDialog({ open, onOpenChange, patientId, patientName, o
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
+          </Field>
+          <Field label="Notes">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Context for the assessing therapist" />
-          </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={create.isPending}>Cancel</Button>

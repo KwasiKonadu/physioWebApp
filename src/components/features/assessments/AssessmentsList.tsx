@@ -6,14 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { StatCard } from "@/components/molecules/stat-card";
 import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
-
 import { formatDate, fullName } from "@/lib/format";
 import * as API from "./assessments-api";
 import type { AssessmentFormTarget } from "./AssessmentForm";
@@ -176,9 +174,6 @@ export function AssessmentsList({ canManage, onOpen }: {
           },
         ]}
       />
-      <p className="text-[11px] text-muted-foreground">
-        Completed assessments are immutable — use “Start correction” on a completed record to create an audited new draft.
-      </p>
     </div>
   );
 }

@@ -3,13 +3,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { SectionCard } from "@/components/molecules/section-card";
 import { DetailRow, DetailGrid } from "@/components/molecules/detail-row";
 import { AtomIcon } from "@/components/atoms/icon";
 import type { UseFieldArrayReturn, UseFormReturn } from "react-hook-form";
 import { DischargeFormValues, emptyRow } from "./discharge-form-model";
-
+import { Field } from "@/components/molecules/field";
 
 export function RecommendationsSection({ form, editable, isCompleted, recommendationsArray, watchedRecommendations }: { form: UseFormReturn<DischargeFormValues>; editable: boolean; isCompleted: boolean; recommendationsArray: UseFieldArrayReturn<DischargeFormValues, "recommendations">; watchedRecommendations: DischargeFormValues["recommendations"] }) {
   return (
@@ -57,34 +56,27 @@ export function RecommendationsSection({ form, editable, isCompleted, recommenda
                     </DetailGrid>
                   ) : (
                     <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 *:min-w-0">
-                      <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
-                        <Label>Exercise name</Label>
+                      <Field label="Exercise name" className="sm:col-span-2 lg:col-span-3">
                         <Input placeholder="e.g. Quad stick gait practice" {...form.register(`recommendations.${idx}.exerciseName` as const)} />
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Instructions</Label>
+                      </Field>
+                      <Field label="Instructions" className="sm:col-span-2">
                         <Input placeholder="How to perform…" {...form.register(`recommendations.${idx}.instructions` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Frequency</Label>
+                      </Field>
+                      <Field label="Frequency">
                         <Input placeholder="e.g. Daily" {...form.register(`recommendations.${idx}.frequency` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Duration</Label>
+                      </Field>
+                      <Field label="Duration">
                         <Input placeholder="e.g. 4 weeks" {...form.register(`recommendations.${idx}.duration` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Repetitions</Label>
+                      </Field>
+                      <Field label="Repetitions">
                         <Input placeholder="e.g. 3 × 10" {...form.register(`recommendations.${idx}.repetitions` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Precautions</Label>
+                      </Field>
+                      <Field label="Precautions">
                         <Input placeholder="e.g. Stop if pain > 4/10" {...form.register(`recommendations.${idx}.precautions` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Notes</Label>
+                      </Field>
+                      <Field label="Notes">
                         <Input placeholder="Optional…" {...form.register(`recommendations.${idx}.notes` as const)} />
-                      </div>
+                      </Field>
                     </div>
                   )}
                 </div>

@@ -2,16 +2,8 @@
 // ============ AssessmentsPage: clinical assessments + diagnoses module (default export) ============
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/molecules/page-header";
-
-
-
-
-
 import { AtomIcon } from "@/components/atoms/icon";
 import { PERMS } from "@/lib/constants";
 import { useAuthStore, useUIStore, hasPermission } from "@/stores/app-store";

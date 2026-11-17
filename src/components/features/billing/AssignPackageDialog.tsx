@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney, fromCents } from "@/lib/format";
 import { PAYMENT_METHODS, labelize } from "@/lib/constants";
 import { PatientPicker, inputToCents, dateInputValue, type ListResponse, type PackageDef, type PatientLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- Assign (sell) a package to a patient ----
 export function AssignPackageDialog({
@@ -92,12 +92,10 @@ export function AssignPackageDialog({
           <DialogDescription>Creates the patient package, its PURCHASE ledger entry and optionally an invoice + payment.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Patient *</Label>
+          <Field label="Patient" required>
             <PatientPicker value={patient} onChange={setPatient} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Package *</Label>
+          </Field>
+          <Field label="Package" required>
             <Select value={packageId} onValueChange={onPackageSelect}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Select package…" /></SelectTrigger>
               <SelectContent className="custom-scrollbar max-h-64">
@@ -111,16 +109,14 @@ export function AssignPackageDialog({
             {selectedPkg ? (
               <p className="text-xs text-muted-foreground">Valid {selectedPkg.validityDays} days from purchase.</p>
             ) : null}
-          </div>
+          </Field>
           <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
-            <div className="space-y-1.5">
-              <Label>Purchase date</Label>
+            <Field label="Purchase date">
               <Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Amount paid (₵)</Label>
+            </Field>
+            <Field label="Amount paid (₵)">
               <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={selectedPkg ? String(fromCents(selectedPkg.priceCents)) : "0.00"} />
-            </div>
+            </Field>
           </div>
           <label className="flex items-center gap-2 rounded-lg border p-3 text-sm">
             <Checkbox checked={createInvoice} onCheckedChange={(v) => setCreateInvoice(!!v)} />
@@ -130,20 +126,18 @@ export function AssignPackageDialog({
             </span>
           </label>
           {createInvoice && (
-            <div className="space-y-1.5">
-              <Label>Payment method</Label>
+            <Field label="Payment method">
               <Select value={method} onValueChange={setMethod}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PAYMENT_METHODS.filter((x) => x !== "INSURANCE").map((x) => <SelectItem key={x} value={x}>{labelize(x)}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           )}
-          <div className="space-y-1.5">
-            <Label>Notes</Label>
+          <Field label="Notes">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-          </div>
+          </Field>
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
         <DialogFooter>

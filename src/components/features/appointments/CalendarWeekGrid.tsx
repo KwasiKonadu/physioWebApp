@@ -2,12 +2,9 @@
 // Calendar week view: seven day columns with positioned time blocks.
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { minutesToTime, ymd } from "@/lib/format";
-
 import { GRID_START_MIN, GRID_END_MIN, HOUR_HEIGHT } from "./appointments-shared";
-
 import { WEEKDAY_HEADERS, CalendarProps, layoutDay, groupByDate, TimeBlock } from "./calendar-shared";
 
 // ---------- week view ----------

@@ -6,11 +6,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import { inputToCents, centsToInput, type ClaimItem } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- Claim decision / settlement dialog ----
 export function ClaimActionDialog({
@@ -62,20 +62,18 @@ export function ClaimActionDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>{action === "record_payment" ? "Amount received (₵)" : "Approved amount (₵)"}</Label>
+          <Field label={<>{action === "record_payment" ? "Amount received (₵)" : "Approved amount (₵)"}</>}>
             <Input type="number" min={0} step="0.01" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
             <p className="text-xs text-muted-foreground">
               {action === "record_payment"
                 ? "Recorded as an INSURANCE payment on the invoice; the claim closes as PAID when the invoice is fully settled."
                 : "Equal to the claimed amount marks the claim APPROVED; anything less records PARTIALLY_APPROVED."}
             </p>
-          </div>
+          </Field>
           {action === "record_payment" && (
-            <div className="space-y-1.5">
-              <Label>Reference</Label>
+            <Field label="Reference">
               <Input value={reference} onChange={(e) => setReference(e.target.value)} />
-            </div>
+            </Field>
           )}
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}

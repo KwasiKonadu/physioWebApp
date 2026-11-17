@@ -5,7 +5,6 @@ import { Controller } from "react-hook-form";
 import { formatDate } from "@/lib/format";
 import { REVIEW_DECISIONS, REVIEW_RESULT_STATUSES, labelize } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +18,7 @@ import { changeFor } from "./types";
 import type { ClinicalBaseline, ReviewDetailResponse } from "./types";
 import type { UseFieldArrayReturn, UseFormReturn } from "react-hook-form";
 import type { ReviewFormValues } from "./review-form-model";
+import { Field } from "@/components/molecules/field";
 
 type Review = ReviewDetailResponse["review"];
 
@@ -38,21 +38,19 @@ export function DecisionSection({ form, review, isCompleted, decision, decisionB
                 control={form.control}
                 name="decision"
                 render={({ field }) => (
-                  <div className="space-y-1.5">
-                    <Label>Decision</Label>
+                  <Field label="Decision">
                     <Select value={field.value || undefined} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Select a decision…" /></SelectTrigger>
                       <SelectContent>
                         {REVIEW_DECISIONS.map((d) => <SelectItem key={d} value={d}>{labelize(d)}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </Field>
                 )}
               />
-              <div className="space-y-1.5">
-                <Label htmlFor="decisionNotes">Decision notes</Label>
+              <Field label="Decision notes" htmlFor="decisionNotes">
                 <Input id="decisionNotes" placeholder="Optional notes supporting this decision…" {...form.register("decisionNotes")} />
-              </div>
+              </Field>
             </div>
             {decision === "REVISE_PLAN" ? (
               <Alert className="border-sky-200 bg-sky-50 text-sky-800">
@@ -146,12 +144,10 @@ export function ObjectivesSection({ form, review, baseline, isCompleted, results
                     </DetailGrid>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 *:min-w-0">
-                      <div className="space-y-1.5">
-                        <Label>Current value</Label>
+                      <Field label="Current value">
                         <Input placeholder="e.g. 120°" {...form.register(`objectiveResults.${idx}.current` as const)} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Result</Label>
+                      </Field>
+                      <Field label="Result">
                         <Controller
                           control={form.control}
                           name={`objectiveResults.${idx}.result` as const}
@@ -164,11 +160,10 @@ export function ObjectivesSection({ form, review, baseline, isCompleted, results
                             </Select>
                           )}
                         />
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Notes</Label>
+                      </Field>
+                      <Field label="Notes" className="sm:col-span-2">
                         <Input placeholder="Optional notes…" {...form.register(`objectiveResults.${idx}.notes` as const)} />
-                      </div>
+                      </Field>
                     </div>
                   )}
                 </div>
@@ -208,26 +203,21 @@ export function SummarySection({ form, review, isCompleted }: { form: UseFormRet
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2 *:min-w-0">
-            <div className="space-y-1.5">
-              <Label htmlFor="improvements">Improvements</Label>
+            <Field label="Improvements" htmlFor="improvements">
               <Textarea id="improvements" rows={3} {...form.register("improvements")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="deterioration">Deterioration / regressions</Label>
+            </Field>
+            <Field label="Deterioration / regressions" htmlFor="deterioration">
               <Textarea id="deterioration" rows={3} {...form.register("deterioration")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="patientResponse">Patient response to treatment</Label>
+            </Field>
+            <Field label="Patient response to treatment" htmlFor="patientResponse">
               <Textarea id="patientResponse" rows={3} {...form.register("patientResponse")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="observations">Observations</Label>
+            </Field>
+            <Field label="Observations" htmlFor="observations">
               <Textarea id="observations" rows={3} {...form.register("observations")} />
-            </div>
-            <div className="space-y-1.5 lg:col-span-2">
-              <Label htmlFor="recommendations">Recommendations</Label>
+            </Field>
+            <Field label="Recommendations" htmlFor="recommendations" className="lg:col-span-2">
               <Textarea id="recommendations" rows={3} {...form.register("recommendations")} />
-            </div>
+            </Field>
           </div>
         )}
       </SectionCard>
@@ -255,52 +245,45 @@ export function UpdatedAssessmentSection({ form, review, baseline, isCompleted }
                 control={form.control}
                 name="painCurrent"
                 render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label>Pain now (0–10)</Label>
+                  <Field label="Pain now (0–10)">
                     <div className="flex items-center gap-3">
                       <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
                       <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.current ?? "—"}{baseline.assessment?.pain.current !== null && baseline.assessment?.pain.current !== undefined ? "/10" : ""}</p>
-                  </div>
+                  </Field>
                 )}
               />
               <Controller
                 control={form.control}
                 name="painWorst"
                 render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label>Pain at worst since last review (0–10)</Label>
+                  <Field label="Pain at worst since last review (0–10)">
                     <div className="flex items-center gap-3">
                       <Slider min={0} max={10} step={1} value={[field.value ?? 0]} onValueChange={(v) => field.onChange(v[0])} className="flex-1" />
                       <span className="w-12 text-center text-sm font-semibold tabular-nums">{field.value ?? 0}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Baseline: {baseline.assessment?.pain.worst ?? "—"}{baseline.assessment?.pain.worst !== null && baseline.assessment?.pain.worst !== undefined ? "/10" : ""}</p>
-                  </div>
+                  </Field>
                 )}
               />
             </div>
             <div className="grid gap-4 lg:grid-cols-2 *:min-w-0">
-              <div className="space-y-1.5">
-                <Label htmlFor="romSummary">ROM summary</Label>
+              <Field label="ROM summary" htmlFor="romSummary">
                 <Textarea id="romSummary" rows={3} placeholder="e.g. Knee flexion (L) improved from 100° to 115° active…" {...form.register("romSummary")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="strengthSummary">Strength summary</Label>
+              </Field>
+              <Field label="Strength summary" htmlFor="strengthSummary">
                 <Textarea id="strengthSummary" rows={3} placeholder="e.g. Quadriceps (L) grade 3 → 4 MRC…" {...form.register("strengthSummary")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="functionalSummary">Functional summary</Label>
+              </Field>
+              <Field label="Functional summary" htmlFor="functionalSummary">
                 <Textarea id="functionalSummary" rows={3} placeholder="e.g. Walking 30m with quad stick; dressing with minimal help…" {...form.register("functionalSummary")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="vitals">Vitals</Label>
+              </Field>
+              <Field label="Vitals" htmlFor="vitals">
                 <Input id="vitals" placeholder="BP, HR, SpO₂, weight…" {...form.register("vitals")} />
-                <div className="space-y-1.5 pt-2">
-                  <Label htmlFor="newFindings">New findings</Label>
+                <Field label="New findings" htmlFor="newFindings" className="pt-2">
                   <Textarea id="newFindings" rows={2} placeholder="Any new observations since last review…" {...form.register("newFindings")} />
-                </div>
-              </div>
+                </Field>
+              </Field>
             </div>
           </div>
         )}
@@ -320,18 +303,16 @@ export function SignSection({ form, review, isCompleted, sessionPct }: { form: U
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
-            <div className="space-y-1.5">
-              <Label htmlFor="therapistSignature">Therapist signature</Label>
+            <Field label="Therapist signature" htmlFor="therapistSignature">
               <Input id="therapistSignature" placeholder="Type your full name to sign" {...form.register("therapistSignature")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Review cycle</Label>
+            </Field>
+            <Field label="Review cycle">
               <div className="flex items-center gap-3">
                 <Progress value={sessionPct} className="flex-1" />
                 <span className="text-xs font-medium text-muted-foreground">{review.episode.sessionsSinceReview}/{review.episode.reviewThreshold} sessions</span>
               </div>
               <p className="text-xs text-muted-foreground">Completing resets the counter to 0/{review.episode.reviewThreshold}.</p>
-            </div>
+            </Field>
           </div>
         )}
       </SectionCard>

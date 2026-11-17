@@ -1,19 +1,12 @@
 "use client";
 // Patient search / selection block of the booking form.
 
-
-
-
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-
 import { AtomIcon } from "@/components/atoms/icon";
-
 import type { UseQueryResult } from "@tanstack/react-query";
 import { PatientOption } from "./booking-shared";
+import { Field } from "@/components/molecules/field";
 
 export function BookingPatientPicker({ effectivePatient, selectedPatientId, query, onQueryChange, search, onPick, onClear, error }: {
   effectivePatient: PatientOption | null;
@@ -26,8 +19,7 @@ export function BookingPatientPicker({ effectivePatient, selectedPatientId, quer
   error?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label>Patient</Label>
+    <Field label="Patient">
       {effectivePatient ? (
         <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
           <div className="min-w-0">
@@ -84,6 +76,6 @@ export function BookingPatientPicker({ effectivePatient, selectedPatientId, quer
         </>
       )}
       {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
-    </div>
+    </Field>
   );
 }

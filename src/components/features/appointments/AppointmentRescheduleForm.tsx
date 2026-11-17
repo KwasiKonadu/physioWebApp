@@ -4,9 +4,9 @@ import { useState } from "react";
 import { ymd } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppointmentDto } from "./appointments-shared";
+import { Field } from "@/components/molecules/field";
 
 export function minutesToInputTime(min: number): string {
   const h = Math.floor(min / 60);
@@ -34,24 +34,21 @@ export function RescheduleForm({ appt, pending, onSubmit, onCancel }: {
       <div className="space-y-3 rounded-lg border p-3">
         <p className="text-sm font-medium">Reschedule appointment</p>
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <Label className="text-xs">New date</Label>
+          <Field label="New date">
             <Input type="date" value={resDate} onChange={(e) => setResDate(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">New start</Label>
+          </Field>
+          <Field label="New start">
             <Input type="time" value={resTime} onChange={(e) => setResTime(e.target.value)} />
-          </div>
+          </Field>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Duration</Label>
+        <Field label="Duration">
           <Select value={resDuration} onValueChange={setResDuration}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {["15", "30", "45", "60"].map((d) => <SelectItem key={d} value={d}>{d} minutes</SelectItem>)}
             </SelectContent>
           </Select>
-        </div>
+        </Field>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onCancel}>Keep original</Button>
           <Button size="sm" onClick={submitReschedule} disabled={pending}>

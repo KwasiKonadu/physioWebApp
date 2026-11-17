@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { SectionCard } from "@/components/molecules/section-card";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
 // A settings card that shows a preview with an Edit button; Edit swaps in the fields with Cancel / Save.
 export function EditableCard({
@@ -67,11 +66,4 @@ export function fmtTime(t: string): string {
   return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
+export { Field } from "@/components/molecules/field";

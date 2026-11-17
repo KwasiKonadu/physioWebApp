@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { minutesToTime, ymd } from "@/lib/format";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { GRID_START_MIN, GRID_END_MIN, HOUR_HEIGHT, statusTone } from "./appointments-shared";
-
 import { PX_PER_MIN, CalendarProps, layoutDay, patientName, nowMin, TimeBlock } from "./calendar-shared";
 
 // ---------- day view ----------

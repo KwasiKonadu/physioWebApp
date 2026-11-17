@@ -2,26 +2,8 @@
 // FEATURE: Therapy Sessions — list + filters + stats + new-session dialog + documentation view
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-
 import { useUIStore, type NavigateOpts } from "@/stores/app-store";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { SessionsList } from "./SessionsList";
-
 
 // ---- Page root: list ↔ documentation view ----
 export default function TherapySessionsPage() {

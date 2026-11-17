@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffDetail, StatsResponse, PERIODS, Period } from "./staff-profile-model";
+import { Field } from "@/components/molecules/field";
 
 export function StaffRemunerationTab({ s, stats, period, setPeriod, periodLabel, canManage, effMethod, method, rateGhs, savingRem, saveRemuneration, setMethod, setRateGhs }: { s: StaffDetail["staff"]; stats: StatsResponse | undefined; period: Period; setPeriod: (p: Period) => void; periodLabel: string; canManage: boolean; effMethod: string; method: string; rateGhs: string; savingRem: boolean; saveRemuneration: () => void; setMethod: (v: string) => void; setRateGhs: (v: string) => void }) {
   return (
@@ -21,8 +22,7 @@ export function StaffRemunerationTab({ s, stats, period, setPeriod, periodLabel,
           {canManage ? (
             <div className="space-y-3">
               {s.isTherapist ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Method</Label>
+                <Field label="Method">
                   <Select value={method} onValueChange={setMethod}>
                     <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -33,7 +33,7 @@ export function StaffRemunerationTab({ s, stats, period, setPeriod, periodLabel,
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
               ) : null}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

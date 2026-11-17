@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatMoney } from "@/lib/format";
 import { inputToCents, type ServiceLite } from "./billing-shared";
 import { DraftItem } from "./invoice-draft";
+import { Field } from "@/components/molecules/field";
 
 export function InvoiceLineItems({ items, services, onAdd, onRemove, onUpdate }: {
   items: DraftItem[];
@@ -40,8 +41,7 @@ export function InvoiceLineItems({ items, services, onAdd, onRemove, onUpdate }:
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Service</Label>
+            <Field label="Service">
               <Select
                 value={it.serviceId || undefined}
                 onValueChange={(v) => onUpdate(it.key, { serviceId: v === "custom" ? "" : v })}
@@ -56,41 +56,37 @@ export function InvoiceLineItems({ items, services, onAdd, onRemove, onUpdate }:
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Description *</Label>
+            </Field>
+            <Field label="Description" required>
               <Input
                 className="h-9"
                 placeholder="What is being billed"
                 value={it.description}
                 onChange={(e) => onUpdate(it.key, { description: e.target.value })}
               />
-            </div>
+            </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-3 *:min-w-0">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Quantity</Label>
+            <Field label="Quantity">
               <Input
                 type="number" min={1} className="h-9"
                 value={String(it.quantity)}
                 onChange={(e) => onUpdate(it.key, { quantity: Math.max(1, parseInt(e.target.value || "1", 10) || 1) })}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Unit price (₵)</Label>
+            </Field>
+            <Field label="Unit price (₵)">
               <Input
                 type="number" min={0} step="0.01" className="h-9" disabled={!!it.ratePreview}
                 value={it.priceText}
                 onChange={(e) => onUpdate(it.key, { priceText: e.target.value })}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Line total</Label>
+            </Field>
+            <Field label="Line total">
               <div className="flex h-9 items-center justify-end rounded-md border bg-muted/40 px-3 text-sm font-medium tabular-nums">
                 {formatMoney(inputToCents(it.priceText) * it.quantity)}
               </div>
-            </div>
+            </Field>
           </div>
 
           {it.ratePreview ? (

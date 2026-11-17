@@ -2,12 +2,9 @@
 // Calendar month view: day cells with appointment counts and previews.
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { minutesToTime, ymd } from "@/lib/format";
-
 import { statusTone } from "./appointments-shared";
-
 import { WEEKDAY_HEADERS, CalendarProps, groupByDate } from "./calendar-shared";
 
 // ---------- month view ----------

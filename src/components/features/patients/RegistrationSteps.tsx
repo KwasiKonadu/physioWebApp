@@ -18,10 +18,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useDuplicates, useInsuranceProviders } from "./hooks";
+import { Field } from "@/components/molecules/field";
+import { FormValues, EMPTY_CONTACT } from "./registration-schema";
 
 type Watch = <P extends FieldPath<FormValues>>(name: P) => PathValue<FormValues, P>;
 type DupMatches = NonNullable<ReturnType<typeof useDuplicates>["data"]>["items"];
-import { FormValues, EMPTY_CONTACT } from "./registration-schema";
 
 export function PersonalStep({ register, setValue, watch, err, form, dob, dupMatches, firstName, lastName, phone }: { register: UseFormRegister<FormValues>; setValue: UseFormSetValue<FormValues>; watch: Watch; err: (path: string) => string | undefined; form: UseFormReturn<FormValues>; dob: string; dupMatches: DupMatches; firstName: string; lastName: string; phone: string }) {
   return (
@@ -47,22 +48,16 @@ export function PersonalStep({ register, setValue, watch, err, form, dob, dupMat
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-3 *:min-w-0">
-          <div className="space-y-1.5">
-            <Label>First name *</Label>
+          <Field label="First name" required error={err("firstName")}>
             <Input {...register("firstName")} placeholder="Kofi" />
-            {err("firstName") ? <p className="text-xs text-destructive">{err("firstName")}</p> : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Middle name</Label>
+          </Field>
+          <Field label="Middle name">
             <Input {...register("middleName")} placeholder="Optional" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Last name *</Label>
+          </Field>
+          <Field label="Last name" required error={err("lastName")}>
             <Input {...register("lastName")} placeholder="Mensah" />
-            {err("lastName") ? <p className="text-xs text-destructive">{err("lastName")}</p> : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Date of birth</Label>
+          </Field>
+          <Field label="Date of birth">
             <div className="flex items-center gap-2">
               <Input type="date" {...register("dateOfBirth")} className="min-w-0 flex-1" />
               <div className="w-20 shrink-0">
@@ -70,9 +65,8 @@ export function PersonalStep({ register, setValue, watch, err, form, dob, dupMat
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">Age auto-calculated</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Gender</Label>
+          </Field>
+          <Field label="Gender">
             <Select value={watch("gender")} onValueChange={(v) => setValue("gender", v)}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
@@ -81,9 +75,8 @@ export function PersonalStep({ register, setValue, watch, err, form, dob, dupMat
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Marital status</Label>
+          </Field>
+          <Field label="Marital status">
             <Select value={watch("maritalStatus")} onValueChange={(v) => setValue("maritalStatus", v)}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
@@ -92,33 +85,25 @@ export function PersonalStep({ register, setValue, watch, err, form, dob, dupMat
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Phone *</Label>
+          </Field>
+          <Field label="Phone" required error={err("phone")}>
             <Input {...register("phone")} placeholder="+233 24 000 0000" />
-            {err("phone") ? <p className="text-xs text-destructive">{err("phone")}</p> : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Alternative phone</Label>
+          </Field>
+          <Field label="Alternative phone">
             <Input {...register("altPhone")} placeholder="Optional" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email</Label>
+          </Field>
+          <Field label="Email" error={err("email")}>
             <Input type="email" {...register("email")} placeholder="name@example.com" />
-            {err("email") ? <p className="text-xs text-destructive">{err("email")}</p> : null}
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Residential address</Label>
+          </Field>
+          <Field label="Residential address" className="sm:col-span-2">
             <Input {...register("address")} placeholder="Area, city" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Occupation</Label>
+          </Field>
+          <Field label="Occupation">
             <Input {...register("occupation")} placeholder="Optional" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Nationality</Label>
+          </Field>
+          <Field label="Nationality">
             <Input {...register("nationality")} placeholder="Ghanaian" />
-          </div>
+          </Field>
         </div>
       </div>
   );
@@ -150,29 +135,21 @@ export function ContactsStep({ register, setValue, watch, err, contacts, phone }
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-4 *:min-w-0">
-              <div className="space-y-1">
-                <Label>Name *</Label>
+              <Field label="Name" required error={err(`emergencyContacts.${index}.fullName`)}>
                 <Input {...register(`emergencyContacts.${index}.fullName`)} placeholder="Full name" />
-                {err(`emergencyContacts.${index}.fullName`) ? <p className="text-xs text-destructive">{err(`emergencyContacts.${index}.fullName`)}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Relationship *</Label>
+              </Field>
+              <Field label="Relationship" required error={err(`emergencyContacts.${index}.relationship`)}>
                 <Input {...register(`emergencyContacts.${index}.relationship`)} placeholder="Spouse, parent…" />
-                {err(`emergencyContacts.${index}.relationship`) ? <p className="text-xs text-destructive">{err(`emergencyContacts.${index}.relationship`)}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Phone *</Label>
+              </Field>
+              <Field label="Phone" required error={err(`emergencyContacts.${index}.phone`)}>
                 <Input {...register(`emergencyContacts.${index}.phone`)} placeholder="+233 …" />
-                {err(`emergencyContacts.${index}.phone`) ? <p className="text-xs text-destructive">{err(`emergencyContacts.${index}.phone`)}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Alt. phone</Label>
+              </Field>
+              <Field label="Alt. phone">
                 <Input {...register(`emergencyContacts.${index}.altPhone`)} placeholder="Optional" />
-              </div>
-              <div className="space-y-1 sm:col-span-4">
-                <Label>Address</Label>
+              </Field>
+              <Field label="Address" className="sm:col-span-4">
                 <Input {...register(`emergencyContacts.${index}.address`)} placeholder="Optional" />
-              </div>
+              </Field>
             </div>
           </div>
         ))}
@@ -210,8 +187,7 @@ export function HistoryStep({ register, setValue, watch, err, history }: { regis
 
         {history.fields.map((field, index) => (
           <div key={field.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[160px_1fr_1fr_40px] *:min-w-0">
-            <div className="space-y-1">
-              <Label>Type</Label>
+            <Field label="Type">
               <Select value={watch(`medicalHistory.${index}.type`)} onValueChange={(v) => setValue(`medicalHistory.${index}.type`, v)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -220,16 +196,13 @@ export function HistoryStep({ register, setValue, watch, err, history }: { regis
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Name / description *</Label>
+            </Field>
+            <Field label="Name / description" required error={err(`medicalHistory.${index}.name`)}>
               <Input {...register(`medicalHistory.${index}.name`)} placeholder="e.g. Asthma, ACL surgery 2023" />
-              {err(`medicalHistory.${index}.name`) ? <p className="text-xs text-destructive">{err(`medicalHistory.${index}.name`)}</p> : null}
-            </div>
-            <div className="space-y-1">
-              <Label>Details</Label>
+            </Field>
+            <Field label="Details">
               <Input {...register(`medicalHistory.${index}.details`)} placeholder="Optional notes" />
-            </div>
+            </Field>
             <div className="flex items-end justify-end">
               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => history.remove(index)} aria-label="Remove entry">
                 <AtomIcon name="Trash2" className="h-4 w-4" />
@@ -245,8 +218,7 @@ export function ReferralStep({ register, setValue, watch }: { register: UseFormR
   return (
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2 *:min-w-0">
-          <div className="space-y-1.5">
-            <Label>Referral source</Label>
+          <Field label="Referral source">
             <Select value={watch("referral.source")} onValueChange={(v) => setValue("referral.source", v)}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Select source (optional)" /></SelectTrigger>
               <SelectContent>
@@ -255,23 +227,19 @@ export function ReferralStep({ register, setValue, watch }: { register: UseFormR
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Referrer name</Label>
+          </Field>
+          <Field label="Referrer name">
             <Input {...register("referral.referrerName")} placeholder="e.g. Dr. Ampofo" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Referrer contact</Label>
+          </Field>
+          <Field label="Referrer contact">
             <Input {...register("referral.referrerContact")} placeholder="Phone or email" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Referral date</Label>
+          </Field>
+          <Field label="Referral date">
             <Input type="date" {...register("referral.referralDate")} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Notes</Label>
+          </Field>
+          <Field label="Notes" className="sm:col-span-2">
             <Textarea {...register("referral.notes")} rows={3} placeholder="Reason for referral, letter reference…" />
-          </div>
+          </Field>
         </div>
       </div>
   );
@@ -280,8 +248,7 @@ export function ReferralStep({ register, setValue, watch }: { register: UseFormR
 export function ConsentStep({ register, setValue, watch, err, isMinor, payment, providers }: { register: UseFormRegister<FormValues>; setValue: UseFormSetValue<FormValues>; watch: Watch; err: (path: string) => string | undefined; isMinor: boolean; payment: string; providers: ReturnType<typeof useInsuranceProviders> }) {
   return (
       <div className="space-y-5">
-        <div className="space-y-2">
-          <Label>Payment arrangement *</Label>
+        <Field label="Payment arrangement" required>
           <RadioGroup
             value={payment}
             onValueChange={(v) => setValue("paymentArrangement", v as FormValues["paymentArrangement"], { shouldValidate: true })}
@@ -308,7 +275,7 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
               </Label>
             ))}
           </RadioGroup>
-        </div>
+        </Field>
 
         {payment === "INSURANCE" ? (
           <div className="rounded-xl border bg-sky-50/40 p-4">
@@ -328,8 +295,7 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
               </Alert>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">
-              <div className="space-y-1">
-                <Label>Provider *</Label>
+              <Field label="Provider" required error={err("insurance.providerId")}>
                 <Select value={watch("insurance.providerId")} onValueChange={(v) => setValue("insurance.providerId", v, { shouldValidate: true })}>
                   <SelectTrigger className="w-full"><SelectValue placeholder="Select provider" /></SelectTrigger>
                   <SelectContent>
@@ -338,34 +304,26 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
                     ))}
                   </SelectContent>
                 </Select>
-                {err("insurance.providerId") ? <p className="text-xs text-destructive">{err("insurance.providerId")}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Membership number *</Label>
+              </Field>
+              <Field label="Membership number" required error={err("insurance.membershipNumber")}>
                 <Input {...register("insurance.membershipNumber")} placeholder="e.g. NHIS-1234-5678" />
-                {err("insurance.membershipNumber") ? <p className="text-xs text-destructive">{err("insurance.membershipNumber")}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Policy number</Label>
+              </Field>
+              <Field label="Policy number">
                 <Input {...register("insurance.policyNumber")} placeholder="Optional" />
-              </div>
-              <div className="space-y-1">
-                <Label>Principal member</Label>
+              </Field>
+              <Field label="Principal member">
                 <Input {...register("insurance.principalMember")} placeholder="Optional" />
-              </div>
-              <div className="space-y-1">
-                <Label>Relationship to principal</Label>
+              </Field>
+              <Field label="Relationship to principal">
                 <Input {...register("insurance.relationshipToPrincipal")} placeholder="e.g. Spouse, dependant" />
-              </div>
+              </Field>
               <div className="grid grid-cols-2 gap-3 *:min-w-0">
-                <div className="space-y-1">
-                  <Label>Valid from</Label>
+                <Field label="Valid from">
                   <Input type="date" {...register("insurance.validFrom")} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Valid to</Label>
+                </Field>
+                <Field label="Valid to">
                   <Input type="date" {...register("insurance.validTo")} />
-                </div>
+                </Field>
               </div>
             </div>
           </div>
@@ -403,30 +361,24 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
             </label>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 *:min-w-0">
-            <div className="space-y-1">
-              <Label>Signature name</Label>
+            <Field label="Signature name">
               <Input {...register("consent.signatureName")} placeholder="Signed by" />
-            </div>
-            <div className="space-y-1">
-              <Label>Consent date</Label>
+            </Field>
+            <Field label="Consent date">
               <Input type="date" {...register("consent.consentDate")} />
-            </div>
+            </Field>
           </div>
           {isMinor ? (
             <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:grid-cols-2 *:min-w-0">
               <p className="text-xs font-medium text-amber-800 sm:col-span-2">
                 Patient is under 18 — guardian consent details are required.
               </p>
-              <div className="space-y-1">
-                <Label>Guardian name *</Label>
+              <Field label="Guardian name" required error={err("consent.guardianName")}>
                 <Input {...register("consent.guardianName")} placeholder="Parent / guardian" />
-                {err("consent.guardianName") ? <p className="text-xs text-destructive">{err("consent.guardianName")}</p> : null}
-              </div>
-              <div className="space-y-1">
-                <Label>Guardian relationship *</Label>
+              </Field>
+              <Field label="Guardian relationship" required error={err("consent.guardianRelationship")}>
                 <Input {...register("consent.guardianRelationship")} placeholder="e.g. Mother" />
-                {err("consent.guardianRelationship") ? <p className="text-xs text-destructive">{err("consent.guardianRelationship")}</p> : null}
-              </div>
+              </Field>
             </div>
           ) : null}
         </div>

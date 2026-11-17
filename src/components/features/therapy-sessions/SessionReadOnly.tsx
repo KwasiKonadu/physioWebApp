@@ -1,29 +1,12 @@
 "use client";
 // Read-only view of a finished session: documentation + package ledger.
 import { DataTable } from "@/components/molecules/data-table";
-
-
-
-
-
 import { formatDateTime } from "@/lib/format";
 import { labelize } from "@/lib/constants";
-
 import { SectionCard } from "@/components/molecules/section-card";
 import { DetailRow, DetailGrid } from "@/components/molecules/detail-row";
-
-
-
-
-
-
-
-
 import { Badge } from "@/components/ui/badge";
-
-
 import { cn } from "@/lib/utils";
-
 import { SessionDetail, PackageTx } from "./session-form";
 
 // ---- Read-only components ----

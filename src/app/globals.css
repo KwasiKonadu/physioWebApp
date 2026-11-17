@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Body text scale: Tailwind's text-sm (the app's body size) is 13px instead of 14px. */
+@theme {
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -144,7 +150,7 @@
     font-family: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm;
   }
   /* form controls don't inherit the font by default */
   button,
@@ -168,4 +174,13 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
+}
+
+/* Splash screen loading bar */
+@keyframes splash-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.splash-bar {
+  animation: splash-bar 1.2s ease-in-out infinite;
 }

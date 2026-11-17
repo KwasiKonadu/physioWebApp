@@ -3,9 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import { AtomIcon } from "@/components/atoms/icon";
-
 import { minutesToTime, ymd } from "@/lib/format";
-
 import { AppointmentDto, GRID_START_MIN, GRID_END_MIN, HOUR_HEIGHT, statusTone } from "./appointments-shared";
 
 export const PX_PER_MIN = HOUR_HEIGHT / 60;

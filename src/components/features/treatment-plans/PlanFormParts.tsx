@@ -2,28 +2,14 @@
 // Small pieces shared by the plan form steps: intervention name input, row shell, error text.
 import { useState } from "react";
 import { type UseFormReturn } from "react-hook-form";
-
-
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-
-
-
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-
-
-
-
-
 import { AtomIcon } from "@/components/atoms/icon";
-
 import { PLAN_INTERVENTIONS } from "@/lib/constants";
-
 import { CUSTOM_SENTINEL, FormValues } from "./plan-form-schema";
 
 // ---------- intervention name: presets select + custom free text ----------

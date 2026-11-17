@@ -1,30 +1,21 @@
 "use client";
 // Wizard steps of the treatment plan form (each receives the form and what it edits).
 import { Controller, type UseFormReturn } from "react-hook-form";
-
-
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SectionCard } from "@/components/molecules/section-card";
-
-
-
-
-
 import { AtomIcon } from "@/components/atoms/icon";
 import { EmptyStateCompact } from "@/components/molecules/empty-state";
 import { MILESTONE_STATUSES } from "@/lib/constants";
-
 import { OBJECTIVE_PRIORITIES, FormValues, intOrNull } from "./plan-form-schema";
 import { InterventionNameInput, RowShell, ErrText } from "./PlanFormParts";
+import { Field } from "@/components/molecules/field";
 
 type Form = UseFormReturn<FormValues>;
 
@@ -186,31 +177,25 @@ export function ScheduleStep({ form }: { form: Form }) {
   return (
       <SectionCard title="Session schedule" icon="CalendarClock" description="Planned frequency, volume and review cadence">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 *:min-w-0">
-          <div className="space-y-1.5">
-            <Label>Sessions per week</Label>
+          <Field label="Sessions per week">
             <Input type="number" min="1" placeholder="e.g. 3" {...form.register("sessionsPerWeek")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Expected total sessions</Label>
+          </Field>
+          <Field label="Expected total sessions">
             <Input type="number" min="1" placeholder="e.g. 24" {...form.register("expectedTotalSessions")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Session duration (minutes)</Label>
+          </Field>
+          <Field label="Session duration (minutes)">
             <Input type="number" min="1" placeholder="e.g. 45" {...form.register("sessionDurationMin")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Start date</Label>
+          </Field>
+          <Field label="Start date">
             <Input type="date" {...form.register("startDate")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>End date (expected)</Label>
+          </Field>
+          <Field label="End date (expected)">
             <Input type="date" {...form.register("endDate")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Review threshold (sessions)</Label>
+          </Field>
+          <Field label="Review threshold (sessions)">
             <Input type="number" min="1" placeholder="Clinic default (15)" {...form.register("reviewThresholdSessions")} />
             <p className="text-xs text-muted-foreground">Leave empty to use the clinic setting (15).</p>
-          </div>
+          </Field>
         </div>
       </SectionCard>
   );
@@ -282,15 +267,14 @@ export function ReviewStep({ form, mode, objectives, milestones, interventions, 
             </div>
           ) : null}
           {mode === "revise" ? (
-            <div className="space-y-1.5">
-              <Label>Change reason <span className="text-rose-500">*</span></Label>
+            <Field label={<>Change reason <span className="text-rose-500">*</span></>}>
               <Textarea
                 rows={3}
                 placeholder="Why is this revision needed? (recorded in the audit trail)"
                 {...form.register("changeReason")}
               />
               <ErrText form={form} name="changeReason" />
-            </div>
+            </Field>
           ) : null}
         </div>
       </SectionCard>

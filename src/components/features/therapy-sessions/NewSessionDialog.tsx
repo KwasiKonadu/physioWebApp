@@ -6,18 +6,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { formatDate, timeToMinutes, ymd } from "@/lib/format";
-
-
-
-
-
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -26,8 +19,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-
 import { SessionListItem, PatientOption, EpisodeOption, useTherapists } from "./session-list-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- New session dialog ----
 export function NewSessionDialog({ open, onOpenChange, onCreated }: {
@@ -179,8 +172,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
               </Button>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Episode</Label>
+            <Field label="Episode">
               {episodesQuery.isLoading ? (
                 <Skeleton className="h-9 w-full" />
               ) : openEpisodes.length === 0 ? (
@@ -199,23 +191,19 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
                   </SelectContent>
                 </Select>
               )}
-            </div>
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ns-date">Date</Label>
+              <Field label="Date" htmlFor="ns-date">
                 <Input id="ns-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ns-time">Time</Label>
+              </Field>
+              <Field label="Time" htmlFor="ns-time">
                 <Input id="ns-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ns-duration">Duration (min)</Label>
+              </Field>
+              <Field label="Duration (min)" htmlFor="ns-duration">
                 <Input id="ns-duration" type="number" min={1} max={600} value={duration} onChange={(e) => setDuration(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
+              </Field>
+              <Field label="Status">
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -223,11 +211,10 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
                     <SelectItem value="IN_PROGRESS">In progress</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Therapist</Label>
+            <Field label="Therapist">
               <Select value={therapistId} onValueChange={setTherapistId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -239,7 +226,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
         )}
 

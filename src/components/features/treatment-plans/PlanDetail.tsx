@@ -23,7 +23,6 @@ import { formatDate, formatDateTime, relativeTime, fullName } from "@/lib/format
 import { PERMS } from "@/lib/constants";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
 import { plansApi } from "./plan-api";
-
 import { ObjectiveRow, VersionHistory } from "./PlanDetailParts";
 
 export function PlanDetail({

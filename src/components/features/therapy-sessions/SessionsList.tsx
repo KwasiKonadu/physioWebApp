@@ -4,7 +4,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-
 import { formatDate, minutesToTime } from "@/lib/format";
 import { PERMS, SESSION_STATUSES, labelize } from "@/lib/constants";
 import { hasPermission, useAuthStore } from "@/stores/app-store";
@@ -17,14 +16,10 @@ import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { Badge } from "@/components/ui/badge";
-
-
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-
 
 import { SessionListItem, SessionsListResponse, useTherapists, PainBadge, ReviewProgress } from "./session-list-shared";
 import { NewSessionDialog } from "./NewSessionDialog";

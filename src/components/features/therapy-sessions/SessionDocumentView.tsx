@@ -3,11 +3,8 @@
 
 import { PageBreadcrumb } from "@/components/molecules/page-breadcrumb";
 import { useRef, useState } from "react";
-
-
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-
 import { formatDateTime, minutesToTime, formatDate, initials } from "@/lib/format";
 import { PERMS, labelize } from "@/lib/constants";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
@@ -19,16 +16,10 @@ import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
-
-
-
-
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-
 import { EDITABLE_STATUSES, DetailResponse } from "./session-form";
 import { ReadOnlyDocumentation, PackageLedgerCard } from "./SessionReadOnly";
 import { SessionEditForm } from "./SessionEditForm";

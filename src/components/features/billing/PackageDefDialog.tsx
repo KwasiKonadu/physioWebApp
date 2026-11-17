@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api-client";
 import { fromCents } from "@/lib/format";
 import { inputToCents, type ListResponse, type PackageDef, type ServiceLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 // ---- Create / edit package definition ----
 export function PackageDefDialog({
@@ -71,26 +71,21 @@ export function PackageDefDialog({
           <DialogDescription>Predefined session bundles sold to patients at a package price.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Name *</Label>
+          <Field label="Name" required className="sm:col-span-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Back Relief Pack" />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Description</Label>
+          </Field>
+          <Field label="Description" className="sm:col-span-2">
             <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sessions *</Label>
+          </Field>
+          <Field label="Sessions" required>
             <Input type="number" min={1} value={sessions} onChange={(e) => setSessions(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Price (₵) *</Label>
+          </Field>
+          <Field label="Price (₵)" required>
             <Input type="number" min={0} step="0.01" value={priceText} onChange={(e) => setPriceText(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Validity (days) *</Label>
+          </Field>
+          <Field label="Validity (days)" required>
             <Input type="number" min={1} value={validityDays} onChange={(e) => setValidityDays(e.target.value)} />
-          </div>
+          </Field>
           <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
             <div>
               <p className="text-sm font-medium">Active</p>
@@ -98,8 +93,7 @@ export function PackageDefDialog({
             </div>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Included services</Label>
+          <Field label="Included services" className="sm:col-span-2">
             <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto custom-scrollbar rounded-lg border p-2.5 sm:grid-cols-2">
               {(servicesQ.data?.items || []).map((s) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
@@ -112,7 +106,7 @@ export function PackageDefDialog({
               ))}
               {servicesQ.isLoading && <Skeleton className="h-16 w-full" />}
             </div>
-          </div>
+          </Field>
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
         <DialogFooter>

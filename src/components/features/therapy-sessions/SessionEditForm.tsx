@@ -1,9 +1,7 @@
 "use client";
 // Editable session documentation form (vitals, interventions, complete / cancel).
 
-
 import { useEffect, useRef, useState } from "react";
-
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,19 +9,14 @@ import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { PLAN_INTERVENTIONS } from "@/lib/constants";
 import { setNavGuard } from "@/stores/app-store";
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SectionCard } from "@/components/molecules/section-card";
-
-
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-
-
 import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -33,8 +26,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
 import { CUSTOM, UNSET, SessionDetail, CompleteResponse, formSchema, FormValues, buildDefaults, payloadFrom } from "./session-form";
+import { Field } from "@/components/molecules/field";
 
 // ---- Editable documentation form (remounted per session via key) ----
 export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside, leaveRef }: {
@@ -233,33 +226,28 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
       <SectionCard title="Clinical record" icon="Stethoscope" className="flex-1">
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-duration">Treatment duration (minutes)</Label>
+            <Field label="Treatment duration (minutes)" htmlFor="doc-duration">
               <Input id="doc-duration" type="number" min={1} max={600} placeholder="e.g. 45" {...form.register("durationMin")} />
               {form.formState.errors.durationMin ? (
                 <p className="text-xs text-rose-600">{form.formState.errors.durationMin.message}</p>
               ) : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-sign">Therapist signature</Label>
+            </Field>
+            <Field label="Therapist signature" htmlFor="doc-sign">
               <Input id="doc-sign" placeholder="Type full name to sign" {...form.register("therapistSignature")} />
-            </div>
+            </Field>
           </div>
           <Separator />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-response">Patient response</Label>
+            <Field label="Patient response" htmlFor="doc-response">
               <Textarea id="doc-response" rows={4} placeholder="How did the patient tolerate / respond to treatment?" {...form.register("patientResponse")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-obs">Clinical observations</Label>
+            </Field>
+            <Field label="Clinical observations" htmlFor="doc-obs">
               <Textarea id="doc-obs" rows={4} placeholder="Objective findings, ROM changes, compensations…" {...form.register("observations")} />
-            </div>
+            </Field>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="doc-notes">Additional notes</Label>
+          <Field label="Additional notes" htmlFor="doc-notes">
             <Textarea id="doc-notes" rows={2} placeholder="Anything else worth recording" {...form.register("notes")} />
-          </div>
+          </Field>
         </div>
       </SectionCard>
 
@@ -294,21 +282,18 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
             )}
           />
           <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-bp">Blood pressure</Label>
+            <Field label="Blood pressure" htmlFor="doc-bp">
               <Input id="doc-bp" placeholder="e.g. 120/80" {...form.register("bloodPressure")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-hr">Heart rate (bpm)</Label>
+            </Field>
+            <Field label="Heart rate (bpm)" htmlFor="doc-hr">
               <Input id="doc-hr" type="number" placeholder="e.g. 72" {...form.register("heartRate")} />
               {form.formState.errors.heartRate ? (
                 <p className="text-xs text-rose-600">{form.formState.errors.heartRate.message}</p>
               ) : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-ov">Other vitals</Label>
+            </Field>
+            <Field label="Other vitals" htmlFor="doc-ov">
               <Input id="doc-ov" placeholder="SpO₂, temperature, ROM…" {...form.register("otherVitals")} />
-            </div>
+            </Field>
           </div>
         </div>
       </SectionCard>
@@ -345,8 +330,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Mark as</Label>
+              <Field label="Mark as">
                 <Select value={markAs} onValueChange={setMarkAs}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -354,9 +338,8 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
                     <SelectItem value="NO_SHOW">No-show</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cancel-reason">Reason</Label>
+              </Field>
+              <Field label="Reason" htmlFor="cancel-reason">
                 <Textarea
                   id="cancel-reason"
                   rows={2}
@@ -364,7 +347,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="Patient called in sick, therapist unavailable…"
                 />
-              </div>
+              </Field>
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Keep session</AlertDialogCancel>

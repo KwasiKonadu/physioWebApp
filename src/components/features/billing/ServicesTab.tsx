@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +20,7 @@ import { formatMoney, fromCents } from "@/lib/format";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
 import { PERMS, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/constants";
 import { inputToCents, type ListResponse, type ServiceLite } from "./billing-shared";
+import { Field } from "@/components/molecules/field";
 
 const ARRANGEMENT_LABELS: Record<string, string> = { PAYG: "PayG", PACKAGE: "Pkg", INSURANCE: "Ins" };
 
@@ -81,16 +81,13 @@ function ServiceDialog({
           <DialogDescription>Services form the clinic price book used on invoices, packages and insurance rates.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Name *</Label>
+          <Field label="Name" required className="sm:col-span-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Manual Therapy" />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Description</Label>
+          </Field>
+          <Field label="Description" className="sm:col-span-2">
             <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Category *</Label>
+          </Field>
+          <Field label="Category" required>
             {addingCategory ? (
               <div className="relative">
                 <Input
@@ -127,21 +124,17 @@ function ServiceDialog({
                 </SelectContent>
               </Select>
             )}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Standard price (₵) *</Label>
+          </Field>
+          <Field label="Standard price (₵)" required>
             <Input type="number" min={0} step="0.01" value={priceText} onChange={(e) => setPriceText(e.target.value)} placeholder="0.00" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Duration (min)</Label>
+          </Field>
+          <Field label="Duration (min)">
             <Input type="number" min={5} value={duration} onChange={(e) => setDuration(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Active</Label>
+          </Field>
+          <Field label="Active">
             <div className="flex h-10 items-center"><Switch checked={active} onCheckedChange={setActive} /></div>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Payment arrangements</Label>
+          </Field>
+          <Field label="Payment arrangements" className="sm:col-span-2">
             <div className="flex flex-wrap gap-3">
               {PAYMENT_ARRANGEMENTS.map((a) => (
                 <label key={a} className="flex items-center gap-1.5 text-sm">
@@ -153,7 +146,7 @@ function ServiceDialog({
                 </label>
               ))}
             </div>
-          </div>
+          </Field>
         </div>
         {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
         <DialogFooter>
