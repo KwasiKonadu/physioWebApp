@@ -14,7 +14,10 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:seed": "tsx prisma/seed.ts",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "db:admin": "tsx prisma/create-admin.ts",
+    "db:admin:prod": "node --env-file=.env.production node_modules/tsx/dist/cli.mjs prisma/create-admin.ts",
+    "db:deploy:prod": "node --env-file=.env.production node_modules/prisma/build/index.js migrate deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
