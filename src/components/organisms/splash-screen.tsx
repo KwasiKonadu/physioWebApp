@@ -1,9 +1,42 @@
 "use client";
 // ORGANISM: full-screen splash shown right after login while the first pages load.
 // Same navy background as the login screen's brand panel.
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
+// Heart monitor traces. Each loop of the animation picks a different one at random.
+const BASE = 40;
+// One heartbeat starting at x, straight edges only: small bump, tall spike with a deep dip, then two small bumps.
+// amp scales the heights, w stretches it sideways.
+function beat(x: number, amp = 1, w = 1) {
+  const pts: [number, number][] = [
+    [0, 0], [4, 0], [7, -9], [10, 0], [15, 0], // small bump
+    [20, -32], [25, 20], [29, 0], [33, 0], // spike and dip
+    [36, -7], [39, 0], [43, 0], [46, -10], [49, 0], [53, 0], // two small bumps
+  ];
+  return pts.map(([dx, dy]) => `L${+(x + dx * w).toFixed(1)} ${+(BASE + dy * amp).toFixed(1)}`).join(" ") + " ";
+}
+const TRACES = {
+  // steady resting rhythm, beats of different heights
+  sinus: `M0 ${BASE} ${beat(30, 1)}${beat(130, 0.7)}${beat(230, 1.1)}L300 ${BASE}`,
+  // fast, tight beats
+  rapid: `M0 ${BASE} ${beat(10, 0.8, 0.7)}${beat(70, 1, 0.7)}${beat(130, 0.6, 0.7)}${beat(190, 0.9, 0.7)}${beat(250, 0.75, 0.7)}L300 ${BASE}`,
+  // slow, tall, wide beats
+  strong: `M0 ${BASE} ${beat(20, 1.2, 1.4)}${beat(160, 0.85, 1.4)}L300 ${BASE}`,
+} as const;
+const KEYS = Object.keys(TRACES) as (keyof typeof TRACES)[];
+
 export function SplashScreen({ leaving }: { leaving?: boolean }) {
+  const [trace, setTrace] = useState<keyof typeof TRACES>("sinus");
+  // random first trace (client only, so server and client markup match)
+  useEffect(() => setTrace(KEYS[Math.floor(Math.random() * KEYS.length)]), []);
+  // the trace is invisible when a loop restarts, so swap to a different one then
+  const next = () =>
+    setTrace((cur) => {
+      const others = KEYS.filter((k) => k !== cur);
+      return others[Math.floor(Math.random() * others.length)];
+    });
+
   return (
     <div
       role="status"
@@ -24,9 +57,21 @@ export function SplashScreen({ leaving }: { leaving?: boolean }) {
           <p className="text-lg font-bold text-white">GMRS Physiotherapy</p>
           <p className="mt-0.5 text-xs text-slate-400">Clinic Management System</p>
         </div>
-        <div className="h-0.5 w-32 overflow-hidden rounded-full bg-white/10">
-          <div className="splash-bar h-full w-1/3 rounded-full bg-teal-400" />
-        </div>
+        <svg viewBox="0 0 300 80" className="h-16 w-64" aria-hidden="true">
+          <path d={`M0 ${BASE} H300`} stroke="white" strokeOpacity="0.08" strokeWidth="1" fill="none" />
+          <path
+            key={trace}
+            d={TRACES[trace]}
+            pathLength={1}
+            className="ecg-trace"
+            onAnimationIteration={next}
+            fill="none"
+            stroke="#2dd4bf"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
     </div>
   );
