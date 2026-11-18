@@ -315,3 +315,17 @@ export function useDebounced<T>(value: T, delay = 300): T {
   }, [value, delay]);
   return debounced;
 }
+
+export interface PackageOption { id: string; name: string; description: string | null; sessions: number; priceCents: number; validityDays: number }
+
+/** Active package definitions offered at registration (billing module owns the API). */
+export function usePackageOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: ["package-options"],
+    enabled,
+    queryFn: async (): Promise<PackageOption[]> => {
+      const data = await apiFetch<{ items?: PackageOption[] }>("/api/packages?active=true&pageSize=100");
+      return data.items ?? [];
+    },
+  });
+}

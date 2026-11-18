@@ -5,7 +5,7 @@ import {
   requireAuth, requirePermission,
 } from "@/server/api-exports";
 import { PERMS } from "@/lib/constants";
-import { fetchPlanDetail, findPlan, createPlanTx, type ObjectiveInput, type MilestoneInput, type InterventionInput } from "../plan-service";
+import { fetchPlanDetail, findPlan, createPlanChildrenTx, type ObjectiveInput, type MilestoneInput, type InterventionInput } from "../plan-service";
 
 // same lenient transforms as collection route
 const optInt = z.union([z.number(), z.string(), z.null()]).optional()
@@ -84,44 +84,11 @@ export const PATCH = route(async (req, ctx) => {
 
     // replace nested collections when provided
     if (body.objectives || body.milestones || body.interventions) {
-      const fresh = await tx.treatmentPlan.findUnique({
-        where: { id },
-        select: {
-          clinicId: true, episodeId: true, version: true, createdById: true,
-          sessionsPerWeek: true, expectedTotalSessions: true, sessionDurationMin: true,
-          startDate: true, endDate: true, reviewThresholdSessions: true,
-          contraindications: true, restrictions: true, activitiesToAvoid: true,
-          specialPrecautions: true, patientRecommendations: true, referralInstructions: true,
-        },
-      });
-      if (!fresh) throw new ApiError(404, "Treatment plan not found");
-
       await tx.planObjective.deleteMany({ where: { planId: id } });
       await tx.rehabilitationMilestone.deleteMany({ where: { planId: id } });
       await tx.planIntervention.deleteMany({ where: { planId: id } });
 
-      await createPlanTx(tx, {
-        clinicId: fresh.clinicId,
-        episodeId: fresh.episodeId,
-        version: fresh.version,
-        status: "DRAFT",
-        createdById: fresh.createdById,
-        schedule: {
-          sessionsPerWeek: fresh.sessionsPerWeek,
-          expectedTotalSessions: fresh.expectedTotalSessions,
-          sessionDurationMin: fresh.sessionDurationMin,
-          startDate: fresh.startDate,
-          endDate: fresh.endDate,
-          reviewThresholdSessions: fresh.reviewThresholdSessions,
-        },
-        precautions: {
-          contraindications: fresh.contraindications,
-          restrictions: fresh.restrictions,
-          activitiesToAvoid: fresh.activitiesToAvoid,
-          specialPrecautions: fresh.specialPrecautions,
-          patientRecommendations: fresh.patientRecommendations,
-          referralInstructions: fresh.referralInstructions,
-        },
+      await createPlanChildrenTx(tx, id, {
         objectives: (body.objectives || []) as ObjectiveInput[],
         milestones: (body.milestones || []) as MilestoneInput[],
         interventions: (body.interventions || []) as InterventionInput[],

@@ -70,6 +70,7 @@ export const formSchema = z
     }),
     // step 5 — payment + consent
     paymentArrangement: z.enum(["PAYG", "PACKAGE", "INSURANCE"]),
+    packageIds: z.array(z.string()),
     insurance: z.object({
       providerId: z.string(),
       membershipNumber: z.string().max(60),
@@ -130,7 +131,7 @@ export const STEP_FIELDS: FieldPath<FormValues>[][] = [
   ["medicalHistory"],
   ["referral.source", "referral.referrerName", "referral.referrerContact"],
   [
-    "paymentArrangement", "insurance.providerId", "insurance.membershipNumber",
+    "paymentArrangement", "packageIds", "insurance.providerId", "insurance.membershipNumber",
     "consent.treatmentConsent", "consent.dataConsent", "consent.signatureName",
     "consent.guardianName", "consent.guardianRelationship",
   ],

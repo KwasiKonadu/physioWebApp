@@ -246,10 +246,12 @@ export function PlanForm({
         name: iv.name, description: iv.description || null, frequency: iv.frequency || null,
         duration: iv.duration || null, instructions: iv.instructions || null, notes: iv.notes || null,
       })),
-      ...schedule, ...precautions,
+      ...schedule,
     };
-    // PATCH (edit) must not carry a status change — activation is a separate POST
-    return mode === "create" ? { episodeId: v.episodeId, status: activate ? "ACTIVE" : "DRAFT", ...shared } : shared;
+    // POST (create) expects precautions nested; PATCH (edit) expects them flat and must not carry a status change
+    return mode === "create"
+      ? { episodeId: v.episodeId, status: activate ? "ACTIVE" : "DRAFT", ...shared, precautions }
+      : { ...shared, ...precautions };
   };
 
   const submitMutation = useMutation({

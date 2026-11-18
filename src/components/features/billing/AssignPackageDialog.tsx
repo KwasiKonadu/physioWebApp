@@ -79,6 +79,7 @@ export function AssignPackageDialog({
     onSuccess: () => {
       toast.success("Package assigned to patient");
       qc.invalidateQueries({ queryKey: ["billing"] });
+      qc.invalidateQueries({ queryKey: ["package-balance"] });
       onClose();
     },
     onError: (e: Error) => setError(e.message),

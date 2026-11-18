@@ -657,10 +657,8 @@ model TherapySession {
   timeMin     Int?
   durationMin Int?
   status      String   @default("PLANNED")
-  painLevel   Int?
-  bloodPressure String?
-  heartRate   Int?
-  otherVitals String?
+  painLevel   Int?      // pain at the START of the session
+  painLevelEnd Int?     // pain at the END of the session
   patientResponse String?
   observations String?
   notes       String?
@@ -674,9 +672,25 @@ model TherapySession {
   therapist    StaffProfile?       @relation("SessionTherapist", fields: [therapistId], references: [id])
   patient      Patient             @relation("SessionPatient", fields: [patientId], references: [id])
   interventions SessionIntervention[]
+  vitals       SessionVital[]
 
   @@index([episodeId, status])
   @@index([patientId])
+}
+
+// One recorded vital sign. phase: START | END — lets the UI compare before/after.
+model SessionVital {
+  id        String   @id @default(cuid())
+  sessionId String
+  phase     String   @default("START")
+  name      String
+  value     String
+  unit      String?
+  createdAt DateTime @default(now())
+
+  session TherapySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
 }
 
 model SessionIntervention {

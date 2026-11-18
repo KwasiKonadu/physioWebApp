@@ -42,17 +42,8 @@ export function ReadOnlyDocumentation({ session, aside, hasAside }: { session: S
       </SectionCard>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-      <SectionCard title="Vitals recorded" icon="HeartPulse" className={hasAside ? "" : "flex-1"}>
-        {session.painLevel === null && !session.bloodPressure && !session.heartRate && !session.otherVitals ? (
-          <p className="text-sm text-muted-foreground">No vitals were recorded for this session.</p>
-        ) : (
-          <DetailGrid cols={1}>
-            <DetailRow label="Pain level" value={session.painLevel !== null && session.painLevel !== undefined ? `${session.painLevel}/10` : "—"} />
-            <DetailRow label="Blood pressure" value={session.bloodPressure || "—"} />
-            <DetailRow label="Heart rate" value={session.heartRate !== null && session.heartRate !== undefined ? `${session.heartRate} bpm` : "—"} />
-            <DetailRow label="Other vitals" value={session.otherVitals || "—"} />
-          </DetailGrid>
-        )}
+      <SectionCard title="Vitals recorded" icon="HeartPulse" description="Start → end of session" className={hasAside ? "" : "flex-1"}>
+        <VitalsComparison session={session} />
       </SectionCard>
 
         {hasAside ? <div className="flex flex-1 flex-col *:flex-1">{aside}</div> : null}
@@ -109,5 +100,35 @@ export function PackageLedgerCard({ transactions, arrangement }: { transactions:
         </div>
       )}
     </SectionCard>
+  );
+}
+
+
+function VitalsComparison({ session }: { session: SessionDetail }) {
+  const vitals = session.vitals ?? [];
+  const names = Array.from(new Set(vitals.map((v) => v.name)));
+  const pick = (name: string, phase: "START" | "END") => {
+    const v = vitals.find((x) => x.name === name && x.phase === phase);
+    return v ? `${v.value}${v.unit ? ` ${v.unit}` : ""}` : "—";
+  };
+  const pain = (n: number | null | undefined) => (n !== null && n !== undefined ? `${n}/10` : "—");
+  const rows = [{ label: "Pain level", start: pain(session.painLevel), end: pain(session.painLevelEnd) },
+    ...names.map((n) => ({ label: n, start: pick(n, "START"), end: pick(n, "END") }))];
+  if (session.painLevel == null && session.painLevelEnd == null && !vitals.length) {
+    return <p className="text-sm text-muted-foreground">No vitals were recorded for this session.</p>;
+  }
+  const delta = session.painLevel != null && session.painLevelEnd != null ? session.painLevelEnd - session.painLevel : null;
+  return (
+    <div className="space-y-2">
+      <table className="w-full text-sm">
+        <thead><tr className="text-left text-xs text-muted-foreground"><th className="py-1 font-medium">Measure</th><th className="py-1 font-medium">Start</th><th className="py-1 font-medium">End</th></tr></thead>
+        <tbody className="divide-y">
+          {rows.map((r) => <tr key={r.label}><td className="py-1.5 text-muted-foreground">{r.label}</td><td className="py-1.5 font-medium">{r.start}</td><td className="py-1.5 font-medium">{r.end}</td></tr>)}
+        </tbody>
+      </table>
+      {delta !== null ? (
+        <p className="text-xs text-muted-foreground">Pain change: {delta === 0 ? "no change" : delta < 0 ? `${Math.abs(delta)} point${Math.abs(delta) > 1 ? "s" : ""} lower` : `${delta} point${delta > 1 ? "s" : ""} higher`}</p>
+      ) : null}
+    </div>
   );
 }

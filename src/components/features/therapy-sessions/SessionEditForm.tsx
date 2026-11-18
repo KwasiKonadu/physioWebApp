@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CUSTOM, UNSET, SessionDetail, CompleteResponse, formSchema, FormValues, buildDefaults, payloadFrom } from "./session-form";
 import { Field } from "@/components/molecules/field";
+import { SessionVitalsEditor } from "./SessionVitalsEditor";
 
 // ---- Editable documentation form (remounted per session via key) ----
 export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside, leaveRef }: {
@@ -56,6 +57,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["session", session.id] });
     qc.invalidateQueries({ queryKey: ["sessions"] });
+    qc.invalidateQueries({ queryKey: ["package-balance"] });
   };
 
   const saveMutation = useMutation({
@@ -253,49 +255,11 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
 
         </div>
         <div className="flex min-w-0 flex-col gap-4">
-      <SectionCard title="Vitals" icon="HeartPulse" description="Recorded at the start of the session" className={hasAside ? "" : "flex-1"}>
-        <div className="space-y-5">
-          <Controller
-            control={form.control}
-            name="painLevel"
-            render={({ field }) => (
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <Label>Pain level (0–10)</Label>
-                  <span className={cn("text-sm font-medium", field.value === null ? "text-muted-foreground" : "text-teal-700")}>
-                    {field.value === null ? "Not recorded" : `${field.value}/10`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">0</span>
-                  <Slider
-                    value={[field.value ?? 5]}
-                    min={0}
-                    max={10}
-                    step={1}
-                    onValueChange={(v) => field.onChange(v[0])}
-                    className="flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground">10</span>
-                </div>
-              </div>
-            )}
-          />
-          <div className="grid grid-cols-1 gap-4">
-            <Field label="Blood pressure" htmlFor="doc-bp">
-              <Input id="doc-bp" placeholder="e.g. 120/80" {...form.register("bloodPressure")} />
-            </Field>
-            <Field label="Heart rate (bpm)" htmlFor="doc-hr">
-              <Input id="doc-hr" type="number" placeholder="e.g. 72" {...form.register("heartRate")} />
-              {form.formState.errors.heartRate ? (
-                <p className="text-xs text-rose-600">{form.formState.errors.heartRate.message}</p>
-              ) : null}
-            </Field>
-            <Field label="Other vitals" htmlFor="doc-ov">
-              <Input id="doc-ov" placeholder="SpO₂, temperature, ROM…" {...form.register("otherVitals")} />
-            </Field>
-          </div>
-        </div>
+      <SectionCard title="Vitals — start of session" icon="HeartPulse" description="Baseline before treatment" className={hasAside ? "" : "flex-1"}>
+        <SessionVitalsEditor form={form} phase="START" />
+      </SectionCard>
+      <SectionCard title="Vitals — end of session" icon="HeartPulse" description="After treatment — compared with the start" className={hasAside ? "" : "flex-1"}>
+        <SessionVitalsEditor form={form} phase="END" />
       </SectionCard>
 
           {hasAside ? <div className="flex flex-1 flex-col *:flex-1">{aside}</div> : null}

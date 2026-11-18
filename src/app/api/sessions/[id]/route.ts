@@ -22,6 +22,7 @@ const detailInclude = {
   patient: { select: { id: true, patientCode: true, firstName: true, lastName: true, phone: true, paymentArrangement: true } },
   therapist: { select: { id: true, firstName: true, lastName: true } },
   interventions: true,
+  vitals: { orderBy: { createdAt: "asc" as const } },
   appointment: { select: { id: true, date: true, startMin: true, endMin: true, status: true, purpose: true } },
 };
 
@@ -58,9 +59,13 @@ export const GET = route(async (req, ctx) => {
 
 const patchSchema = z.object({
   painLevel: z.number().int().min(0).max(10).nullish(),
-  bloodPressure: z.string().max(40).nullish(),
-  heartRate: z.number().int().min(0).max(300).nullish(),
-  otherVitals: z.string().max(2000).nullish(),
+  painLevelEnd: z.number().int().min(0).max(10).nullish(),
+  vitals: z.array(z.object({
+    phase: z.enum(["START", "END"]),
+    name: z.string().trim().min(1).max(60),
+    value: z.string().trim().min(1).max(40),
+    unit: z.string().trim().max(20).nullish(),
+  })).max(40).optional(),
   patientResponse: z.string().max(2000).nullish(),
   observations: z.string().max(4000).nullish(),
   notes: z.string().max(4000).nullish(),
@@ -99,9 +104,7 @@ export const PATCH = route(async (req, ctx) => {
   // Build scalar update data — only include explicitly provided keys (null clears the field)
   const data: Record<string, unknown> = {};
   if ("painLevel" in body) data.painLevel = body.painLevel;
-  if ("bloodPressure" in body) data.bloodPressure = body.bloodPressure?.trim() || null;
-  if ("heartRate" in body) data.heartRate = body.heartRate;
-  if ("otherVitals" in body) data.otherVitals = body.otherVitals?.trim() || null;
+  if ("painLevelEnd" in body) data.painLevelEnd = body.painLevelEnd;
   if ("patientResponse" in body) data.patientResponse = body.patientResponse?.trim() || null;
   if ("observations" in body) data.observations = body.observations?.trim() || null;
   if ("notes" in body) data.notes = body.notes?.trim() || null;
@@ -124,6 +127,10 @@ export const PATCH = route(async (req, ctx) => {
           data: rows.map((i) => ({ sessionId: id, name: i.name.trim(), details: i.details?.trim() || null })),
         });
       }
+    }
+    if (body.vitals) {
+      await tx.sessionVital.deleteMany({ where: { sessionId: id } });
+      if (body.vitals.length) await tx.sessionVital.createMany({ data: body.vitals.map((v) => ({ sessionId: id, phase: v.phase, name: v.name, value: v.value, unit: v.unit?.trim() || null })) });
     }
     return tx.therapySession.update({
       where: { id },

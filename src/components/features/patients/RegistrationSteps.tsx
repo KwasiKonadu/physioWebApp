@@ -1,7 +1,7 @@
 "use client";
 // Wizard steps of the patient registration form.
 import { type FieldPath, type PathValue, type UseFieldArrayReturn, type UseFormRegister, type UseFormReturn, type UseFormSetValue } from "react-hook-form";
-import { calcAge } from "@/lib/format";
+import { calcAge, formatMoney } from "@/lib/format";
 import { GENDERS, MARITAL_STATUSES, MEDICAL_HISTORY_TYPES, REFERRAL_SOURCES, labelize } from "@/lib/constants";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useDuplicates, useInsuranceProviders } from "./hooks";
+import { useDuplicates, useInsuranceProviders, usePackageOptions } from "./hooks";
 import { Field } from "@/components/molecules/field";
 import { FormValues, EMPTY_CONTACT } from "./registration-schema";
 
@@ -277,6 +277,8 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
           </RadioGroup>
         </Field>
 
+        {payment === "PACKAGE" ? <PackagePicker watch={watch} setValue={setValue} /> : null}
+
         {payment === "INSURANCE" ? (
           <div className="rounded-xl border bg-sky-50/40 p-4">
             <p className="mb-3 flex items-center gap-2 text-sm font-medium">
@@ -383,5 +385,47 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
           ) : null}
         </div>
       </div>
+  );
+}
+
+
+function PackagePicker({ watch, setValue }: { watch: Watch; setValue: UseFormSetValue<FormValues> }) {
+  const packages = usePackageOptions(true);
+  const selected = watch("packageIds") ?? [];
+  const toggle = (id: string) =>
+    setValue("packageIds", selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id], { shouldDirty: true });
+
+  return (
+    <Field label="Packages">
+      {packages.isLoading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : packages.isError ? (
+        <p className="text-xs text-muted-foreground">Packages are unavailable right now. You can assign one later from the patient&apos;s Billing tab.</p>
+      ) : !packages.data?.length ? (
+        <p className="text-xs text-muted-foreground">No active packages are set up yet. Create one under Billing → Packages, or assign it later.</p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 *:min-w-0">
+          {packages.data.map((pkg) => {
+            const on = selected.includes(pkg.id);
+            return (
+              <Label
+                key={pkg.id}
+                htmlFor={`pkg-${pkg.id}`}
+                className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/40", on && "border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/30")}
+              >
+                <Checkbox id={`pkg-${pkg.id}`} checked={on} onCheckedChange={() => toggle(pkg.id)} className="mt-0.5" />
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-semibold">{pkg.name}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {pkg.sessions} sessions · valid {pkg.validityDays} days · {formatMoney(pkg.priceCents)}
+                  </span>
+                </span>
+              </Label>
+            );
+          })}
+        </div>
+      )}
+      <p className="mt-1 text-xs text-muted-foreground">Selected packages are assigned on registration with an unpaid invoice — record payment from Billing.</p>
+    </Field>
   );
 }

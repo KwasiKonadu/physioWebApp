@@ -36,6 +36,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
       medicalHistory: [],
       referral: { source: "", referrerName: "", referrerContact: "", referralDate: "", notes: "" },
       paymentArrangement: "PAYG",
+      packageIds: [],
       insurance: { providerId: "", membershipNumber: "", policyNumber: "", validFrom: "", validTo: "", principalMember: "", relationshipToPrincipal: "" },
       consent: { treatmentConsent: false, dataConsent: false, signatureName: "", consentDate: ymd(new Date()), guardianName: "", guardianRelationship: "" },
     },
@@ -67,11 +68,24 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
   const payment = watch("paymentArrangement");
 
   const createMutation = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      apiFetch<{ id: string; patientCode: string }>("/api/patients", { method: "POST", json: body }),
+    mutationFn: async (body: Record<string, unknown>) => {
+      const created = await apiFetch<{ id: string; patientCode: string }>("/api/patients", { method: "POST", json: body });
+      // Assign the chosen packages (unpaid invoice each; payment is recorded from Billing)
+      const failed: string[] = [];
+      if (body.paymentArrangement === "PACKAGE") {
+        for (const packageId of (body.packageIds as string[] | undefined) ?? []) {
+          try {
+            await apiFetch("/api/patient-packages", { method: "POST", json: { patientId: created.id, packageId, createInvoice: true, amountPaidCents: 0 } });
+          } catch { failed.push(packageId); }
+        }
+      }
+      return { ...created, packagesFailed: failed.length };
+    },
     onSuccess: (created) => {
       toast.success(`Patient ${created.patientCode} registered`);
+      if (created.packagesFailed) toast.warning(`${created.packagesFailed} package(s) could not be assigned — add them from the patient's Billing tab`);
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      void queryClient.invalidateQueries({ queryKey: ["patient-packages"] });
       onOpenChange(false);
       onRegistered(created.id);
       form.reset();
@@ -119,6 +133,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
           }
         : undefined,
       paymentArrangement: values.paymentArrangement,
+      packageIds: values.paymentArrangement === "PACKAGE" ? values.packageIds : [],
       insurance:
         values.paymentArrangement === "INSURANCE"
           ? {

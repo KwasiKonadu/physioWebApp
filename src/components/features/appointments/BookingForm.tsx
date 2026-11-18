@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AtomIcon } from "@/components/atoms/icon";
 import { AppointmentDto, TherapistOption } from "./appointments-shared";
+import { PackageBalanceNotice } from "../patients/PackageBalanceNotice";
 import { DURATIONS, OPEN_EPISODE_BLOCKED, PatientOption, EpisodeOption, formSchema, FormValues, extractBundle } from "./booking-shared";
 import { BookingPatientPicker } from "./BookingPatientPicker";
 
@@ -153,6 +154,8 @@ export function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate
           onClear={clearPatient}
           error={errors.patientId?.message}
         />
+
+        <PackageBalanceNotice patientId={selectedPatientId} />
 
         {/* episode + physiotherapist */}
         <div className="grid gap-3 sm:grid-cols-2 *:min-w-0">

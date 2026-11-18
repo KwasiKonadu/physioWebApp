@@ -46,6 +46,7 @@ async function main() {
   await db.discharge.deleteMany();
   await db.reviewObjectiveResult.deleteMany();
   await db.progressReview.deleteMany();
+  await db.sessionVital.deleteMany();
   await db.sessionIntervention.deleteMany();
   await db.therapySession.deleteMany();
   await db.appointment.deleteMany();
@@ -685,7 +686,8 @@ async function main() {
         clinicId: clinic.id, episodeId: o.episodeId, patientId: o.patientId, therapistId: o.therapistId,
         appointmentId: o.appointmentId || null,
         date: d(o.day, o.hour), timeMin: o.hour * 60, durationMin: o.durationMin || 45,
-        status: "COMPLETED", painLevel: o.pain, bloodPressure: "125/80", heartRate: 72,
+        status: "COMPLETED", painLevel: o.pain, painLevelEnd: Math.max(0, o.pain - 1),
+        vitals: { create: [{ phase: "START", name: "Blood pressure", value: "125/80", unit: "mmHg" }, { phase: "START", name: "Heart rate", value: "72", unit: "bpm" }, { phase: "END", name: "Heart rate", value: "76", unit: "bpm" }] },
         patientResponse: o.response, observations: o.observations, therapistSignature: "Signed electronically",
         completedAt: d(o.day, o.hour + 1),
         interventions: { create: o.interventions.map((i) => ({ name: i.name, details: i.details })) },

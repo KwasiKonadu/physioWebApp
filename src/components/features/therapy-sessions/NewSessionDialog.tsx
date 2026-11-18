@@ -19,7 +19,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-import { SessionListItem, PatientOption, EpisodeOption, useTherapists } from "./session-list-shared";
+import { PackageBalanceNotice } from "../patients/PackageBalanceNotice";
+import { PatientSearchSelect } from "../assessments/PatientSearchSelect";
+import type { PatientLite } from "../assessments/assessments-api";
+import { SessionListItem, EpisodeOption, useTherapists } from "./session-list-shared";
 import { Field } from "@/components/molecules/field";
 
 // ---- New session dialog ----
@@ -29,11 +32,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
   onCreated: (sessionId: string) => void;
 }) {
   const qc = useQueryClient();
-  const [patientQuery, setPatientQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [patients, setPatients] = useState<PatientOption[]>([]);
-  const [patientError, setPatientError] = useState<string | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<PatientOption | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<PatientLite | null>(null);
   const [episodeId, setEpisodeId] = useState("none");
   const [date, setDate] = useState(ymd(new Date()));
   const [time, setTime] = useState("09:00");
@@ -55,9 +54,6 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
   }, [episodesQuery.data]);
 
   const reset = () => {
-    setPatientQuery("");
-    setPatients([]);
-    setPatientError(null);
     setSelectedPatient(null);
     setEpisodeId("none");
     setDate(ymd(new Date()));
@@ -65,25 +61,6 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
     setDuration("45");
     setTherapistId("auto");
     setStatus("PLANNED");
-  };
-
-  const searchPatients = async () => {
-    const q = patientQuery.trim();
-    if (!q) return;
-    setSearching(true);
-    setPatientError(null);
-    try {
-      const data = await apiFetch<{ items?: PatientOption[] } | PatientOption[]>(
-        `/api/patients?search=${encodeURIComponent(q)}&pageSize=20`
-      );
-      const items = Array.isArray(data) ? data : (data.items ?? []);
-      setPatients(items);
-      if (!items.length) setPatientError("No patients matched that search.");
-    } catch {
-      setPatientError("Patient directory is unavailable right now.");
-    } finally {
-      setSearching(false);
-    }
   };
 
   const createMutation = useMutation({
@@ -130,47 +107,16 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
           </DialogDescription>
         </DialogHeader>
 
-        {!selectedPatient ? (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                value={patientQuery}
-                onChange={(e) => setPatientQuery(e.target.value)}
-                placeholder="Search patient by name or code…"
-                onKeyDown={(e) => { if (e.key === "Enter") searchPatients(); }}
-              />
-              <Button variant="outline" onClick={searchPatients} disabled={searching || !patientQuery.trim()}>
-                {searching ? <AtomIcon name="Loader2" className="h-4 w-4 animate-spin" /> : <AtomIcon name="Search" className="h-4 w-4" />}
-              </Button>
-            </div>
-            {patientError ? <p className="text-xs text-muted-foreground">{patientError}</p> : null}
-            <div className="max-h-56 space-y-1 overflow-y-auto custom-scrollbar">
-              {patients.map((p) => (
-                <button
-                  key={p.id}
-                  className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors hover:bg-teal-50/60"
-                  onClick={() => { setSelectedPatient(p); setEpisodeId("none"); }}
-                >
-                  <span className="font-medium">{p.firstName} {p.lastName}</span>
-                  <span className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-xs">{p.patientCode}</Badge>
-                    {p.currentStatus ? <StatusBadge status={p.currentStatus} /> : null}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
+        <PatientSearchSelect
+          autoFocus
+          selected={selectedPatient}
+          onSelect={(p) => { setSelectedPatient(p); setEpisodeId("none"); }}
+          onClear={() => { setSelectedPatient(null); setEpisodeId("none"); }}
+        />
+
+        {selectedPatient ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{selectedPatient.firstName} {selectedPatient.lastName}</span>
-                <Badge variant="outline" className="font-mono text-xs">{selectedPatient.patientCode}</Badge>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(null); setEpisodeId("none"); }}>
-                Change
-              </Button>
-            </div>
+            <PackageBalanceNotice patientId={selectedPatient.id} />
 
             <Field label="Episode">
               {episodesQuery.isLoading ? (
@@ -228,7 +174,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
               </Select>
             </Field>
           </div>
-        )}
+        ) : null}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

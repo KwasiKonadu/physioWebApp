@@ -365,7 +365,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
             {ready ? null : (
               <p className="text-xs text-muted-foreground">
                 {therapistsQ.data && !therapistsQ.data.length && patient && episode
-                  ? "No active therapists found from /api/staff — enter one once the staff module is available."
+                  ? "No active therapists found."
                   : "Complete all three to open the assessment form."}
               </p>
             )}

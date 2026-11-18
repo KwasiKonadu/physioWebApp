@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { EDITABLE_STATUSES, DetailResponse } from "./session-form";
 import { ReadOnlyDocumentation, PackageLedgerCard } from "./SessionReadOnly";
+import { PackageBalanceNotice } from "../patients/PackageBalanceNotice";
 import { SessionEditForm } from "./SessionEditForm";
 
 // ---- Main view ----
@@ -74,6 +75,8 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
     <div className="space-y-4">
       <PageBreadcrumb items={[{ label: "Therapy Sessions", onClick: goBack }, { label: `Session — ${patientName}` }]} />
       <PageHeader title="Therapy session" description="Document the treatment delivered, vitals and clinical record" icon="Activity" />
+
+      {EDITABLE_STATUSES.includes(session.status) ? <PackageBalanceNotice patientId={session.patientId} /> : null}
 
       {/* Summary card */}
       <div className="panel">

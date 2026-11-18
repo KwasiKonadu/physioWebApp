@@ -5,6 +5,22 @@ export const CUSTOM = "__custom__";
 export const UNSET = "__none__";
 export const EDITABLE_STATUSES = ["PLANNED", "IN_PROGRESS"];
 
+// ---- Vitals ----
+export type VitalPhase = "START" | "END";
+export interface SessionVital { id?: string; phase: VitalPhase; name: string; value: string; unit: string | null }
+
+/** Selectable vital signs (name, unit, input hint). "Other" lets the user type any name. */
+export const VITAL_TYPES = [
+  { name: "Blood pressure", unit: "mmHg", hint: "e.g. 120/80" },
+  { name: "Heart rate", unit: "bpm", hint: "e.g. 72" },
+  { name: "Respiratory rate", unit: "breaths/min", hint: "e.g. 16" },
+  { name: "SpO₂", unit: "%", hint: "e.g. 98" },
+  { name: "Temperature", unit: "°C", hint: "e.g. 36.8" },
+  { name: "Blood glucose", unit: "mmol/L", hint: "e.g. 5.4" },
+  { name: "Weight", unit: "kg", hint: "e.g. 70" },
+] as const;
+export const OTHER_VITAL = "__other__";
+
 // ---- Types ----
 export interface SessionDetail {
   id: string;
@@ -17,9 +33,8 @@ export interface SessionDetail {
   durationMin: number | null;
   status: string;
   painLevel: number | null;
-  bloodPressure: string | null;
-  heartRate: number | null;
-  otherVitals: string | null;
+  painLevelEnd: number | null;
+  vitals: SessionVital[];
   patientResponse: string | null;
   observations: string | null;
   notes: string | null;
@@ -71,9 +86,13 @@ export interface CompleteResponse {
 // ---- Documentation form helpers ----
 export const formSchema = z.object({
   painLevel: z.number().min(0).max(10).nullable(),
-  bloodPressure: z.string().max(40),
-  heartRate: z.string().max(10).refine((v) => v === "" || /^\d+$/.test(v), "Heart rate must be a number"),
-  otherVitals: z.string().max(2000),
+  painLevelEnd: z.number().min(0).max(10).nullable(),
+  vitals: z.array(z.object({
+    phase: z.enum(["START", "END"]),
+    name: z.string().min(1).max(60),
+    value: z.string().min(1).max(40),
+    unit: z.string().max(20).nullable(),
+  })).max(40),
   patientResponse: z.string().max(2000),
   observations: z.string().max(4000),
   notes: z.string().max(4000),
@@ -91,9 +110,8 @@ export type FormValues = z.infer<typeof formSchema>;
 export function buildDefaults(session: SessionDetail): FormValues {
   return {
     painLevel: session.painLevel ?? null,
-    bloodPressure: session.bloodPressure ?? "",
-    heartRate: session.heartRate !== null && session.heartRate !== undefined ? String(session.heartRate) : "",
-    otherVitals: session.otherVitals ?? "",
+    painLevelEnd: session.painLevelEnd ?? null,
+    vitals: (session.vitals ?? []).map((v) => ({ phase: v.phase, name: v.name, value: v.value, unit: v.unit })),
     patientResponse: session.patientResponse ?? "",
     observations: session.observations ?? "",
     notes: session.notes ?? "",
@@ -121,9 +139,8 @@ export function rowsFrom(values: FormValues) {
 export function payloadFrom(values: FormValues): Record<string, unknown> {
   return {
     painLevel: values.painLevel,
-    bloodPressure: values.bloodPressure.trim() || null,
-    heartRate: values.heartRate.trim() === "" ? null : Number(values.heartRate),
-    otherVitals: values.otherVitals.trim() || null,
+    painLevelEnd: values.painLevelEnd,
+    vitals: values.vitals.map((v) => ({ phase: v.phase, name: v.name.trim(), value: v.value.trim(), unit: v.unit?.trim() || null })),
     patientResponse: values.patientResponse.trim() || null,
     observations: values.observations.trim() || null,
     notes: values.notes.trim() || null,

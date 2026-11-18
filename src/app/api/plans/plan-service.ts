@@ -90,6 +90,63 @@ export async function maxPlanVersion(tx: Tx, episodeId: string): Promise<number>
 
 // ---- create / activate ----
 
+/** Creates objectives → milestones (linked by objective index) → interventions for an existing plan. */
+export async function createPlanChildrenTx(tx: Tx, planId: string, opts: {
+  objectives: ObjectiveInput[];
+  milestones: MilestoneInput[];
+  interventions: InterventionInput[];
+}) {
+  const objectiveIds: string[] = [];
+  for (const o of opts.objectives) {
+    const created = await tx.planObjective.create({
+      data: {
+        planId: planId,
+        description: o.description,
+        baseline: o.baseline ?? null,
+        target: o.target ?? null,
+        unit: o.unit ?? null,
+        priority: o.priority ?? null,
+        expectedDate: o.expectedDate ?? null,
+        status: o.status || "PENDING",
+        notes: o.notes ?? null,
+      },
+    });
+    objectiveIds.push(created.id);
+  }
+
+  for (const m of opts.milestones) {
+    const objectiveId =
+      m.objectiveIdx != null && m.objectiveIdx >= 0 && m.objectiveIdx < objectiveIds.length
+        ? objectiveIds[m.objectiveIdx]
+        : null;
+    await tx.rehabilitationMilestone.create({
+      data: {
+        planId: planId,
+        description: m.description,
+        objectiveId,
+        expectedDate: m.expectedDate ?? null,
+        status: m.status || "PENDING",
+        notes: m.notes ?? null,
+      },
+    });
+  }
+
+  for (const iv of opts.interventions) {
+    await tx.planIntervention.create({
+      data: {
+        planId: planId,
+        name: iv.name,
+        description: iv.description ?? null,
+        frequency: iv.frequency ?? null,
+        duration: iv.duration ?? null,
+        instructions: iv.instructions ?? null,
+        notes: iv.notes ?? null,
+      },
+    });
+  }
+
+}
+
 /**
  * Create one plan version with nested objectives → milestones (objectiveIdx resolved
  * against the freshly-created objectives, in order) → interventions.
@@ -133,54 +190,7 @@ export async function createPlanTx(tx: Tx, opts: {
     },
   });
 
-  const objectiveIds: string[] = [];
-  for (const o of opts.objectives) {
-    const created = await tx.planObjective.create({
-      data: {
-        planId: plan.id,
-        description: o.description,
-        baseline: o.baseline ?? null,
-        target: o.target ?? null,
-        unit: o.unit ?? null,
-        priority: o.priority ?? null,
-        expectedDate: o.expectedDate ?? null,
-        status: o.status || "PENDING",
-        notes: o.notes ?? null,
-      },
-    });
-    objectiveIds.push(created.id);
-  }
-
-  for (const m of opts.milestones) {
-    const objectiveId =
-      m.objectiveIdx != null && m.objectiveIdx >= 0 && m.objectiveIdx < objectiveIds.length
-        ? objectiveIds[m.objectiveIdx]
-        : null;
-    await tx.rehabilitationMilestone.create({
-      data: {
-        planId: plan.id,
-        description: m.description,
-        objectiveId,
-        expectedDate: m.expectedDate ?? null,
-        status: m.status || "PENDING",
-        notes: m.notes ?? null,
-      },
-    });
-  }
-
-  for (const iv of opts.interventions) {
-    await tx.planIntervention.create({
-      data: {
-        planId: plan.id,
-        name: iv.name,
-        description: iv.description ?? null,
-        frequency: iv.frequency ?? null,
-        duration: iv.duration ?? null,
-        instructions: iv.instructions ?? null,
-        notes: iv.notes ?? null,
-      },
-    });
-  }
+  await createPlanChildrenTx(tx, plan.id, opts);
 
   return plan;
 }
