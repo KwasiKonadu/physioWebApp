@@ -33,7 +33,7 @@ export function AppSidebar() {
         )}
       >
         {/* Dark navy icon rail — the ONLY set of icons */}
-        <nav className={cn("flex h-full shrink-0 flex-col items-center bg-navy-900 py-3", collapsed ? "w-14" : "w-[46px] pl-2.5")}>
+        <nav className={cn("flex h-full shrink-0 flex-col items-center bg-navy-900 py-3", collapsed ? "w-14" : "w-11.5 pl-2.5")}>
           <Tooltip key={`toggle-${collapsed}`}>
             <TooltipTrigger asChild>
               <button
