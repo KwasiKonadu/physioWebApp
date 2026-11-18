@@ -21,8 +21,8 @@ const EXIT_MS = 800;
 
 export function LoginScreen({ slideIn = false }: { slideIn?: boolean }) {
   const setAuth = useAuthStore((s) => s.setAuth);
-  const [email, setEmail] = useState("admin@gmrsphysio.com.gh");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   // after a successful sign-in the screen animates out (panel right, logo right, headline down) before the splash
   // (after signing out it starts in that off-screen state and slides back into view)
