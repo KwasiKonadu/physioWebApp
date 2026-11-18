@@ -1,13 +1,15 @@
 "use client";
 // AppFrame: providers + auth gate + shell, shared by every route under app/(app)/.
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useIsFetching } from "@tanstack/react-query";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/templates/app-shell";
 import { LoginScreen } from "@/components/organisms/login-screen";
 import { SplashScreen } from "@/components/organisms/splash-screen";
 import { registerRouter, useAuthStore } from "@/stores/app-store";
+
+const RETURN_KEY = "returnTo"; // last page visited before the login screen
 
 function Gate({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
@@ -48,6 +50,22 @@ function Gate({ children }: { children: React.ReactNode }) {
 
   // zustand persist with sync localStorage hydrates at store creation — safe to read once
   const [hydrated] = useState(() => useAuthStore.persist?.hasHydrated?.() ?? false);
+
+  // The login screen lives at /login. Signed out: remember the page you were on and move to /login.
+  // Signed in: leave /login for the remembered page (or the dashboard).
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!hydrated) return;
+    const onLogin = pathname === "/login";
+    if (!user && !onLogin) {
+      try { localStorage.setItem(RETURN_KEY, window.location.pathname + window.location.search); } catch {}
+      router.replace("/login");
+    } else if (user && onLogin) {
+      let back: string | null = null;
+      try { back = localStorage.getItem(RETURN_KEY); } catch {}
+      router.replace(back && back !== "/login" ? back : "/dashboard");
+    }
+  }, [hydrated, user, pathname, router]);
   if (!hydrated) {
     return <div className="flex min-h-screen items-center justify-center bg-workspace" />;
   }
