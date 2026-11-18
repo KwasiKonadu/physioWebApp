@@ -12,6 +12,8 @@ import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
+import { avatarTone } from "@/components/molecules/profile-card";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +27,7 @@ import { hasPermission, useAuthStore } from "@/stores/app-store";
 import { useDebounced, usePatientList, useTherapists, type PatientListItem } from "./hooks";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { PatientCard } from "./PatientCard";
+import { PatientRowActions } from "./PatientRowActions";
 import PatientRegistrationDialog from "./PatientRegistrationDialog";
 
 const PAYMENT_TONES: Record<string, string> = {
@@ -243,19 +246,18 @@ export default function PatientsDirectory({ onOpen }: Props) {
           empty={emptyBlock}
           pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (s) => { setPageSize(s); resetPage(); } }}
           columns={[
-            { id: "code", header: "Patient ID", sortField: "patientCode", cell: (p) => <span className="font-mono text-xs text-muted-foreground">{p.patientCode}</span> },
             {
-              id: "name", header: "Name",
+              id: "name", header: "Name", sortField: "lastName",
               cell: (p) => {
                 const name = fullName({ firstName: p.firstName, middleName: p.middleName, lastName: p.lastName });
                 return (
                   <div className="flex items-center gap-2.5">
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg bg-navy-50 text-xs font-semibold text-navy-800">{initials(name)}</AvatarFallback>
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className={cn("text-xs font-semibold", avatarTone(p.patientCode))}>{initials(name)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{name}</p>
-                      {p.activeEpisodeTitle ? <p className="truncate text-xs text-muted-foreground">{p.activeEpisodeTitle}</p> : null}
+                      <p className="truncate font-mono text-xs text-muted-foreground">{p.patientCode}</p>
                     </div>
                   </div>
                 );
@@ -269,8 +271,8 @@ export default function PatientsDirectory({ onOpen }: Props) {
             { id: "status", header: "Status", cell: (p) => <StatusBadge status={p.currentStatus} /> },
             { id: "therapist", header: "Therapist", cell: (p) => <span className="text-sm">{p.assignedTherapist?.name || "—"}</span> },
             {
-              id: "actions", header: "Actions", align: "right",
-              cell: (p) => <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onOpen(p.id); }}>Open</Button>,
+              id: "actions", header: <span className="sr-only">Actions</span>, align: "right", className: "w-12",
+              cell: (p) => <PatientRowActions patient={p} />,
             },
           ]}
         />

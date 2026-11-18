@@ -167,7 +167,7 @@ export function AssessmentsList({ canManage, onOpen }: {
           {
             id: "actions", header: "", align: "right",
             cell: (a) => (
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onOpen({ assessmentId: a.id }); }}>
+              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onOpen({ assessmentId: a.id }); }}>
                 {a.status === "DRAFT" ? <><AtomIcon name="Play" className="h-3.5 w-3.5" />Continue</> : <><AtomIcon name="Eye" className="h-3.5 w-3.5" />Open</>}
               </Button>
             ),

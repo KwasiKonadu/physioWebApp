@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Ubuntu, Geist_Mono } from "next/font/google";
+import { Ubuntu, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -10,7 +10,7 @@ const ubuntu = Ubuntu({
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const codeFont = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${ubuntu.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${ubuntu.variable} ${codeFont.variable} antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />

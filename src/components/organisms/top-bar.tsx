@@ -62,11 +62,7 @@ export function TopBar() {
     <header className="sticky top-0 z-20 flex h-24 flex-col border-b border-slate-200 bg-white">
       {/* Row 1: page title + actions + notifications + profile */}
       <div className="flex h-14 shrink-0 items-center gap-3 px-4 md:px-6">
-        {/* Page title — filled by <PageHeader>; falls back to the section name */}
-        <div ref={slots?.setTitle} className="peer min-w-0 flex-1 empty:hidden" />
-        <div className="hidden min-w-0 flex-1 peer-empty:block">
-          <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">{fallbackTitle}</h1>
-        </div>
+        <div className="min-w-0 flex-1" />
 
         <div ref={slots?.setActions} className="shrink-0 empty:hidden" />
         <div className="flex shrink-0 items-center gap-1.5">

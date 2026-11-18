@@ -16,7 +16,7 @@ const AVATAR_TONES = [
   "bg-emerald-100 text-emerald-700",
   "bg-orange-100 text-orange-700",
 ];
-function avatarTone(seed: string): string {
+export function avatarTone(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   return AVATAR_TONES[h % AVATAR_TONES.length];
