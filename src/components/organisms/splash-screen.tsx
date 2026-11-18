@@ -1,7 +1,7 @@
 "use client";
 // ORGANISM: full-screen splash shown right after login while the first pages load.
 // Same navy background as the login screen's brand panel.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 // Heart monitor traces. Each loop of the animation picks a different one at random.
@@ -27,9 +27,8 @@ const TRACES = {
 const KEYS = Object.keys(TRACES) as (keyof typeof TRACES)[];
 
 export function SplashScreen({ leaving }: { leaving?: boolean }) {
-  const [trace, setTrace] = useState<keyof typeof TRACES>("sinus");
-  // random first trace (client only, so server and client markup match)
-  useEffect(() => setTrace(KEYS[Math.floor(Math.random() * KEYS.length)]), []);
+  // random first trace (safe here: the splash only renders client-side, after login)
+  const [trace, setTrace] = useState<keyof typeof TRACES>(() => KEYS[Math.floor(Math.random() * KEYS.length)]);
   // the trace is invisible when a loop restarts, so swap to a different one then
   const next = () =>
     setTrace((cur) => {
