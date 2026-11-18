@@ -23,6 +23,7 @@ import { Tabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/t
 import { usePatient, type InsuranceDto } from "./hooks";
 import { PAYMENT_TONES, ContactDraft, HistoryDraft } from "./patient-profile-shared";
 import { NewEpisodeDialog } from "./NewEpisodeDialog";
+import { EditPatientDialog } from "./EditPatientDialog";
 import { InsuranceDialog } from "./InsuranceDialog";
 import { OverviewTab } from "./OverviewTab";
 import { EpisodesTab } from "./EpisodesTab";
@@ -50,6 +51,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
 
   const [newEpisodeOpen, setNewEpisodeOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const appointmentTherapists = useAppointmentTherapists();
   const [contactDraft, setContactDraft] = useState<ContactDraft[] | null>(null);
   const [historyDraft, setHistoryDraft] = useState<HistoryDraft[] | null>(null);
@@ -219,6 +221,11 @@ export default function PatientProfile({ patientId, onBack }: Props) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {canManagePatients ? (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <AtomIcon name="UserPen" className="mr-2 h-4 w-4" /> Edit patient
+              </Button>
+            ) : null}
             {canClinicalManage ? (
               <Button onClick={() => setNewEpisodeOpen(true)}>
                 <AtomIcon name="Stethoscope" className="mr-2 h-4 w-4" /> New episode
@@ -249,7 +256,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
       </div>
 
         {/* ============ OVERVIEW ============ */}
-        <OverviewTab bundle={bundle} canManagePatients={canManagePatients} consent={consent} contacts={contacts} name={name} patient={patient} removeInsurance={removeInsurance} setInsuranceDialog={setInsuranceDialog} />
+        <OverviewTab bundle={bundle} canManagePatients={canManagePatients} consent={consent} contacts={contacts} name={name} patient={patient} />
 
         {/* ============ EPISODES ============ */}
         <EpisodesTab bundle={bundle} canClinicalManage={canClinicalManage} invalidate={invalidate} name={name} patient={patient} patientId={patientId} setNewEpisodeOpen={setNewEpisodeOpen} />
@@ -258,7 +265,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
         <AppointmentsTab bundle={bundle} navigate={navigate} patientId={patientId} />
 
         {/* ============ BILLING ============ */}
-        <BillingTab bundle={bundle} name={name} navigate={navigate} patient={patient} patientId={patientId} />
+        <BillingTab bundle={bundle} name={name} navigate={navigate} patient={patient} patientId={patientId} canBill={canBill} canManagePatients={canManagePatients} removeInsurance={removeInsurance} setInsuranceDialog={setInsuranceDialog} onChangeArrangement={() => setEditOpen(true)} />
 
         {/* ============ MEDICAL HISTORY ============ */}
         <HistoryTab bundle={bundle} canManagePatients={canManagePatients} historyByType={historyByType} historyDraft={historyDraft} name={name} patchMutation={patchMutation} patient={patient} saveHistory={saveHistory} setHistoryDraft={setHistoryDraft} startHistoryEdit={startHistoryEdit} />
@@ -277,6 +284,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
         presetPatientId={patientId}
         therapists={appointmentTherapists.data || []}
       />
+      <EditPatientDialog open={editOpen} onOpenChange={setEditOpen} patient={patient} onSaved={invalidate} />
       <NewEpisodeDialog open={newEpisodeOpen} onOpenChange={setNewEpisodeOpen} patientId={patientId} patientName={name} onCreated={invalidate} />
 
       {/* ---------- insurance dialog (remounted per target entry) ---------- */}

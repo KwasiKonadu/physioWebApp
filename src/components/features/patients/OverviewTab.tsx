@@ -11,11 +11,10 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
-import { type InsuranceDto } from "./hooks";
 import type { PatientBundle } from "./hooks";
 import { PAYMENT_TONES, EmptyStateCompact } from "./patient-profile-shared";
 
-export function OverviewTab({ bundle, canManagePatients, consent, contacts, name, patient, removeInsurance, setInsuranceDialog }: { bundle: PatientBundle; canManagePatients: boolean; consent: PatientBundle["consents"][number] | undefined; contacts: PatientBundle["emergencyContacts"]; name: string; patient: PatientBundle["patient"]; removeInsurance: (id: string) => void; setInsuranceDialog: (v: { open: boolean; entry: InsuranceDto | null }) => void }) {
+export function OverviewTab({ bundle, canManagePatients, consent, contacts, name, patient }: { bundle: PatientBundle; canManagePatients: boolean; consent: PatientBundle["consents"][number] | undefined; contacts: PatientBundle["emergencyContacts"]; name: string; patient: PatientBundle["patient"] }) {
   return (
     <TabsContent value="overview" className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -95,45 +94,6 @@ export function OverviewTab({ bundle, canManagePatients, consent, contacts, name
           </SectionCard>
         </div>
       </div>
-
-      {bundle.insurances.length > 0 ? (
-        <SectionCard
-          title="Insurance"
-          icon="ShieldCheck"
-          actions={
-            canManagePatients ? (
-              <Button size="sm" variant="outline" onClick={() => setInsuranceDialog({ open: true, entry: null })}>
-                <AtomIcon name="Plus" className="mr-1.5 h-3.5 w-3.5" /> Add policy
-              </Button>
-            ) : undefined
-          }
-        >
-          <ul className="space-y-3">
-            {bundle.insurances.map((ins) => (
-              <li key={ins.id} className="rounded-lg border px-3 py-3">
-                <div className="toolbar-row">
-                  <p className="text-sm font-medium">{ins.provider?.name || "Unknown provider"}</p>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={ins.status} />
-                    {canManagePatients ? (
-                      <>
-                        <Button size="sm" variant="ghost" onClick={() => setInsuranceDialog({ open: true, entry: ins })}>Edit</Button>
-                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-rose-50 hover:text-destructive" onClick={() => removeInsurance(ins.id)}>Remove</Button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-                <DetailGrid cols={2}>
-                  <DetailRow label="Membership" value={<span className="font-mono text-xs">{ins.membershipNumber}</span>} />
-                  <DetailRow label="Policy" value={ins.policyNumber} />
-                  <DetailRow label="Valid" value={ins.validFrom || ins.validTo ? `${formatDate(ins.validFrom)} — ${formatDate(ins.validTo)}` : undefined} />
-                  <DetailRow label="Principal member" value={ins.principalMember ? `${ins.principalMember}${ins.relationshipToPrincipal ? ` (${labelize(ins.relationshipToPrincipal)})` : ""}` : undefined} />
-                </DetailGrid>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
 
       {bundle.referrals.length > 0 ? (
         <SectionCard title="Referral" icon="Share2">

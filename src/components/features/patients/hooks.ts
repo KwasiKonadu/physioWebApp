@@ -160,6 +160,8 @@ export interface InvoiceDto {
   issuedAt: string;
   dueDate?: string | null;
   episodeId?: string | null;
+  insuranceCoveredCents?: number;
+  claim?: { id: string; claimNumber: string; status: string; claimedCents: number; approvedCents: number } | null;
 }
 
 export interface PatientDto {
@@ -198,6 +200,7 @@ export interface PatientBundle {
   appointments: AppointmentDto[];
   patientPackages: PatientPackageDto[];
   invoices: InvoiceDto[];
+  billing: { outstandingCents: number; unpaidInvoices: number; lastPayment: { amountCents: number; method: string; paidAt: string } | null };
   stats: {
     episodes: number;
     openEpisodes: number;

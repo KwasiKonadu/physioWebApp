@@ -39,7 +39,7 @@ async function loadBundle(id: string, clinicId: string) {
   });
   if (!patient) throw new ApiError(404, "Patient not found");
 
-  const [episodes, appointments, patientPackages, invoices, sessionCount, sessionCompleted, assessmentCount] =
+  const [episodes, appointments, patientPackages, invoices, sessionCount, sessionCompleted, assessmentCount, openInvoices, lastPayment] =
     await Promise.all([
       db.treatmentEpisode.findMany({
         where: { patientId: id },
@@ -72,12 +72,22 @@ async function loadBundle(id: string, clinicId: string) {
         take: 20,
         select: {
           id: true, invoiceNumber: true, status: true, arrangement: true,
-          totalCents: true, paidCents: true, issuedAt: true, dueDate: true, episodeId: true,
+          totalCents: true, paidCents: true, insuranceCoveredCents: true, issuedAt: true, dueDate: true, episodeId: true,
+          claim: { select: { id: true, claimNumber: true, status: true, claimedCents: true, approvedCents: true } },
         },
       }),
       db.therapySession.count({ where: { patientId: id } }),
       db.therapySession.count({ where: { patientId: id, status: "COMPLETED" } }),
       db.assessment.count({ where: { episode: { patientId: id } } }),
+      db.invoice.findMany({
+        where: { patientId: id, status: { in: ["UNPAID", "PARTIAL"] } },
+        select: { totalCents: true, paidCents: true },
+      }),
+      db.payment.findFirst({
+        where: { invoice: { patientId: id } },
+        orderBy: { paidAt: "desc" },
+        select: { amountCents: true, method: true, paidAt: true },
+      }),
     ]);
 
   return {
@@ -117,6 +127,11 @@ async function loadBundle(id: string, clinicId: string) {
     appointments,
     patientPackages,
     invoices,
+    billing: {
+      outstandingCents: openInvoices.reduce((n, i) => n + Math.max(0, i.totalCents - i.paidCents), 0),
+      unpaidInvoices: openInvoices.length,
+      lastPayment,
+    },
     stats: {
       episodes: episodes.length,
       openEpisodes: episodes.filter((e) =>
@@ -165,22 +180,28 @@ const insuranceSchema = z.object({
   documentRef: optStr(120),
 });
 
+/** PATCH variants: "" / null CLEAR the field (null), undefined leaves it unchanged. */
+const emptyToNull = (v: unknown) => (v === null || (typeof v === "string" && v.trim() === "") ? null : v);
+const clrStr = (max = 255) => z.preprocess(emptyToNull, z.string().max(max).nullable().optional());
+const clrDate = () => z.preprocess(emptyToNull, z.coerce.date().nullable().optional());
+const clrEnum = (values: readonly [string, ...string[]]) => z.preprocess(emptyToNull, z.enum(values).nullable().optional());
+
 const patchSchema = z.object({
   firstName: z.string().trim().min(1).max(80).optional(),
-  middleName: optStr(80),
+  middleName: clrStr(80),
   lastName: z.string().trim().min(1).max(80).optional(),
-  dateOfBirth: optDate(),
-  gender: optEnum(GENDERS),
+  dateOfBirth: clrDate(),
+  gender: clrEnum(GENDERS),
   phone: z.string().trim().min(1).max(30).optional(),
-  altPhone: optStr(30),
-  email: optStr(160),
-  address: optStr(500),
-  occupation: optStr(120),
-  maritalStatus: optEnum(MARITAL_STATUSES),
-  nationality: optStr(80),
-  photoUrl: optStr(500),
+  altPhone: clrStr(30),
+  email: clrStr(160),
+  address: clrStr(500),
+  occupation: clrStr(120),
+  maritalStatus: clrEnum(MARITAL_STATUSES),
+  nationality: clrStr(80),
+  photoUrl: clrStr(500),
   paymentArrangement: z.enum(PAYMENT_ARRANGEMENTS).optional(),
-  branchId: optStr(64),
+  branchId: clrStr(64),
   emergencyContacts: z.array(emergencyContactSchema).optional(),
   medicalHistory: z.array(medicalHistorySchema).optional(),
   insurance: z.array(insuranceSchema).optional(),
