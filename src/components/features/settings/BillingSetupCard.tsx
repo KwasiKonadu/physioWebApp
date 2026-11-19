@@ -29,7 +29,7 @@ export function BillingSetupCard() {
             key={t.tab}
             type="button"
             onClick={() => navigate("billing", { focusTab: t.tab })}
-            className="group flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:border-teal-500/60 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+            className="group flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:border-navy-600/60 hover:bg-navy-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-800">
               <AtomIcon name={t.icon} className="h-5 w-5" />

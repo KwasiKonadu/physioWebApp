@@ -89,7 +89,7 @@ export function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
       {episodeFilter ? (
         <div className="mb-3 flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Filtered by episode</span>
-          <Badge variant="outline" className="gap-1 bg-teal-50 text-teal-700">
+          <Badge variant="outline" className="gap-1 bg-navy-50 text-navy-800">
             <AtomIcon name="Layers" className="h-3 w-3" /> {episodeFilter.slice(0, 10)}…
           </Badge>
           <Button variant="ghost" size="sm" onClick={onClearEpisodeFilter}>
@@ -132,14 +132,14 @@ export function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
           }
         >
           {canManage ? (
-            <Button onClick={() => setCreateOpen(true)} className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={() => setCreateOpen(true)} className="bg-navy-800 hover:bg-navy-900">
               <AtomIcon name="Plus" className="h-4 w-4" /> New session
             </Button>
           ) : null}
         </DataToolbar>
       </div>
       {listQuery.isError ? (
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-lg border bg-card p-4">
           <EmptyState
             icon="AlertTriangle"
             title="Could not load sessions"

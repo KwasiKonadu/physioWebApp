@@ -44,8 +44,8 @@ export function StaffWorkloadTab({ data, stats, name, period, setPeriod, periodL
             xKey="month"
             height={260}
             series={[
-              { key: "sessions", name: "Sessions completed", color: "#0e9f8a" },
-              { key: "patients", name: "Unique patients", color: "#123c66" },
+              { key: "sessions", name: "Sessions completed", color: "#7fa9ee" },
+              { key: "patients", name: "Unique patients", color: "#306fdb" },
               { key: "booked", name: "Appointments booked", color: "#0ea5e9" },
               { key: "noShows", name: "No-shows", color: "#ef4444" },
               { key: "cancelled", name: "Cancelled", color: "#f59e0b" },
@@ -77,7 +77,7 @@ export function StaffWorkloadTab({ data, stats, name, period, setPeriod, periodL
               data={stats.byWeekday}
               xKey="day"
               height={208}
-              series={[{ key: "sessions", name: "Sessions", color: "#0e9f8a" }]}
+              series={[{ key: "sessions", name: "Sessions", color: "#7fa9ee" }]}
             />
           )}
         </SectionCard>

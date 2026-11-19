@@ -458,7 +458,7 @@ export function ReviewStep({ values, problem, episode, goTo, complete }: { value
             <DRow label="Precautions" value={values.precautions} />
           </DetailGrid>
         </div>
-        <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800 xl:col-span-2">
+        <p className="rounded-lg border border-navy-200 bg-navy-50 px-3 py-2 text-xs text-navy-800 xl:col-span-2">
           Completing the assessment marks the episode <strong>awaiting plan</strong> and locks this record. Corrections create a new draft linked in the audit trail.
         </p>
       </div>

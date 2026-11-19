@@ -117,7 +117,7 @@ export default function SettingsUsersTab({ highlightEmail }: Props) {
         loading={isLoading}
         loadingRows={4}
         minWidth="min-w-160"
-        rowClassName={(u) => (highlightEmail && u.email === highlightEmail ? "bg-teal-50/60 ring-1 ring-inset ring-teal-300" : undefined)}
+        rowClassName={(u) => (highlightEmail && u.email === highlightEmail ? "bg-navy-50/60 ring-1 ring-inset ring-navy-300" : undefined)}
         empty={<EmptyState icon="Users" title="No users found" />}
         columns={[
           {
@@ -127,7 +127,7 @@ export default function SettingsUsersTab({ highlightEmail }: Props) {
                 <p className="flex items-center gap-2 text-sm font-medium">
                   {u.name}
                   {highlightEmail && u.email === highlightEmail && (
-                    <Badge variant="outline" className="border-teal-300 bg-teal-100 text-teal-800">You</Badge>
+                    <Badge variant="outline" className="border-navy-300 bg-navy-100 text-navy-800">You</Badge>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground sm:hidden">{u.email}</p>

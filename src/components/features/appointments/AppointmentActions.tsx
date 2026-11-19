@@ -27,7 +27,7 @@ export function AppointmentActions({ appt, action, startSession, canStartSession
   return (
       <SidePanelFooter>
           {status === "SCHEDULED" ? (
-            <Button size="sm" className="bg-teal-600 hover:bg-teal-700" disabled={action.isPending}
+            <Button size="sm" className="bg-navy-800 hover:bg-navy-900" disabled={action.isPending}
               onClick={() => doAction({ action: "confirm" }, "Appointment confirmed")}>
               <AtomIcon name="Check" className="h-4 w-4" /> Confirm
             </Button>

@@ -66,7 +66,7 @@ export function StaffOverviewTab({ data, s, stats, name }: { data: StaffDetail; 
             {s.availability.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {s.availability.map((a, i) => (
-                  <Badge key={i} variant="outline" className="border-teal-200 bg-teal-50 font-normal text-teal-700">
+                  <Badge key={i} variant="outline" className="border-navy-200 bg-navy-50 font-normal text-navy-800">
                     {a.day} {a.start || ""}{a.end ? `–${a.end}` : ""}
                   </Badge>
                 ))}

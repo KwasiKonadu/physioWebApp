@@ -47,7 +47,7 @@ function TrendChip({ trend }: { trend: StatTrend }) {
 // card background + ink colour (the circle and icon inherit the ink via currentColor)
 const toneMap: Record<string, string> = {
   navy: "bg-navy-50 text-navy-900",
-  teal: "bg-teal-50 text-teal-900",
+  teal: "bg-navy-50 text-navy-900",
   amber: "bg-amber-50 text-amber-900",
   rose: "bg-rose-50 text-rose-900",
   sky: "bg-sky-50 text-sky-900",
@@ -58,9 +58,9 @@ export function StatCard({ label, value, icon = "Activity", hint, tone = "navy",
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-current/10 px-4 py-3 shadow-sm",
+        "relative overflow-hidden rounded-lg border border-border px-4 py-3",
         toneMap[tone],
-        onClick && "cursor-pointer transition-shadow hover:shadow-md"
+        onClick && "cursor-pointer transition-shadow hover:border-navy-300"
       )}
       onClick={onClick}
     >

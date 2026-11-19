@@ -234,7 +234,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
             </Avatar>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: review.episode.patient.id })}>{fullName(review.episode.patient)}</button></h2>
+                <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: review.episode.patient.id })}>{fullName(review.episode.patient)}</button></h2>
                 <span className="code-chip">{review.episode.patient.patientCode}</span>
                 <StatusBadge status={review.status} />
               </div>
@@ -291,7 +291,7 @@ export default function ReviewForm({ reviewId, onBack }: { reviewId: string; onB
       </div>
 
       {!isCompleted && canManage ? (
-        <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+        <div className="sticky bottom-0 z-10 rounded-lg border bg-background/95 p-3 backdrop-blur">
           <div className="toolbar-row">
             <p className="text-xs text-muted-foreground">Completing the review is final and resets the episode review counter.</p>
             <div className="flex items-center gap-2">

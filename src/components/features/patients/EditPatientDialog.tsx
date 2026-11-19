@@ -94,7 +94,7 @@ export function EditPatientDialog({ open, onOpenChange, patient, onSaved }: {
       open={open}
       onOpenChange={(o) => { if (!o && save.isPending) return; onOpenChange(o); }}
       size="xl"
-      title={<><AtomIcon name="UserPen" className="h-4 w-4 text-teal-600" /> Edit patient</>}
+      title={<><AtomIcon name="UserPen" className="h-4 w-4 text-navy-800" /> Edit patient</>}
       description={`${patient.patientCode} — update demographics and contact details. Emergency contacts and medical history are edited in their own tabs.`}
     >
       <form onSubmit={handleSubmit((v) => save.mutate(v))} className="flex min-h-0 flex-1 flex-col">

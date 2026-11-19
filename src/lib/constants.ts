@@ -24,6 +24,7 @@ export const PERMS = {
   insuranceManage: "insurance.manage",
   staffView: "staff.view",
   staffManage: "staff.manage",
+  leaveApply: "leave.apply",
   reportsView: "reports.view",
   settingsManage: "settings.manage",
 } as const;
@@ -39,6 +40,9 @@ export const ROLE_NAMES = {
 } as const;
 
 export const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "PHYSIOTHERAPIST", "MANAGEMENT"] as const;
+export const LEAVE_TYPES = ["ANNUAL", "SICK", "OFF_DUTY"] as const;
+export const LEAVE_TYPE_LABELS: Record<string, string> = { ANNUAL: "Annual leave", SICK: "Sick day", OFF_DUTY: "Off duty" };
+export const LEAVE_STATUSES = ["PENDING", "APPROVED", "REJECTED", "CANCELLED"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -47,17 +51,18 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMS.dashboardView, PERMS.patientsView, PERMS.patientsManage,
     PERMS.appointmentsView, PERMS.appointmentsManage,
     PERMS.billingView, PERMS.billingManage,
+    PERMS.leaveApply,
   ],
   [ROLE_NAMES.physiotherapist]: [
     PERMS.dashboardView, PERMS.patientsView,
     PERMS.appointmentsView, PERMS.appointmentsManage,
     PERMS.clinicalView, PERMS.clinicalManage,
-    PERMS.reportsView,
+    PERMS.reportsView, PERMS.leaveApply,
   ],
   [ROLE_NAMES.management]: [
     PERMS.dashboardView, PERMS.patientsView,
     PERMS.appointmentsView, PERMS.clinicalView,
-    PERMS.billingView, PERMS.staffView, PERMS.reportsView,
+    PERMS.billingView, PERMS.staffView, PERMS.reportsView, PERMS.leaveApply,
   ],
 };
 

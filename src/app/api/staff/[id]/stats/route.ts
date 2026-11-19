@@ -2,6 +2,7 @@
 // Business Rules 1/2: only COMPLETED therapy sessions count; PER_PATIENT counts UNIQUE patients.
 import { db, route, json, getQuery, ApiError, requireAuth, requirePermission } from "@/server/api-exports";
 import { PERMS } from "@/lib/constants";
+import { staffIdForUser } from "@/server/leave";
 import { fixedSalaryForPeriod } from "@/lib/remuneration";
 
 const OPEN_EPISODE_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS", "AWAITING_PLAN", "ACTIVE_TREATMENT", "ON_HOLD", "UNDER_REVIEW"];
@@ -24,8 +25,8 @@ function parseQueryDate(v: string | null, endOfDay = false): Date | null {
 
 export const GET = route(async (req, ctx) => {
   const auth = requireAuth(req);
-  requirePermission(req, PERMS.staffView);
   const { id } = await ctx.params;
+  if ((await staffIdForUser(auth.userId)) !== id) requirePermission(req, PERMS.staffView);
 
   const staff = await db.staffProfile.findUnique({ where: { id } });
   if (!staff || staff.clinicId !== auth.clinicId) throw new ApiError(404, "Staff member not found");

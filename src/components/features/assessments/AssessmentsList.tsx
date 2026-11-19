@@ -151,7 +151,7 @@ export function AssessmentsList({ canManage, onOpen }: {
             cell: (a) =>
               a.painCurrent != null || a.painWorst != null ? (
                 <span className="inline-flex items-center gap-1 text-xs">
-                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{a.painCurrent ?? "—"}/10</Badge>
+                  <Badge variant="outline" className="bg-navy-50 text-navy-800 border-navy-200">{a.painCurrent ?? "—"}/10</Badge>
                   <span className="text-muted-foreground">/</span>
                   <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">{a.painWorst ?? "—"}/10</Badge>
                 </span>

@@ -33,9 +33,9 @@ export function WeekGrid({ anchorDate, items, loading, onSelect }: Omit<Calendar
         <div className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-border">
           <div />
           {days.map((d) => (
-            <div key={d.toISOString()} className={cn("px-1 py-2 text-center", ymd(d) === todayKey && "bg-teal-50/60")}>
+            <div key={d.toISOString()} className={cn("px-1 py-2 text-center", ymd(d) === todayKey && "bg-navy-50/60")}>
               <p className="text-[10px] font-medium uppercase text-muted-foreground">{WEEKDAY_HEADERS[(d.getDay() + 6) % 7]}</p>
-              <p className={cn("text-sm font-semibold", ymd(d) === todayKey ? "text-teal-700" : "text-foreground")}>{d.getDate()}</p>
+              <p className={cn("text-sm font-semibold", ymd(d) === todayKey ? "text-navy-800" : "text-foreground")}>{d.getDate()}</p>
             </div>
           ))}
         </div>
@@ -54,7 +54,7 @@ export function WeekGrid({ anchorDate, items, loading, onSelect }: Omit<Calendar
             const dayItems = grouped.get(ymd(d)) || [];
             const laidOut = layoutDay(dayItems);
             return (
-              <div key={d.toISOString()} className={cn("relative border-l border-border", ymd(d) === todayKey && "bg-teal-50/40")} style={{ height: gridHeight }}>
+              <div key={d.toISOString()} className={cn("relative border-l border-border", ymd(d) === todayKey && "bg-navy-50/40")} style={{ height: gridHeight }}>
                 {Array.from({ length: (GRID_END_MIN - GRID_START_MIN) / 60 + 1 }, (_, i) => (
                   <div key={i} className="absolute inset-x-0 border-t border-border/60" style={{ top: i * HOUR_HEIGHT }} />
                 ))}

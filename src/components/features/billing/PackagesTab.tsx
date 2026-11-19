@@ -167,7 +167,7 @@ export default function PackagesTab({ prefillPatientId }: { prefillPatientId?: s
                   <Progress value={pp.totalSessions ? (pp.usedSessions / pp.totalSessions) * 100 : 0} className="h-2 w-16" />
                   <span className="text-xs tabular-nums text-muted-foreground">{pp.usedSessions}/{pp.totalSessions}</span>
                 </div>
-                <p className="mt-0.5 text-[11px] text-teal-700">{pp.remaining} remaining</p>
+                <p className="mt-0.5 text-[11px] text-navy-800">{pp.remaining} remaining</p>
               </>
             ),
           },

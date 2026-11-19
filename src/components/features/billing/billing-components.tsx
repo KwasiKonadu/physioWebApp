@@ -62,7 +62,7 @@ export function PatientPicker({
                     setOpen(false);
                   }}
                 >
-                  <AtomIcon name="User" className="mr-2 h-4 w-4 text-teal-600" />
+                  <AtomIcon name="User" className="mr-2 h-4 w-4 text-navy-800" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{patientName(p)}</p>
                     <p className="text-xs text-muted-foreground">{p.patientCode}{p.phone ? ` · ${p.phone}` : ""}</p>
@@ -126,7 +126,7 @@ export function MoneyInput({
 export function ArrangementBadge({ arrangement }: { arrangement: string }) {
   const tone =
     arrangement === "INSURANCE" ? "bg-sky-50 text-sky-700 border-sky-200"
-    : arrangement === "PACKAGE" ? "bg-teal-50 text-teal-700 border-teal-200"
+    : arrangement === "PACKAGE" ? "bg-navy-50 text-navy-800 border-navy-200"
     : "bg-slate-100 text-slate-700 border-slate-200";
   return <Badge variant="outline" className={`font-medium ${tone}`}>{arrangement === "PAYG" ? "Pay as you go" : arrangement === "PACKAGE" ? "Package" : "Insurance"}</Badge>;
 }

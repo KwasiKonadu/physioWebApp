@@ -26,7 +26,7 @@ export function DischargeSummary({ discharge, baseline, isCompleted, outstanding
           </Avatar>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: discharge.patientId })}>{fullName(discharge.patient)}</button></h2>
+              <h2 className="min-w-0"><button type="button" title="Open patient profile" className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: discharge.patientId })}>{fullName(discharge.patient)}</button></h2>
               <span className="code-chip">{discharge.patient.patientCode}</span>
               <StatusBadge status={discharge.status} />
             </div>

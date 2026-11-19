@@ -26,7 +26,7 @@ export function PatientSearchSelect({ selected, onSelect, onClear, autoFocus }: 
     return (
       <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2">
-          <AtomIcon name="UserRound" className="h-4 w-4 text-teal-600" />
+          <AtomIcon name="UserRound" className="h-4 w-4 text-navy-800" />
           <div>
             <p className="text-sm font-medium">{fullName(selected) || selected.id}</p>
             {selected.patientCode ? <p className="text-xs text-muted-foreground">{selected.patientCode}</p> : null}

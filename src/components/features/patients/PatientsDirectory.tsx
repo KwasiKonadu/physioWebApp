@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/molecules/page-header";
+import { TopBarTitle } from "@/components/templates/topbar-slots";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { CardGrid } from "@/components/molecules/card-grid";
 import { ViewToggle } from "@/components/molecules/view-toggle";
@@ -31,7 +32,7 @@ import { PatientRowActions } from "./PatientRowActions";
 import PatientRegistrationDialog from "./PatientRegistrationDialog";
 
 const PAYMENT_TONES: Record<string, string> = {
-  PAYG: "bg-teal-50 text-teal-700 border-teal-200",
+  PAYG: "bg-navy-50 text-navy-800 border-navy-200",
   PACKAGE: "bg-indigo-50 text-indigo-700 border-indigo-200",
   INSURANCE: "bg-sky-50 text-sky-700 border-sky-200",
 };
@@ -129,8 +130,9 @@ export default function PatientsDirectory({ onOpen }: Props) {
 
   return (
     <div>
+      <TopBarTitle><h1 className="truncate text-lg font-semibold text-navy-800">Patient Management</h1></TopBarTitle>
       <PageHeader
-        title="Patients"
+        title="Patient Management"
         description="Register new patients, manage records and open treatment profiles"
         icon="Users"
       />
@@ -226,13 +228,13 @@ export default function PatientsDirectory({ onOpen }: Props) {
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
             </CardGrid>
           ) : items.length === 0 ? (
-            <div className="rounded-xl border bg-card shadow-sm">{emptyBlock}</div>
+            <div className="rounded-lg border bg-card">{emptyBlock}</div>
           ) : (
             <CardGrid minItemWidth={290}>
               {items.map((p: PatientListItem) => <PatientCard key={p.id} patient={p} onOpen={onOpen} />)}
             </CardGrid>
           )}
-          <div className="mt-4 overflow-hidden rounded-xl border bg-card shadow-sm">{paginationEl}</div>
+          <div className="mt-4 overflow-hidden rounded-lg border bg-card">{paginationEl}</div>
         </>
       ) : (
         <DataTable

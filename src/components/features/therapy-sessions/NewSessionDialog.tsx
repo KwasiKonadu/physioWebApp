@@ -99,7 +99,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AtomIcon name="PlusCircle" className="h-4 w-4 text-teal-600" />
+            <AtomIcon name="PlusCircle" className="h-4 w-4 text-navy-800" />
             New therapy session
           </DialogTitle>
           <DialogDescription>
@@ -181,7 +181,7 @@ export function NewSessionDialog({ open, onOpenChange, onCreated }: {
           <Button
             onClick={handleCreate}
             disabled={createMutation.isPending || !selectedPatient || episodeId === "none"}
-            className="bg-teal-600 hover:bg-teal-700"
+            className="bg-navy-800 hover:bg-navy-900"
           >
             {createMutation.isPending ? <AtomIcon name="Loader2" className="h-4 w-4 animate-spin" /> : <AtomIcon name="Plus" className="h-4 w-4" />}
             Create session

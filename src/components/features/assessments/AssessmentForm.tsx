@@ -289,7 +289,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
       />
 
       {ready ? (
-        <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm md:flex-row md:items-center md:justify-between md:px-4">
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border bg-card p-3 md:flex-row md:items-center md:justify-between md:px-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">
               {initials(patient ? fullName(patient) : "")}
@@ -392,7 +392,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                 onClick={() => goTo(i)}
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium",
-                  i === step ? "border-teal-500 bg-teal-50 text-teal-700" : isSectionComplete(i) ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-white text-muted-foreground",
+                  i === step ? "border-navy-800 bg-navy-50 text-navy-800" : isSectionComplete(i) ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-white text-muted-foreground",
                 )}
               >
                 {isSectionComplete(i) ? <AtomIcon name="Check" className="h-3 w-3" /> : <span>{i + 1}</span>}
@@ -404,7 +404,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
           <div className="grid w-full gap-5 lg:grid-cols-[290px_minmax(0,1fr)] *:min-w-0">
             {/* section nav */}
             <div className="hidden space-y-3 self-start lg:sticky lg:top-28 lg:block">
-            <nav className="rounded-xl border bg-white p-2 shadow-sm">
+            <nav className="rounded-lg border bg-white p-2">
               {NAV.map((s) => {
                 const i = s.i;
                 const done = isSectionComplete(i);
@@ -416,12 +416,12 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                     onClick={() => goTo(i)}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                      i === step ? "bg-teal-50 font-semibold text-teal-800" : "text-muted-foreground hover:bg-muted/60",
+                      i === step ? "bg-navy-50 font-semibold text-navy-800" : "text-muted-foreground hover:bg-muted/60",
                     )}
                   >
                     <span className={cn(
                       "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
-                      err ? "border-rose-300 bg-rose-50 text-rose-600" : done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === step ? "border-teal-400 bg-teal-100 text-teal-700" : "border-border text-muted-foreground",
+                      err ? "border-rose-300 bg-rose-50 text-rose-600" : done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === step ? "border-navy-800 bg-navy-100 text-navy-800" : "border-border text-muted-foreground",
                     )}>
                       <AtomIcon name={err ? "AlertCircle" : done ? "Check" : s.icon} className="h-3.5 w-3.5" />
                     </span>
@@ -432,7 +432,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
                 );
               })}
             </nav>
-              <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+              <div className="space-y-3 rounded-lg border bg-card p-4">
                 <p className="label-caps-sm">Case summary</p>
                 <div className="grid grid-cols-3 gap-2 *:min-w-0">
                   {[{ l: "Now", v: values.painCurrent }, { l: "Worst", v: values.painWorst }, { l: "Lowest", v: values.painLowest }].map((p) => (
@@ -481,7 +481,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
               {step === 7 ? <ReviewStep values={values} problem={problem} episode={episode} goTo={goTo} complete={complete} /> : null}
 
               {/* sticky action bar */}
-              <div className="sticky bottom-0 z-10 mt-5 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+              <div className="sticky bottom-0 z-10 mt-5 rounded-lg border bg-background/95 p-3 backdrop-blur">
                 <div className="toolbar-row">
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="sm" onClick={requestLeave}>

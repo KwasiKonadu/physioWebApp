@@ -4,6 +4,7 @@ import {
   db, route, json, parseBody, ApiError, audit, parseJson,
   requireAuth, requirePermission,
 } from "@/server/api-exports";
+import { staffIdForUser } from "@/server/leave";
 import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
 
 const OPEN_EPISODE_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS", "AWAITING_PLAN", "ACTIVE_TREATMENT", "ON_HOLD", "UNDER_REVIEW"];
@@ -57,7 +58,8 @@ export const GET = route(async (req, ctx) => {
   const auth = requireAuth(req);
   const { id } = await ctx.params;
   const staff = await getStaffOr404(id, auth.clinicId);
-  requirePermission(req, PERMS.staffView);
+  // anyone may open their own profile; other profiles need staff.view
+  if ((await staffIdForUser(auth.userId)) !== staff.id) requirePermission(req, PERMS.staffView);
 
   const [branch, linkedUser, completedSessions, uniquePatients, activeEpisodes] = await Promise.all([
     staff.branchId

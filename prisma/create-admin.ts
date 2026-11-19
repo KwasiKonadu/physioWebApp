@@ -8,7 +8,7 @@ const db = new PrismaClient();
 const ALL_PERMS = [
   "dashboard.view", "patients.view", "patients.manage", "appointments.view", "appointments.manage",
   "clinical.view", "clinical.manage", "billing.view", "billing.manage", "billing.refund",
-  "packages.manage", "insurance.manage", "staff.view", "staff.manage", "reports.view", "settings.manage",
+  "packages.manage", "insurance.manage", "staff.view", "staff.manage", "leave.apply", "reports.view", "settings.manage",
 ];
 
 function hashPassword(password: string): string {

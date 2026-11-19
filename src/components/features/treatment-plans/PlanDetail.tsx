@@ -98,13 +98,13 @@ export function PlanDetail({
     <div className="space-y-4">
       <PageBreadcrumb items={[{ label: "Treatment Plans", onClick: onBack }, { label: `${fullName(plan.episode.patient)} — v${plan.version}` }]} />
       {/* ---- header ---- */}
-      <div className="rounded-xl border bg-white shadow-sm">
+      <div className="rounded-lg border bg-white">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="min-w-0 truncate text-lg font-semibold text-foreground">
-                  <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: plan.episode.patient.id })}>
+                  <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: plan.episode.patient.id })}>
                     {fullName(plan.episode.patient)}
                   </button>
                 </h2>
@@ -128,7 +128,7 @@ export function PlanDetail({
           <div className="flex flex-wrap items-center gap-2">
             {canActivate ? (
               <Button
-                className="bg-teal-600 text-white hover:bg-teal-700"
+                className="bg-navy-800 text-white hover:bg-navy-900"
                 onClick={() => setActivateOpen(true)}
                 disabled={activateMutation.isPending}
               >
@@ -136,7 +136,7 @@ export function PlanDetail({
               </Button>
             ) : null}
             {canRevise ? (
-              <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={onRevise}>
+              <Button className="bg-navy-800 text-white hover:bg-navy-900" onClick={onRevise}>
                 <AtomIcon name="GitBranch" className="mr-1.5 h-4 w-4" /> Revise
               </Button>
             ) : null}
@@ -292,7 +292,7 @@ export function PlanDetail({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-navy-800 hover:bg-navy-900"
               disabled={activateMutation.isPending}
               onClick={(e) => { e.preventDefault(); activateMutation.mutate(); }}
             >

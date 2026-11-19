@@ -41,12 +41,12 @@ export function AppSidebar() {
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 aria-expanded={!collapsed}
                 onClick={() => { setHovered(null); toggleSidebar(); }}
-                className="group flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                className="group flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <img src="/appicon.svg" alt="" className="h-5 w-5 group-hover:hidden" />
                 <AtomIcon
                   name={collapsed ? "ChevronsRight" : "ChevronsLeft"}
-                  className="hidden h-4 w-4 text-teal-50 group-hover:block group-focus-visible:block"
+                  className="hidden h-4 w-4 text-white group-hover:block group-focus-visible:block"
                 />
               </button>
             </TooltipTrigger>
@@ -72,7 +72,7 @@ export function AppSidebar() {
                         "flex h-9 items-center justify-center rounded-lg transition-colors",
                         "w-9", !collapsed && "rounded-r-none",
                         active
-                          ? "bg-teal-500/90 text-white shadow-[0_2px_10px_rgba(14,159,138,0.4)]"
+                          ? "bg-white text-navy-800 shadow-[0_2px_10px_rgba(8,28,51,0.35)]"
                           : hovered === item.key ? "bg-white/10 text-white" : "text-slate-300/80"
                       )}
                     >
@@ -106,7 +106,7 @@ export function AppSidebar() {
                     className={cn(
                       "flex h-9 w-full shrink-0 items-center rounded-lg rounded-l-none pl-0 pr-2 text-left text-[13px] transition-colors",
                       active
-                        ? "bg-teal-500/90 font-semibold text-white shadow-[0_2px_10px_rgba(14,159,138,0.4)]"
+                        ? "bg-white font-semibold text-navy-800 shadow-[0_2px_10px_rgba(8,28,51,0.35)]"
                         : hovered === item.key ? "bg-white/10 font-medium text-white" : "font-medium text-slate-300/80"
                     )}
                   >

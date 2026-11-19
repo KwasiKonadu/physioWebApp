@@ -9,7 +9,7 @@ import type { StaffListItem } from "./StaffPage";
 
 export const STAFF_ROLE_TONES: Record<string, string> = {
   ADMIN: "bg-navy-50 text-navy-800 border-navy-200",
-  PHYSIOTHERAPIST: "bg-teal-50 text-teal-700 border-teal-200",
+  PHYSIOTHERAPIST: "bg-navy-50 text-navy-800 border-navy-200",
   RECEPTIONIST: "bg-sky-50 text-sky-700 border-sky-200",
   MANAGEMENT: "bg-amber-50 text-amber-700 border-amber-200",
 };

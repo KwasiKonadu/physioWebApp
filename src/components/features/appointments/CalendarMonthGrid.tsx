@@ -46,12 +46,12 @@ export function MonthGrid({ anchorDate, items, loading, onSelect, onDayClick }: 
               className={cn(
                 "min-h-23 border-b border-r border-border/70 p-1.5 text-left align-top transition-colors hover:bg-muted/50 nth-[7n]:border-r-0",
                 !inMonth && "bg-muted/30 text-muted-foreground",
-                key === todayKey && "bg-teal-50/50",
+                key === todayKey && "bg-navy-50/50",
               )}
             >
               <span className={cn(
                 "inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
-                key === todayKey ? "bg-teal-600 text-white" : inMonth ? "text-foreground" : "text-muted-foreground",
+                key === todayKey ? "bg-navy-800 text-white" : inMonth ? "text-foreground" : "text-muted-foreground",
               )}>
                 {d.getDate()}
               </span>

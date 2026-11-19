@@ -58,7 +58,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
       />
 
       {/* ---------- summary ---------- */}
-      <div className="mb-4 rounded-xl border bg-card shadow-sm">
+      <div className="mb-4 rounded-lg border bg-card">
         <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar className="h-12 w-12 rounded-xl">
@@ -68,7 +68,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
             </Avatar>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="min-w-0"><button type="button" title="Open patient profile" disabled={!patient?.id} className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => patient?.id && navigate("patients", { patientId: patient.id })}>{patient ? fullName(patient) : "Patient"}</button></h2>
+                <h2 className="min-w-0"><button type="button" title="Open patient profile" disabled={!patient?.id} className="truncate text-left text-lg font-semibold tracking-tight transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => patient?.id && navigate("patients", { patientId: patient.id })}>{patient ? fullName(patient) : "Patient"}</button></h2>
                 {patient?.patientCode ? (
                   <span className="code-chip">{patient.patientCode}</span>
                 ) : null}
@@ -155,7 +155,7 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
                 <div className="overflow-hidden rounded-lg border">
                   <MeasurementTable rows={strength} columns={[
                     ["Body part", (r) => r.bodyPart], ["Muscle group", (r) => r.muscleGroup], ["Side", (r) => labelize(r.side)],
-                    ["Grade", (r) => <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{r.grade}/5</Badge>],
+                    ["Grade", (r) => <Badge variant="outline" className="bg-navy-50 text-navy-800 border-navy-200">{r.grade}/5</Badge>],
                     ["Notes", (r) => r.notes || "—"],
                   ]} />
                 </div>
@@ -165,8 +165,8 @@ export function CompletedView({ detail, canManage, onReplaced, onBack }: {
 
           <SectionCard title="Clinical findings" icon="ClipboardCheck" className="flex-1">
             {detail.clinicalImpression ? (
-              <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50/60 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-700">Clinical impression</p>
+              <div className="mb-4 rounded-lg border border-navy-200 bg-navy-50/60 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-800">Clinical impression</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{detail.clinicalImpression}</p>
               </div>
             ) : null}

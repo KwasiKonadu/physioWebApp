@@ -85,7 +85,7 @@ export function ContactsTab({ canManagePatients, consent, contactDraft, contacts
                   <p className="text-xs text-muted-foreground">{c.relationship} · {c.phone}{c.altPhone ? ` · ${c.altPhone}` : ""}{c.address ? ` · ${c.address}` : ""}</p>
                 </div>
                 {c.isNextOfKin ? (
-                  <Badge variant="outline" className="border-teal-200 bg-teal-50 text-teal-700">Next of kin</Badge>
+                  <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-800">Next of kin</Badge>
                 ) : null}
               </li>
             ))}

@@ -57,10 +57,10 @@ export function DiagnosisDetailDialog({ item, onClose, onRevise, canManage }: {
                 {history.length === 0 ? (
                   <EmptyStateCompact message="No revisions recorded for this diagnosis." />
                 ) : (
-                  <ol className="space-y-2 border-l-2 border-teal-200 pl-4">
+                  <ol className="space-y-2 border-l-2 border-navy-200 pl-4">
                     {history.map((h, i) => (
                       <li key={i} className="relative">
-                        <span className="absolute left-[-21.5px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-teal-500 bg-white" />
+                        <span className="absolute left-[-21.5px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-navy-800 bg-white" />
                         <p className="text-xs text-muted-foreground">{formatDate(h.date)} · by {h.by}</p>
                         <p className="text-sm font-medium">{h.from} → superseded</p>
                         <p className="text-xs text-muted-foreground">{h.justification}</p>

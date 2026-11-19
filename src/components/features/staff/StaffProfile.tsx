@@ -27,12 +27,14 @@ import { StaffOverviewTab } from "./StaffOverviewTab";
 import { StaffWorkloadTab } from "./StaffWorkloadTab";
 import { StaffRemunerationTab } from "./StaffRemunerationTab";
 import { StaffAccountTab } from "./StaffAccountTab";
+import { StaffLeaveTab } from "./StaffLeaveTab";
 import { Field } from "@/components/molecules/field";
 import { PasswordInput } from "@/components/molecules/password-input";
 
 export default function StaffProfile({ staffId, onBack }: { staffId: string; onBack: () => void }) {
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.staffManage);
+  const canViewStaff = hasPermission(user, PERMS.staffView);
   const canManageUsers = hasPermission(user, PERMS.settingsManage);
   const qc = useQueryClient();
 
@@ -202,11 +204,11 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
 
   return (
     <>
-      <PageBreadcrumb items={[{ label: "Staff", onClick: onBack }, { label: name }]} />
+      <PageBreadcrumb items={canViewStaff ? [{ label: "Staff", onClick: onBack }, { label: name }] : [{ label: "My profile" }]} />
       <div className="space-y-5">
         <Tabs defaultValue="overview" className="gap-5">
           {/* ---------- summary + tabs: one card ---------- */}
-          <div className="rounded-xl border bg-card shadow-sm">
+          <div className="rounded-lg border bg-card">
             <div className="p-4 md:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-4">
@@ -228,7 +230,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       <StatusBadge status={s.employmentStatus} />
                       <Badge variant="outline" className={STAFF_ROLE_TONES[s.staffRole] || ""}>{labelize(s.staffRole)}</Badge>
-                      {s.isTherapist ? <Badge variant="outline" className="border-teal-200 bg-teal-50 text-teal-700">Therapist</Badge> : null}
+                      {s.isTherapist ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-800">Therapist</Badge> : null}
                       <Badge variant="outline" className={data.account ? (data.account.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700") : "border-slate-200 bg-slate-100 text-slate-600"}>
                         {data.account ? (data.account.active ? "Login active" : "Login deactivated") : "No login"}
                       </Badge>
@@ -253,6 +255,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
               ) : null}
               {s.isTherapist ? <UnderlineTabsTrigger value="workload"><AtomIcon name="Activity" className="h-4 w-4" />Workload</UnderlineTabsTrigger> : null}
               <UnderlineTabsTrigger value="remuneration"><AtomIcon name="Wallet" className="h-4 w-4" />Remuneration</UnderlineTabsTrigger>
+              <UnderlineTabsTrigger value="leave"><AtomIcon name="CalendarOff" className="h-4 w-4" />Leave</UnderlineTabsTrigger>
               <UnderlineTabsTrigger value="account"><AtomIcon name="ShieldCheck" className="h-4 w-4" />Login account</UnderlineTabsTrigger>
             </UnderlineTabsList>
           </div>
@@ -274,6 +277,8 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
 
           {/* ============ REMUNERATION ============ */}
           <StaffRemunerationTab s={s} stats={stats} period={period} setPeriod={setPeriod} periodLabel={periodLabel} canManage={canManage} effMethod={effMethod} method={method} rateGhs={rateGhs} savingRem={savingRem} saveRemuneration={saveRemuneration} setMethod={setMethod} setRateGhs={setRateGhs} />
+
+          <TabsContent value="leave"><StaffLeaveTab canManage={canManage} staffId={staffId} /></TabsContent>
 
           {/* ============ LOGIN ACCOUNT ============ */}
           <StaffAccountTab data={data} s={s} name={name} canManage={canManage} canManageUsers={canManageUsers} busy={busy} newPassword={newPassword} resetOpen={resetOpen} resetPassword={resetPassword} toggleAccount={toggleAccount} setCreateEmail={setCreateEmail} setCreateRoleId={setCreateRoleId} setNewPassword={setNewPassword} setCreateOpen={setCreateOpen} setResetOpen={setResetOpen} />

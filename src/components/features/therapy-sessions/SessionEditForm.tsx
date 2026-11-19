@@ -267,7 +267,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
       </div>
 
       {/* ---- Action bar ---- */}
-      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-3 backdrop-blur">
         <Button variant="outline" onClick={handleSave} disabled={busy}>
           <AtomIcon name={saveMutation.isPending ? "Loader2" : "Save"} className={cn("h-4 w-4", saveMutation.isPending && "animate-spin")} />
           Save draft
@@ -329,7 +329,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
 
         <AlertDialog open={completeOpen} onOpenChange={setCompleteOpen}>
           <AlertDialogTrigger asChild>
-            <Button className="bg-teal-600 hover:bg-teal-700" disabled={busy}>
+            <Button className="bg-navy-800 hover:bg-navy-900" disabled={busy}>
               <AtomIcon name={completeMutation.isPending ? "Loader2" : "CheckCircle2"} className={cn("h-4 w-4", completeMutation.isPending && "animate-spin")} />
               Complete session
             </Button>
@@ -345,7 +345,7 @@ export function SessionEditForm({ session, onBack, onReviewDue, aside, hasAside,
             <AlertDialogFooter>
               <AlertDialogCancel>Keep editing</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-teal-600 text-white hover:bg-teal-700"
+                className="bg-navy-800 text-white hover:bg-navy-900"
                 onClick={(e) => { e.preventDefault(); handleComplete(); }}
                 disabled={completeMutation.isPending}
               >

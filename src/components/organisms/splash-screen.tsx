@@ -45,8 +45,8 @@ export function SplashScreen({ leaving }: { leaving?: boolean }) {
         leaving && "pointer-events-none opacity-0"
       )}
     >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-navy-800/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-navy-800/10 blur-3xl" />
 
       <div className="relative flex animate-in flex-col items-center gap-5 duration-500 fade-in zoom-in-95">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">

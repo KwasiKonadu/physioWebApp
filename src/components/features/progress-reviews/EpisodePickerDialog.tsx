@@ -79,7 +79,7 @@ export function EpisodePickerDialog({ open, onOpenChange, endpoint, title, descr
                 key={ep.id}
                 type="button"
                 onClick={() => { onOpenChange(false); onPicked(ep); }}
-                className="w-full rounded-lg border p-3 text-left transition-colors hover:border-teal-300 hover:bg-teal-50/50"
+                className="w-full rounded-lg border p-3 text-left transition-colors hover:border-navy-600 hover:bg-navy-50/50"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">{fullName(ep.patient)}</p>

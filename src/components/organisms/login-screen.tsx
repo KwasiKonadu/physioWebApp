@@ -54,8 +54,8 @@ export function LoginScreen({ slideIn = false }: { slideIn?: boolean }) {
     <div className="flex min-h-screen flex-col overflow-hidden bg-navy-900 lg:flex-row">
       {/* Brand panel */}
       <div className="relative flex flex-1 flex-col p-8 lg:p-12">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-navy-800/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-navy-800/10 blur-3xl" />
         <div className={cn("flex items-center gap-3 transition-all duration-800 motion-reduce:transition-none", exiting ? "ease-in" : "ease-out", exiting && "translate-x-[-120vw]")}>
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
             <img src="/appicon.svg" alt="" className="h-7 w-7" />

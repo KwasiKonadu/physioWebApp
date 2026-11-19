@@ -23,7 +23,7 @@ export function PageBreadcrumb({ items }: { items: Crumb[] }) {
                 {last || !c.onClick ? (
                   <BreadcrumbPage className="font-semibold text-slate-800">{c.label}</BreadcrumbPage>
                 ) : (
-                  <button type="button" onClick={c.onClick} className="font-medium text-slate-500 transition-colors hover:text-teal-700">
+                  <button type="button" onClick={c.onClick} className="font-medium text-slate-500 transition-colors hover:text-navy-800">
                     {c.label}
                   </button>
                 )}

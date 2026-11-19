@@ -75,7 +75,7 @@ export function DataTable<T>({
   const colClass = (c: DataColumn<T>) => cn(c.hideBelow && HIDE[c.hideBelow], ALIGN[c.align ?? "left"], c.className);
 
   return (
-    <div className={cn(!bare && "overflow-hidden rounded-xl border bg-card shadow-sm", bare && bordered && "overflow-hidden rounded-lg border", className)}>
+    <div className={cn(!bare && "overflow-hidden rounded-lg border bg-card", bare && bordered && "overflow-hidden rounded-lg border", className)}>
       {/* the outer div is the scroll container so the header can stick (the base Table has its own x-scroller) */}
       <div className={cn("overflow-auto custom-scrollbar **:data-[slot=table-container]:overflow-visible", compact && "[&_td]:text-xs [&_th]:text-xs [&_th]:whitespace-nowrap", maxHeight)}>
         <Table className={minWidth}>

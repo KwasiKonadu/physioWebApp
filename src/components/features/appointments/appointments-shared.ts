@@ -54,7 +54,7 @@ export interface TherapistOption {
 // ---- Calendar block tones per status (spec mapping) ----
 export const STATUS_BLOCK_TONE: Record<string, { block: string; dot: string; chip: string }> = {
   SCHEDULED: { block: "bg-sky-50 border-sky-300 hover:bg-sky-100", dot: "bg-sky-500", chip: "text-sky-800" },
-  CONFIRMED: { block: "bg-teal-50 border-teal-400 hover:bg-teal-100", dot: "bg-teal-600", chip: "text-teal-800" },
+  CONFIRMED: { block: "bg-navy-50 border-navy-800 hover:bg-navy-50", dot: "bg-navy-800", chip: "text-navy-800" },
   COMPLETED: { block: "bg-emerald-50 border-emerald-300 hover:bg-emerald-100", dot: "bg-emerald-500", chip: "text-emerald-800" },
   CANCELLED: { block: "bg-slate-100 border-slate-300 hover:bg-slate-200/60", dot: "bg-slate-400", chip: "text-slate-500" },
   NO_SHOW: { block: "bg-rose-50 border-rose-300 hover:bg-rose-100", dot: "bg-rose-500", chip: "text-rose-800" },

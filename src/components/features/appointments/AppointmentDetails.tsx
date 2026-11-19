@@ -144,9 +144,9 @@ function AppointmentDetailsBody({ appt, onOpenChange, action, startSession }: {
 
         {/* linked therapy session */}
         {linkedSession ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50/50 p-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-navy-200 bg-navy-50/50 p-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Linked therapy session</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-navy-800">Linked therapy session</p>
               <p className="mt-0.5 flex items-center gap-2 text-sm">
                 <StatusBadge status={linkedSession.status} />
                 <span className="text-muted-foreground">{linkedSession.date ? formatDate(linkedSession.date) : "—"}</span>
@@ -154,7 +154,7 @@ function AppointmentDetailsBody({ appt, onOpenChange, action, startSession }: {
             </div>
             <Button
               size="sm"
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-navy-800 hover:bg-navy-900"
               onClick={() => { onOpenChange(false); navigate("therapy-sessions", { sessionId: linkedSession.id }); }}
             >
               Open session

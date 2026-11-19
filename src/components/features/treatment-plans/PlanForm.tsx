@@ -350,7 +350,7 @@ export function PlanForm({
 
       {/* patient strip */}
       {(mode !== "create" || episodeIdWatch) ? (
-        <div className="flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm md:flex-row md:items-center md:justify-between md:px-4">
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 md:flex-row md:items-center md:justify-between md:px-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-sm font-semibold text-navy-800">
               {initials(stripName)}
@@ -359,7 +359,7 @@ export function PlanForm({
               <div className="flex flex-wrap items-center gap-2">
                 <p className="min-w-0 truncate text-sm font-semibold">
                   {stripPatientId && stripName ? (
-                    <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: stripPatientId })}>{stripName}</button>
+                    <button type="button" title="Open patient profile" className="truncate text-left transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline" onClick={() => navigate("patients", { patientId: stripPatientId })}>{stripName}</button>
                   ) : (stripName || "—")}
                 </p>
                 {stripCode ? <span className="rounded-md bg-navy-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-navy-800">{stripCode}</span> : null}
@@ -378,7 +378,7 @@ export function PlanForm({
       <div className="grid w-full gap-5 lg:grid-cols-[290px_minmax(0,1fr)] *:min-w-0">
         {/* step list + live summary */}
         <div className="hidden space-y-3 self-start lg:sticky lg:top-28 lg:block">
-          <nav className="rounded-xl border bg-white p-2 shadow-sm">
+          <nav className="rounded-lg border bg-white p-2">
             {steps.map((st, i) => {
               const done = stepDone(st.key);
               const reachable = i <= maxIdx;
@@ -389,11 +389,11 @@ export function PlanForm({
                   disabled={!reachable}
                   onClick={() => setStepIdx(i)}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                    i === stepIdx ? "bg-teal-50 font-semibold text-teal-800" : reachable ? "text-muted-foreground hover:bg-muted/60" : "text-muted-foreground/50"
+                    i === stepIdx ? "bg-navy-50 font-semibold text-navy-800" : reachable ? "text-muted-foreground hover:bg-muted/60" : "text-muted-foreground/50"
                   }`}
                 >
                   <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
-                    done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === stepIdx ? "border-teal-400 bg-teal-100 text-teal-700" : "border-border"
+                    done ? "border-emerald-300 bg-emerald-100 text-emerald-700" : i === stepIdx ? "border-navy-800 bg-navy-100 text-navy-800" : "border-border"
                   }`}>
                     <AtomIcon name={done ? "Check" : st.icon} className="h-3.5 w-3.5" />
                   </span>
@@ -406,7 +406,7 @@ export function PlanForm({
             })}
           </nav>
 
-          <div className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+          <div className="space-y-3 rounded-lg border bg-card p-4">
             <p className="label-caps-sm">Plan summary</p>
             <div className="grid grid-cols-3 gap-2 text-center text-xs *:min-w-0">
               <div className="rounded-lg border px-2 py-1.5"><p className="font-semibold">{(objectivesWatch || []).filter((o) => o?.description?.trim()).length}</p><p className="text-[10px] text-muted-foreground">Objectives</p></div>
@@ -435,7 +435,7 @@ export function PlanForm({
               disabled={i > maxIdx}
               onClick={() => setStepIdx(i)}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                isCurrent ? "border-navy-800 bg-navy-800 text-white" : isPast ? "border-teal-200 bg-teal-50 text-teal-800" : "border-slate-200 bg-white text-muted-foreground"
+                isCurrent ? "border-navy-800 bg-navy-800 text-white" : isPast ? "border-navy-200 bg-navy-50 text-navy-800" : "border-slate-200 bg-white text-muted-foreground"
               }`}
             >
               {isPast ? <AtomIcon name="Check" className="h-3 w-3" /> : <span>{i + 1}</span>}
@@ -464,7 +464,7 @@ export function PlanForm({
       {step.key === "review" ? <ReviewStep form={form} mode={mode} objectives={objectivesWatch} milestones={milestonesWatch} interventions={interventionsWatch} perWeek={perWeekW} total={totalW} duration={durationW} start={startW} end={endW} episodeLabel={selectedEpisode?.title || episodeIdWatch || "—"} /> : null}
 
       {/* ---------- sticky action bar ---------- */}
-      <div className="sticky bottom-0 z-10 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
+      <div className="sticky bottom-0 z-10 rounded-lg border bg-background/95 p-3 backdrop-blur">
         <div className="toolbar-row">
           <div className="flex items-center gap-3">
             <Button type="button" variant="ghost" size="sm" onClick={requestLeave} disabled={submitMutation.isPending}>
@@ -486,7 +486,7 @@ export function PlanForm({
                   {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Save" className="mr-1.5 h-4 w-4" />}
                   {mode === "revise" ? "Save new version (draft)" : mode === "edit" ? "Save changes" : "Save draft"}
                 </Button>
-                <Button type="button" size="sm" className="bg-teal-600 text-white hover:bg-teal-700" disabled={submitMutation.isPending} onClick={saveActivate}>
+                <Button type="button" size="sm" className="bg-navy-800 text-white hover:bg-navy-900" disabled={submitMutation.isPending} onClick={saveActivate}>
                   {submitMutation.isPending ? <AtomIcon name="Loader2" className="mr-1.5 h-4 w-4 animate-spin" /> : <AtomIcon name="Zap" className="mr-1.5 h-4 w-4" />}
                   {mode === "revise" ? "Save & activate new version" : "Save & activate"}
                 </Button>

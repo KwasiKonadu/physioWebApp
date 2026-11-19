@@ -91,7 +91,7 @@ export default function SessionDocumentView({ sessionId, onBack }: { sessionId: 
                   <button
                     type="button"
                     title="Open patient profile"
-                    className="truncate text-left transition-colors hover:text-teal-700 hover:underline focus-visible:outline-none focus-visible:underline"
+                    className="truncate text-left transition-colors hover:text-navy-800 hover:underline focus-visible:outline-none focus-visible:underline"
                     onClick={() => navigate("patients", { patientId: session.patientId })}
                   >
                     {patientName}

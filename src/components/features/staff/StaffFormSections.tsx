@@ -87,7 +87,7 @@ export function StaffClinicalSection({ register, setValue, watch, qualArray, ava
         <Separator />
         <div>
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy-800">
-            <AtomIcon name="Stethoscope" className="h-4 w-4 text-teal-600" />
+            <AtomIcon name="Stethoscope" className="h-4 w-4 text-navy-800" />
             Clinical profile
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">
@@ -166,7 +166,7 @@ export function StaffRemunerationSection({ register, errors, setValue, isTherapi
     <>
     <div>
       <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy-800">
-        <AtomIcon name="Wallet" className="h-4 w-4 text-teal-600" />
+        <AtomIcon name="Wallet" className="h-4 w-4 text-navy-800" />
         Remuneration
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">

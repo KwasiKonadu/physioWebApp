@@ -1,10 +1,10 @@
 "use client";
 // Dashboard chart building blocks (recharts). Palette validated for colour-blind separation:
-// blue #2f7fd0 · teal #0e9f8a · amber #e08a1e — always paired with a legend / direct values.
+// blue #306fdb · amber #e08a1e — always paired with a legend / direct values.
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { labelize } from "@/lib/constants";
 
-export const VIZ = { blue: "#2f7fd0", teal: "#0e9f8a", amber: "#e08a1e", grid: "#e8ecf1", axis: "#64748b" };
+export const VIZ = { blue: "#7fa9ee", teal: "#306fdb", amber: "#e08a1e", grid: "#e8ecf1", axis: "#64748b" };
 
 export interface TrendPoint {
   day: string; date: string; appointments: number; sessions: number; revenue: number; newPatients: number;

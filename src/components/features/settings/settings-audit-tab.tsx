@@ -128,7 +128,7 @@ export default function SettingsAuditTab() {
             </div>
             <div>
               <p className="label-caps mb-1.5">New values</p>
-              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-teal-800">
+              <pre className="max-h-56 overflow-auto custom-scrollbar rounded-md border bg-white p-3 font-mono text-xs leading-relaxed text-navy-800">
                 {pretty(log.newValues)}
               </pre>
             </div>

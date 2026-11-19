@@ -187,7 +187,7 @@ export default function PatientRegistrationDialog({ open, onOpenChange, onRegist
       size="xl"
       title={(
         <>
-          <AtomIcon name="UserPlus" className="h-4 w-4 text-teal-600" />
+          <AtomIcon name="UserPlus" className="h-4 w-4 text-navy-800" />
           Register new patient
         </>
       )}

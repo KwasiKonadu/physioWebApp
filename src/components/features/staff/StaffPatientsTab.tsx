@@ -15,7 +15,7 @@ import { PATIENT_STATUSES, labelize } from "@/lib/constants";
 import { formatDate, fullName, initials } from "@/lib/format";
 
 const PAYMENT_TONES: Record<string, string> = {
-  PAYG: "bg-teal-50 text-teal-700 border-teal-200",
+  PAYG: "bg-navy-50 text-navy-800 border-navy-200",
   PACKAGE: "bg-indigo-50 text-indigo-700 border-indigo-200",
   INSURANCE: "bg-sky-50 text-sky-700 border-sky-200",
 };

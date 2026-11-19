@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
-import { useAuthStore, useUIStore, viewFromPath } from "@/stores/app-store";
+import { useAuthStore, useUIStore, viewFromPath, hasPermission } from "@/stores/app-store";
 import { initials, relativeTime } from "@/lib/format";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS, PERMS } from "@/lib/constants";
 import { useTopBarSlots } from "@/components/templates/topbar-slots";
 
 interface NotificationItem {
@@ -56,13 +56,23 @@ export function TopBar() {
     toast.success("Signed out");
   };
 
+  // Profile → the logged-in person's own staff profile (falls back to account settings when the login has no staff profile)
+  const openProfile = async () => {
+    try {
+      const { staffId } = await apiFetch<{ staffId: string | null }>("/api/staff/me");
+      if (staffId) { router.push(`/staff/${staffId}`); return; }
+    } catch { /* fall through */ }
+    if (hasPermission(user, PERMS.settingsManage)) navigate("settings", { focusTab: "account" });
+    else toast.error("Your login isn't linked to a staff profile");
+  };
+
   const unread = (notifications.data?.items || []).filter((n) => !n.read).length;
 
   return (
     <header className="sticky top-0 z-20 flex h-24 flex-col border-b border-slate-200 bg-white">
       {/* Row 1: page title + actions + notifications + profile */}
       <div className="flex h-14 shrink-0 items-center gap-3 px-4 md:px-6">
-        <div className="min-w-0 flex-1" />
+        <div ref={slots?.setTitle} className="min-w-0 flex-1 empty:block" />
 
         <div ref={slots?.setActions} className="shrink-0 empty:hidden" />
         <div className="flex shrink-0 items-center gap-1.5">
@@ -72,7 +82,7 @@ export function TopBar() {
               <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
                 <AtomIcon name="Bell" className="h-5 w-5" />
                 {unread > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy-800 px-1 text-[10px] font-bold text-white">
                     {unread > 9 ? "9+" : unread}
                   </span>
                 )}
@@ -92,7 +102,7 @@ export function TopBar() {
                   <p className="p-6 text-center text-sm text-muted-foreground">No notifications</p>
                 ) : (
                   (notifications.data?.items || []).map((n) => (
-                    <div key={n.id} className={cn("border-b px-4 py-3 last:border-0", !n.read && "bg-teal-50/40")}>
+                    <div key={n.id} className={cn("border-b px-4 py-3 last:border-0", !n.read && "bg-navy-50/40")}>
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-medium">{n.title}</p>
                         <span className="shrink-0 text-[11px] text-muted-foreground">{relativeTime(n.createdAt)}</span>
@@ -125,8 +135,8 @@ export function TopBar() {
                 <p className="text-xs font-normal text-muted-foreground">{user?.email}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("settings", { focusTab: "account" })}>
-                <AtomIcon name="UserCog" className="mr-2 h-4 w-4" /> Account settings
+              <DropdownMenuItem onClick={() => void openProfile()}>
+                <AtomIcon name="UserCog" className="mr-2 h-4 w-4" /> Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-rose-600 focus:text-rose-600">

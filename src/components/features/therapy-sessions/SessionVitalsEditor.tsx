@@ -43,7 +43,7 @@ export function SessionVitalsEditor({ form, phase }: { form: UseFormReturn<FormV
             <div className="mb-2 flex items-center justify-between">
               <Label>Pain level (0–10)</Label>
               <span className="flex items-center gap-2">
-                <span className={cn("text-sm font-medium", field.value === null ? "text-muted-foreground" : "text-teal-700")}>
+                <span className={cn("text-sm font-medium", field.value === null ? "text-muted-foreground" : "text-navy-800")}>
                   {field.value === null ? "Not recorded" : `${field.value}/10`}
                 </span>
                 {field.value !== null ? (

@@ -42,7 +42,7 @@ function VersionPeek({ planId, onOpen }: { planId: string; onOpen: (id: string) 
           type="button"
           onClick={() => onOpen(v.id)}
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-            v.id === planId ? "border-teal-300 bg-teal-50 text-teal-800" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            v.id === planId ? "border-navy-300 bg-navy-50 text-navy-800" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
           }`}
         >
           <span className="font-semibold">v{v.version}</span>
@@ -88,7 +88,7 @@ function PlanRowMobile({ item, onOpen, onExpand, expanded, isOpen }: {
   isOpen: boolean;
 }) {
   return (
-    <div className="rounded-xl border bg-white p-3 shadow-sm">
+    <div className="rounded-lg border bg-white p-3">
       <button type="button" className="w-full text-left" onClick={onOpen}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -109,7 +109,7 @@ function PlanRowMobile({ item, onOpen, onExpand, expanded, isOpen }: {
         </div>
       </button>
       <div className="mt-2 flex items-center gap-2 border-t pt-2">
-        <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-teal-700" onClick={onExpand}>
+        <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-navy-800" onClick={onExpand}>
           <AtomIcon name={isOpen ? "ChevronUp" : "ChevronDown"} className="h-3.5 w-3.5" />
           Version history
         </button>
@@ -238,7 +238,7 @@ export default function TreatmentPlansPage() {
             </Badge>
           ) : null}
           {canManage ? (
-            <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => openNew()}>
+            <Button className="bg-navy-800 text-white hover:bg-navy-900" onClick={() => openNew()}>
           <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
         </Button>
           ) : null}
@@ -294,7 +294,7 @@ export default function TreatmentPlansPage() {
               id: "objectives", header: "Objectives",
               cell: (item) => (
                 <span className="text-sm">
-                  <span className="font-semibold text-teal-700">{item.objectivesAchieved}</span>
+                  <span className="font-semibold text-navy-800">{item.objectivesAchieved}</span>
                   <span className="text-muted-foreground">/{item.objectivesTotal}</span>
                 </span>
               ),
@@ -324,7 +324,7 @@ export default function TreatmentPlansPage() {
               title="No treatment plans found"
               description="Adjust filters or create a new plan."
               action={canManage ? (
-                <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => openNew()}>
+                <Button className="bg-navy-800 text-white hover:bg-navy-900" onClick={() => openNew()}>
                   <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> New plan
                 </Button>
               ) : undefined}

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 // Soft avatar colours; each person always gets the same one (picked from a hash of their code).
 const AVATAR_TONES = [
-  "bg-teal-100 text-teal-700",
+  "bg-navy-100 text-navy-800",
   "bg-sky-100 text-sky-700",
   "bg-indigo-100 text-indigo-700",
   "bg-violet-100 text-violet-700",
@@ -49,7 +49,7 @@ export function ProfileCard({ initials, name, code, status, subtitle, details, f
       onClick={onOpen}
       className={cn(
         "group flex flex-col gap-4 rounded-2xl border bg-card p-5 text-left shadow-xs transition-all",
-        "hover:-translate-y-0.5 hover:border-teal-500/50 hover:shadow-md focus-visible:border-teal-500 focus-visible:outline-none",
+        "hover:-translate-y-0.5 hover:border-navy-600/50 hover:shadow-md focus-visible:border-navy-600 focus-visible:outline-none",
         className,
       )}
     >
@@ -81,7 +81,7 @@ export function ProfileCard({ initials, name, code, status, subtitle, details, f
 
       <div className="mt-auto flex items-center justify-between border-t pt-3">
         {footer}
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-colors group-hover:bg-teal-600 group-hover:text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-colors group-hover:bg-navy-800 group-hover:text-white">
           <AtomIcon name="ArrowRight" className="h-3.5 w-3.5" />
         </span>
       </div>

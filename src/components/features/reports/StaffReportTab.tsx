@@ -41,7 +41,7 @@ export function StaffTab({ report, prev, prevLabel }: { report: StaffReport; pre
             { id: "name", header: "Therapist", cell: (r) => <span className="text-sm font-medium">{r.name}</span> },
             { id: "job", header: "Job title", hideBelow: "md", cell: (r) => <span className="text-sm text-muted-foreground">{r.jobTitle}</span> },
             { id: "sessions", header: "Completed sessions", align: "right", cell: (r) => <span className="text-sm font-semibold">{r.completedSessions}</span> },
-            { id: "patients", header: "Unique patients", align: "right", cell: (r) => <span className="text-sm font-semibold text-teal-700">{r.uniquePatients}</span> },
+            { id: "patients", header: "Unique patients", align: "right", cell: (r) => <span className="text-sm font-semibold text-navy-800">{r.uniquePatients}</span> },
             { id: "episodes", header: "Active episodes", align: "right", hideBelow: "lg", cell: (r) => <span className="text-sm">{r.activeEpisodes}</span> },
             {
               id: "rem", header: "Remuneration", hideBelow: "md",

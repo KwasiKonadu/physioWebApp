@@ -53,58 +53,56 @@
   --color-navy-700: var(--navy-700);
   --color-navy-600: var(--navy-600);
   --color-navy-50: var(--navy-50);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
-  --color-teal-50: var(--teal-50);
+  --color-navy-100: var(--navy-100);
+  --color-navy-200: var(--navy-200);
+  --color-navy-300: var(--navy-300);
   --color-workspace: var(--workspace);
 }
 
 :root {
   --radius: 0.75rem;
   /* GMRS brand */
-  --navy-900: #081c33;
-  --navy-800: #0b2a4a;
-  --navy-700: #123c66;
-  --navy-600: #1a4d80;
-  --navy-50: #eef3f9;
-  --teal-500: #0e9f8a;
-  --teal-600: #0b7f6e;
-  --teal-700: #096657;
-  --teal-50: #e6f5f2;
+  --navy-900: #1e4a9c;
+  --navy-800: #306fdb;
+  --navy-700: #2860c4;
+  --navy-600: #4a85ea;
+  --navy-50: #eef4fd;
+  --navy-100: #dbe7fa;
+  --navy-200: #bcd3f6;
+  --navy-300: #92b5f0;
   --workspace: #faf9f7;
-  /* shadcn tokens — navy primary, teal accents, warm off-white workspace */
+  /* shadcn tokens — blue primary, warm off-white workspace */
   --background: #faf9f7;
   --foreground: oklch(0.24 0.03 250);
   --card: #ffffff;
   --card-foreground: oklch(0.24 0.03 250);
   --popover: #ffffff;
   --popover-foreground: oklch(0.24 0.03 250);
-  --primary: #0b2a4a;
+  --primary: #306fdb;
   --primary-foreground: #ffffff;
-  --secondary: #e8eef4;
-  --secondary-foreground: #0b2a4a;
+  --secondary: #e6eefc;
+  --secondary-foreground: #306fdb;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #e6f5f2;
-  --accent-foreground: #096657;
+  --accent: #eef4fd;
+  --accent-foreground: #1e4a9c;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #0e9f8a;
-  --chart-1: #0e9f8a;
-  --chart-2: #123c66;
+  --ring: #306fdb;
+  --chart-1: #306fdb;
+  --chart-2: #7fa9ee;
   --chart-3: #d97706;
   --chart-4: #0284c7;
   --chart-5: #e11d48;
   --sidebar: #ffffff;
   --sidebar-foreground: oklch(0.24 0.03 250);
-  --sidebar-primary: #0b2a4a;
+  --sidebar-primary: #306fdb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef3f9;
-  --sidebar-accent-foreground: #0b2a4a;
+  --sidebar-accent: #eef4fd;
+  --sidebar-accent-foreground: #306fdb;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #0e9f8a;
+  --sidebar-ring: #306fdb;
 }
 
 .dark {
@@ -213,7 +211,7 @@
   }
   /* bordered white block */
   .panel {
-    @apply rounded-xl border bg-card p-4 shadow-sm md:p-5;
+    @apply rounded-lg border bg-card p-4 md:p-5;
   }
   .empty-note {
     @apply py-4 text-center text-sm text-muted-foreground;

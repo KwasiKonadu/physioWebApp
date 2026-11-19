@@ -120,7 +120,7 @@ export default function InsuranceTab() {
                   tabIndex={0}
                   onClick={() => selectProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectProvider(p.id); } }}
-                  className="cursor-pointer rounded-lg border p-3.5 transition-colors hover:border-teal-300 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="cursor-pointer rounded-lg border p-3.5 transition-colors hover:border-navy-600 hover:bg-navy-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -159,7 +159,7 @@ export default function InsuranceTab() {
         <>
           <PageBreadcrumb items={[{ label: "Insurance providers", onClick: () => selectProvider(null) }, { label: selected.name }]} />
 
-          <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="rounded-lg border bg-card p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

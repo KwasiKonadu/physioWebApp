@@ -43,7 +43,7 @@ export function DashboardRightColumn({ data, isLoading, quickActions }: { data: 
         <div className="grid grid-cols-2 gap-3">
           {quickActions.map((q) => (
             <button key={q.label} type="button" onClick={q.go}
-              className="group relative flex min-h-23 flex-col items-start gap-2 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+              className="group relative flex min-h-23 flex-col items-start gap-2 rounded-lg border bg-white p-3 text-left transition-all hover:-translate-y-0.5 hover:border-navy-300">
               <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors", q.tone)}>
                 <AtomIcon name={q.icon} className="h-4.5 w-4.5" />
               </span>

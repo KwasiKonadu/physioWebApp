@@ -101,7 +101,7 @@ export function LedgerDialog({
                 </div>
                 <div className="rounded-lg border p-2.5">
                   <p className="text-xs text-muted-foreground">Remaining</p>
-                  <p className="text-lg font-semibold text-teal-700">{pp.remaining}</p>
+                  <p className="text-lg font-semibold text-navy-800">{pp.remaining}</p>
                 </div>
                 <div className="rounded-lg border p-2.5">
                   <p className="text-xs text-muted-foreground">Paid</p>
@@ -133,9 +133,9 @@ export function LedgerDialog({
                   <ol className="relative space-y-3 border-l pl-4">
                     {pp.transactions.map((tx) => (
                       <li key={tx.id} className="relative">
-                        <span className="absolute -left-5.25 top-1.5 h-2.5 w-2.5 rounded-full bg-teal-500" />
+                        <span className="absolute -left-5.25 top-1.5 h-2.5 w-2.5 rounded-full bg-navy-800" />
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className={tx.type === "PURCHASE" ? "bg-teal-50 text-teal-700" : tx.type === "DEDUCTION" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}>
+                          <Badge variant="outline" className={tx.type === "PURCHASE" ? "bg-navy-50 text-navy-800" : tx.type === "DEDUCTION" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}>
                             {labelize(tx.type)}
                           </Badge>
                           <span className={`text-sm font-semibold tabular-nums ${tx.sessions > 0 ? "text-emerald-700" : tx.sessions < 0 ? "text-rose-600" : ""}`}>

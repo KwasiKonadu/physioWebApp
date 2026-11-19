@@ -6,6 +6,7 @@ import { useAuthStore, useUIStore, hasPermission } from "@/stores/app-store";
 import { PERMS } from "@/lib/constants";
 import { ymd } from "@/lib/format";
 import { PageHeader } from "@/components/molecules/page-header";
+import { TopBarTitle } from "@/components/templates/topbar-slots";
 import { SectionCard } from "@/components/molecules/section-card";
 import { StatCard } from "@/components/molecules/stat-card";
 import { EmptyState } from "@/components/molecules/empty-state";
@@ -94,6 +95,7 @@ export default function AppointmentsPage() {
 
   return (
     <div>
+      <TopBarTitle><h1 className="truncate text-lg font-semibold text-navy-800">Appointments</h1></TopBarTitle>
       <PageHeader
         title="Appointments"
         description="Booking calendar and schedule management"

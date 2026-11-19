@@ -65,7 +65,7 @@ export default function EpisodeCard({ episode, patientId, onChanged }: Props) {
   const therapistName = episode.therapist ? fullName({ firstName: episode.therapist.firstName, lastName: episode.therapist.lastName }) : null;
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-lg border bg-card p-4 transition-shadow hover:border-navy-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

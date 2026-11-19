@@ -37,7 +37,7 @@ const methodBadge: Record<string, string> = {
   MOBILE_MONEY: "bg-sky-50 text-sky-700 border-sky-200",
   CARD: "bg-violet-50 text-violet-700 border-violet-200",
   BANK_TRANSFER: "bg-amber-50 text-amber-700 border-amber-200",
-  INSURANCE: "bg-teal-50 text-teal-700 border-teal-200",
+  INSURANCE: "bg-navy-50 text-navy-800 border-navy-200",
 };
 
 function Overview({ onOpenInvoices }: { onOpenInvoices: () => void }) {
@@ -108,7 +108,7 @@ function Overview({ onOpenInvoices }: { onOpenInvoices: () => void }) {
         <SectionCard title="Revenue by arrangement" icon="BarChart3" description="Payments received this month" loading={invoicesQ.isLoading}>
           <div className="space-y-4 pt-1">
             <MiniBar label="Pay as you go" cents={byArrangement.PAYG || 0} max={maxRevenue} tone="bg-slate-500" />
-            <MiniBar label="Packages" cents={byArrangement.PACKAGE || 0} max={maxRevenue} tone="bg-teal-500" />
+            <MiniBar label="Packages" cents={byArrangement.PACKAGE || 0} max={maxRevenue} tone="bg-navy-800" />
             <MiniBar label="Insurance" cents={byArrangement.INSURANCE || 0} max={maxRevenue} tone="bg-sky-500" />
           </div>
         </SectionCard>

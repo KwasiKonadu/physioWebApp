@@ -186,7 +186,7 @@ export default function PatientProfile({ patientId, onBack }: Props) {
     <div className="space-y-5">
       <Tabs defaultValue="overview" className="gap-5">
       {/* ---------- summary + tabs: one card ---------- */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="rounded-lg border bg-card">
         <div className="p-4 md:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">

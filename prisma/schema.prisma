@@ -946,8 +946,33 @@ model StaffProfile {
   episodeEpisodes TreatmentEpisode[] @relation("EpisodeTherapist")
   appointments  Appointment[] @relation("AppointmentTherapist")
   sessions      TherapySession[] @relation("SessionTherapist")
+  leaveRequests LeaveRequest[]
 
   @@index([clinicId, staffRole])
+}
+
+model LeaveRequest {
+  id         String   @id @default(cuid())
+  clinicId   String
+  staffId    String
+  // TYPE: ANNUAL | SICK | MATERNITY | PATERNITY | COMPASSIONATE | STUDY | UNPAID
+  type       String
+  startDate  DateTime
+  endDate    DateTime
+  days       Int
+  reason     String?
+  // STATUS: PENDING | APPROVED | REJECTED | CANCELLED
+  status     String   @default("PENDING")
+  decidedById String?
+  decidedAt  DateTime?
+  decisionNote String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  staff      StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, status])
+  @@index([staffId, startDate])
 }
 
 // ===================== GENERAL =====================

@@ -47,7 +47,7 @@ export function DashboardLeftColumn({ windowLabel, windowRevenue, avgRevenue, to
           ) : (
             <div className="grid gap-3 2xl:grid-cols-2">
               {(data?.activeEpisodesList || []).slice(0, 6).map((e) => (
-                <button key={e.id} type="button" className="rounded-lg border p-2.5 text-left transition-colors hover:border-teal-500 hover:bg-teal-50/40" onClick={() => navigate("patients", { patientId: e.patientId })}>
+                <button key={e.id} type="button" className="rounded-lg border p-2.5 text-left transition-colors hover:border-navy-600 hover:bg-navy-50/40" onClick={() => navigate("patients", { patientId: e.patientId })}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-semibold">{e.patientName}</p>
                     <StatusBadge status={e.status} />

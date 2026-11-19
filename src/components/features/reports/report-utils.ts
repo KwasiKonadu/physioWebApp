@@ -16,8 +16,8 @@ export function previousRange(range: { from: string; to: string }): { from: stri
   return { from: prevFrom.toISOString(), to: prevTo.toISOString() };
 }
 
-export const TEAL = "#0e9f8a";
-export const NAVY = "#123c66";
+export const TEAL = "#7fa9ee";
+export const NAVY = "#306fdb";
 
 export function rangeFor(preset: RangePreset, customFrom?: Date, customTo?: Date): { from: string; to: string; label: string } {
   const now = new Date();

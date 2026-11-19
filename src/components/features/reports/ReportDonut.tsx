@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
-export const DONUT_COLORS = ["#123c66", "#0e9f8a", "#f59e0b", "#0ea5e9", "#ef4444", "#8b5cf6", "#14b8a6", "#64748b", "#a3e635"];
+export const DONUT_COLORS = ["#306fdb", "#7fa9ee", "#f59e0b", "#0ea5e9", "#ef4444", "#8b5cf6", "#1e4a9c", "#64748b", "#a3e635"];
 
 export interface DonutDatum { name: string; value: number }
 

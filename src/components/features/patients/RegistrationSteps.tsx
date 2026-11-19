@@ -260,7 +260,7 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
                 htmlFor={`payment-${option}`}
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/40",
-                  payment === option && "border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/30"
+                  payment === option && "border-navy-800 bg-navy-50/60 ring-1 ring-navy-800/30"
                 )}
               >
                 <RadioGroupItem id={`payment-${option}`} value={option} className="mt-0.5" />
@@ -335,7 +335,7 @@ export function ConsentStep({ register, setValue, watch, err, isMinor, payment, 
 
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-sm font-medium">
-            <AtomIcon name="FileSignature" className="h-4 w-4 text-teal-600" />
+            <AtomIcon name="FileSignature" className="h-4 w-4 text-navy-800" />
             Consent
           </p>
           <div className="space-y-2.5">
@@ -411,7 +411,7 @@ function PackagePicker({ watch, setValue }: { watch: Watch; setValue: UseFormSet
               <Label
                 key={pkg.id}
                 htmlFor={`pkg-${pkg.id}`}
-                className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/40", on && "border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/30")}
+                className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/40", on && "border-navy-800 bg-navy-50/60 ring-1 ring-navy-800/30")}
               >
                 <Checkbox id={`pkg-${pkg.id}`} checked={on} onCheckedChange={() => toggle(pkg.id)} className="mt-0.5" />
                 <span className="space-y-0.5">

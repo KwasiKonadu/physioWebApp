@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const quickActions = [
     { label: "Patients", hint: "Register & find records", icon: "UserPlus", tone: "bg-navy-50 text-navy-800 group-hover:bg-navy-800 group-hover:text-white", perm: PERMS.patientsView, go: () => navigate("patients") },
     { label: "Appointments", hint: "Book & manage the calendar", icon: "CalendarPlus", tone: "bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white", perm: PERMS.appointmentsView, go: () => navigate("appointments") },
-    { label: "Assessments", hint: "Clinical assessments", icon: "ClipboardList", tone: "bg-teal-50 text-teal-700 group-hover:bg-teal-600 group-hover:text-white", perm: PERMS.clinicalView, go: () => navigate("assessments") },
+    { label: "Assessments", hint: "Clinical assessments", icon: "ClipboardList", tone: "bg-navy-50 text-navy-800 group-hover:bg-navy-800 group-hover:text-white", perm: PERMS.clinicalView, go: () => navigate("assessments") },
     { label: "Therapy sessions", hint: "Document treatments", icon: "Activity", tone: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white", perm: PERMS.clinicalView, go: () => navigate("therapy-sessions") },
     { label: "Invoices", hint: "Bill & record payments", icon: "Receipt", tone: "bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white", perm: PERMS.billingView, go: () => navigate("billing", { focusTab: "invoices" }) },
     { label: "Reports", hint: "Operational insights", icon: "BarChart3", tone: "bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white", perm: PERMS.reportsView, go: () => navigate("reports") },

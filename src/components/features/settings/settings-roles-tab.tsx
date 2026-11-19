@@ -55,7 +55,7 @@ const PERM_GROUPS: { label: string; perms: { key: string; label: string }[] }[] 
   },
   {
     label: "Staff",
-    perms: [{ key: "staff.view", label: "View staff" }, { key: "staff.manage", label: "Manage staff" }],
+    perms: [{ key: "staff.view", label: "View staff" }, { key: "staff.manage", label: "Manage staff" }, { key: "leave.apply", label: "Apply for own leave" }],
   },
   { label: "Reports", perms: [{ key: "reports.view", label: "View reports" }] },
   { label: "Settings", perms: [{ key: "settings.manage", label: "Manage settings" }] },
@@ -138,7 +138,7 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
                   <button
                     type="button"
                     onClick={() => pick(r)}
-                    className="group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:border-teal-500/60 hover:bg-teal-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+                    className="group flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:border-navy-600/60 hover:bg-navy-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-800">
                       <AtomIcon name="ShieldCheck" className="h-4 w-4" />
@@ -176,7 +176,7 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
         <SidePanelBody className="space-y-5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{role?.userCount ?? 0} users</Badge>
-            <Badge variant="outline" className="bg-teal-50 text-teal-700">{draft.length} permissions on</Badge>
+            <Badge variant="outline" className="bg-navy-50 text-navy-800">{draft.length} permissions on</Badge>
             {dirty ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Unsaved changes</Badge> : null}
           </div>
           {PERM_GROUPS.map((g) => (
@@ -192,9 +192,9 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
                       aria-pressed={on}
                       onClick={() => toggle(p.key)}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400",
+                        "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600",
                         on
-                          ? "border-teal-600 bg-teal-600 text-white shadow-sm hover:bg-teal-700"
+                          ? "border-navy-800 bg-navy-800 text-white shadow-sm hover:bg-navy-900"
                           : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700",
                       )}
                     >

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, labelize } from "@/lib/constants";
+import { TopBarTitle } from "@/components/templates/topbar-slots";
 import { PageHeader } from "@/components/molecules/page-header";
 import { StatCard } from "@/components/molecules/stat-card";
 import { DataTable } from "@/components/molecules/data-table";
@@ -26,6 +27,9 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuthStore, hasPermission } from "@/stores/app-store";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StaffLeaveTab } from "./StaffLeaveTab";
+import { StaffSalariesTab } from "./StaffSalariesTab";
 import StaffFormDialog, { type StaffFormTarget } from "./staff-form-dialog";
 
 export interface StaffListItem {
@@ -50,7 +54,7 @@ export interface StaffListItem {
   branchId: string | null;
 }
 
-interface StaffListResponse {
+export interface StaffListResponse {
   items: StaffListItem[];
   total: number;
   page: number;
@@ -58,10 +62,13 @@ interface StaffListResponse {
   summary: { total: number; therapists: number; active: number; onLeave: number };
 }
 
+type StaffTab = "directory" | "leave" | "salaries";
+
 export default function StaffPage() {
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.staffManage);
 
+  const [tab, setTab] = useState<StaffTab>("directory");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("ALL");
@@ -187,12 +194,24 @@ export default function StaffPage() {
 
   return (
     <div>
+      <TopBarTitle><h1 className="truncate text-lg font-semibold text-navy-800">Staff management</h1></TopBarTitle>
       <PageHeader
         title="Staff"
         description="Staff profiles, employment status and therapist remuneration"
         icon="BadgeCheck"
+        filters={
+          <Tabs value={tab} onValueChange={(v) => setTab(v as StaffTab)}>
+            <TabsList className="h-9">
+              <TabsTrigger value="directory" className="text-xs">Directory</TabsTrigger>
+              <TabsTrigger value="leave" className="text-xs">Leave management</TabsTrigger>
+              <TabsTrigger value="salaries" className="text-xs">Salaries</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
       />
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as StaffTab)}>
+        <TabsContent value="directory" className="mt-2">
       {/* Stats */}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Total staff" value={summary?.total ?? 0} icon="Users" tone="navy" loading={!data} />
@@ -257,13 +276,13 @@ export default function StaffPage() {
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
             </CardGrid>
           ) : items.length === 0 ? (
-            <div className="rounded-xl border bg-card shadow-sm">{emptyBlock}</div>
+            <div className="rounded-lg border bg-card">{emptyBlock}</div>
           ) : (
             <CardGrid minItemWidth={290}>
               {items.map((row) => <StaffCard key={row.id} staff={row} onOpen={setDetailId} />)}
             </CardGrid>
           )}
-          <div className="mt-4 overflow-hidden rounded-xl border bg-card shadow-sm">{paginationEl}</div>
+          <div className="mt-4 overflow-hidden rounded-lg border bg-card">{paginationEl}</div>
         </>
       ) : (
         <TooltipProvider>
@@ -330,6 +349,11 @@ export default function StaffPage() {
           />
         </TooltipProvider>
       )}
+
+        </TabsContent>
+        <TabsContent value="leave" className="mt-2"><StaffLeaveTab canManage={canManage} /></TabsContent>
+        <TabsContent value="salaries" className="mt-2"><StaffSalariesTab /></TabsContent>
+      </Tabs>
 
       <StaffFormDialog
         open={formOpen}

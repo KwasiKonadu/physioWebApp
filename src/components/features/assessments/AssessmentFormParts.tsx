@@ -24,7 +24,7 @@ export function PainSlider({ label, value, onChange }: { label: string; value?: 
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="min-w-9 justify-center bg-teal-50 text-teal-700 border-teal-200">{value ?? "—"}/10</Badge>
+          <Badge variant="outline" className="min-w-9 justify-center bg-navy-50 text-navy-800 border-navy-200">{value ?? "—"}/10</Badge>
           {value !== undefined ? (
             <button type="button" onClick={() => onChange(undefined)} className="text-muted-foreground hover:text-foreground" aria-label={`Clear ${label}`}>
               <AtomIcon name="X" className="h-3.5 w-3.5" />

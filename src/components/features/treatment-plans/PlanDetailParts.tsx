@@ -34,7 +34,7 @@ export function ObjectiveRow({ objective }: { objective: PlanObjectiveDto }) {
           <span className="inline-flex items-center gap-1">
             <span className="font-medium text-slate-500">{objective.baseline || "—"}</span>
             <AtomIcon name="ArrowRight" className="h-3 w-3" />
-            <span className="font-semibold text-teal-700">{objective.target || "—"}</span>
+            <span className="font-semibold text-navy-800">{objective.target || "—"}</span>
             {objective.unit ? <span className="text-slate-400">{objective.unit}</span> : null}
           </span>
         ) : null}
@@ -67,19 +67,19 @@ export function VersionHistory({ versions, currentId, onOpen }: {
           <li key={v.id} className="relative">
             <span
               className={`absolute -left-6.5 top-2 h-2.5 w-2.5 rounded-full border-2 ${
-                isCurrent ? "border-teal-600 bg-teal-500" : "border-slate-300 bg-white"
+                isCurrent ? "border-navy-800 bg-navy-800" : "border-slate-300 bg-white"
               }`}
             />
             <button
               type="button"
               onClick={() => onOpen(v.id)}
               className={`flex w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                isCurrent ? "border-teal-200 bg-teal-50/60" : "border-slate-200 bg-white hover:bg-slate-50"
+                isCurrent ? "border-navy-200 bg-navy-50/60" : "border-slate-200 bg-white hover:bg-slate-50"
               }`}
             >
               <span className="text-sm font-semibold text-foreground">v{v.version}</span>
               <StatusBadge status={v.status} />
-              {isCurrent ? <Badge className="bg-teal-600 text-[10px] text-white">Viewing</Badge> : null}
+              {isCurrent ? <Badge className="bg-navy-800 text-[10px] text-white">Viewing</Badge> : null}
               <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(v.createdAt)}</span>
               {v.activatedAt ? (
                 <span className="w-full text-xs text-muted-foreground">

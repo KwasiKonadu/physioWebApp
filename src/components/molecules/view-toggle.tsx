@@ -17,7 +17,7 @@ interface ViewToggleProps<T extends string> {
 
 export function ViewToggle<T extends string>({ value, onChange, options }: ViewToggleProps<T>) {
   return (
-    <div role="group" aria-label="Change view" className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+    <div role="group" aria-label="Change view" className="inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-0.5 text-muted-foreground">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -29,8 +29,8 @@ export function ViewToggle<T extends string>({ value, onChange, options }: ViewT
             title={`${o.label} view`}
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex w-8 items-center justify-center rounded-md transition-colors",
-              active ? "bg-white text-navy-800 shadow-sm" : "text-slate-400 hover:text-slate-700"
+              "flex h-7! w-9 items-center justify-center rounded-md border border-transparent transition-[color,box-shadow]",
+              active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <AtomIcon name={o.icon} className="h-4 w-4" />
