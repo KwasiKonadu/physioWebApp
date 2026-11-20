@@ -2,6 +2,7 @@
 // ============ Assessments module: typed client API helpers + shared hooks ============
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { useTherapistOptions } from "@/components/features/staff/use-therapists";
 
 export interface ListRes<T> { items: T[]; total: number; page: number; pageSize: number }
 
@@ -67,7 +68,7 @@ export interface DiagnosisListItem {
 }
 
 // ---- querystring builder ----
-function qs(params: Record<string, string | number | undefined | null>): string {
+function qs(params: Record<string, string | number | boolean | undefined | null>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
@@ -78,9 +79,9 @@ function qs(params: Record<string, string | number | undefined | null>): string 
 
 // ---- assessments ----
 export function fetchAssessments(params: {
-  episodeId?: string; patientId?: string; status?: string; search?: string; page?: number; pageSize?: number;
-}): Promise<ListRes<AssessmentListItem>> {
-  return apiFetch<ListRes<AssessmentListItem>>(`/api/assessments${qs(params)}`);
+  episodeId?: string; patientId?: string; status?: string; search?: string; page?: number; pageSize?: number; stats?: boolean;
+}): Promise<ListRes<AssessmentListItem> & { stats?: { total: number; drafts: number; completed: number } }> {
+  return apiFetch<ListRes<AssessmentListItem> & { stats?: { total: number; drafts: number; completed: number } }>(`/api/assessments${qs(params)}`);
 }
 export function fetchAssessment(id: string): Promise<AssessmentDetail> {
   return apiFetch<AssessmentDetail>(`/api/assessments/${id}`);
@@ -155,17 +156,12 @@ export async function fetchPatientBundle(patientId: string): Promise<PatientBund
   }
 }
 
-export async function fetchTherapists(): Promise<StaffLite[]> {
-  try {
-    const res = await apiFetch<unknown>(`/api/staff${qs({ pageSize: 100 })}`);
-    const items = extractItems<StaffLite>(res);
-    return items.filter((s) => {
-      const isTherapist = s.isTherapist ?? (s.staffRole ? s.staffRole === "PHYSIOTHERAPIST" : true);
-      return isTherapist && (s.employmentStatus || "ACTIVE") === "ACTIVE";
-    });
-  } catch {
-    return [];
-  }
+/** Active therapists, from the shared therapists cache (see staff/use-therapists). */
+export const activeTherapists = (items: StaffLite[]): StaffLite[] =>
+  items.filter((s) => (s.employmentStatus || "ACTIVE") === "ACTIVE");
+
+export function useActiveTherapists(enabled = true) {
+  return useTherapistOptions(activeTherapists, enabled);
 }
 
 // Episode statuses that accept new assessments / diagnoses

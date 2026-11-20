@@ -2,6 +2,7 @@
 // ============ Billing & Payments: overview + invoices + packages + insurance + services ============
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useInvoiceStats } from "./billing-hooks";
 import { PageHeader } from "@/components/molecules/page-header";
 import { SectionCard } from "@/components/molecules/section-card";
 import { StatCard } from "@/components/molecules/stat-card";
@@ -41,10 +42,7 @@ const methodBadge: Record<string, string> = {
 };
 
 function Overview({ onOpenInvoices }: { onOpenInvoices: () => void }) {
-  const invoicesQ = useQuery({
-    queryKey: ["billing", "overview", "invoices"],
-    queryFn: () => apiFetch<ListResponse<InvoiceListItem> & { stats: InvoiceStats }>("/api/invoices?pageSize=1"),
-  });
+  const invoicesQ = useInvoiceStats<InvoiceStats>();
   const packagesQ = useQuery({
     queryKey: ["billing", "overview", "packages"],
     queryFn: () => apiFetch<ListResponse<PatientPackageItem> & { stats: { active: number; exhausted: number; expiringSoon: number } }>("/api/patient-packages?pageSize=1"),

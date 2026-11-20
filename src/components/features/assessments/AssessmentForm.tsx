@@ -65,11 +65,7 @@ export default function AssessmentForm({ target, onTargetChange, onDone, onBack 
     queryFn: () => API.fetchPatientBundle(patient!.id),
     enabled: !!patient?.id && !assessmentId,
   });
-  const therapistsQ = useQuery({
-    queryKey: ["assessments", "therapists"],
-    queryFn: API.fetchTherapists,
-    staleTime: 5 * 60_000,
-  });
+  const therapistsQ = API.useActiveTherapists();
 
   const therapistId = selectedTherapistId || therapistsQ.data?.[0]?.id || "";
 

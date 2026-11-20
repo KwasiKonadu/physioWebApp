@@ -1,15 +1,14 @@
 "use client";
 // Staff page: salaries tab — pay method and rate for every staff member, with the fixed monthly payroll total.
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api-client";
 import { labelize } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
 import { StatCard } from "@/components/molecules/stat-card";
 import { DataTable } from "@/components/molecules/data-table";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { Button } from "@/components/ui/button";
-import type { StaffListItem, StaffListResponse } from "./StaffPage";
+import type { StaffListItem } from "./StaffPage";
+import { useAllStaff } from "./use-staff-options";
 
 const METHOD_LABEL: Record<string, string> = {
   FIXED: "Fixed monthly salary",
@@ -19,10 +18,7 @@ const METHOD_LABEL: Record<string, string> = {
 
 export function StaffSalariesTab() {
   const router = useRouter();
-  const { data, isLoading } = useQuery({
-    queryKey: ["staff", "salaries"],
-    queryFn: () => apiFetch<StaffListResponse>("/api/staff?pageSize=200"),
-  });
+  const { data, isLoading } = useAllStaff();
   const items = (data?.items ?? []).filter((s) => s.employmentStatus !== "TERMINATED");
 
   const fixed = items.filter((s) => s.remunerationMethod === "FIXED");

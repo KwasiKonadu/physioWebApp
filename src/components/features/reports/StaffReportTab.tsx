@@ -3,7 +3,7 @@
 
 import { labelize } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
-import { ReportBarChart } from "./ReportBarChart";
+import { ReportBarChart } from "./report-charts-lazy";
 import { DataTable } from "@/components/molecules/data-table";
 import { StatCard, makeTrend } from "@/components/molecules/stat-card";
 import { SectionCard } from "@/components/molecules/section-card";

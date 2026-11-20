@@ -1,7 +1,7 @@
 "use client";
 // ============ DiagnosesTab: clinical diagnoses list, detail + revision history ============
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +38,7 @@ export default function DiagnosesTab() {
 
   const listQ = useQuery({
     queryKey: ["diagnoses", "list", { dq, category, status, page, pageSize }],
+    placeholderData: keepPreviousData,
     queryFn: () => API.fetchDiagnoses({
       search: dq || undefined,
       category: category === "all" ? undefined : category,

@@ -1,7 +1,7 @@
 "use client";
 // ============ Insurance tab: providers + negotiated rates + claims workflow ============
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
@@ -51,6 +51,7 @@ export default function InsuranceTab() {
   if (claimStatus !== "all") claimsParams.set("status", claimStatus);
   const claimsQ = useQuery({
     queryKey: ["billing", "claims", claimsParams.toString()],
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<ListResponse<ClaimItem> & { stats: { open: number; submitted: number; claimedCents: number; approvedCents: number } }>(`/api/insurance/claims?${claimsParams.toString()}`),
     enabled: !!selectedProviderId,
   });

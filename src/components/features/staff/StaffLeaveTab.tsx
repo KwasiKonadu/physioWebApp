@@ -1,7 +1,7 @@
 "use client";
 // Staff page: leave management tab — requests list, approve / reject, new request panel.
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { LEAVE_TYPES, LEAVE_TYPE_LABELS, LEAVE_STATUSES, labelize } from "@/lib/constants";
@@ -49,6 +49,7 @@ export function StaffLeaveTab({ canManage, staffId }: { canManage: boolean; /** 
   if (staffId) params.set("staffId", staffId);
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["staff", "leave", staffId ?? "all", status, page, pageSize],
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<LeaveResponse>(`/api/staff/leave?${params.toString()}`),
   });
 

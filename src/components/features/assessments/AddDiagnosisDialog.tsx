@@ -36,12 +36,7 @@ export function AddDiagnosisDialog({ open, onOpenChange, onSaved }: {
     queryFn: () => API.fetchPatientBundle(patient!.id),
     enabled: open && !!patient?.id,
   });
-  const therapistsQ = useQuery({
-    queryKey: ["diagnoses", "therapists"],
-    queryFn: API.fetchTherapists,
-    enabled: open,
-    staleTime: 5 * 60_000,
-  });
+  const therapistsQ = API.useActiveTherapists(open);
 
   const episodes = useMemo(() => {
     const eps = bundleQ.data?.episodes || [];

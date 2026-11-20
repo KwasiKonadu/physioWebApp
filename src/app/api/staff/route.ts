@@ -56,7 +56,7 @@ export const GET = route(async (req) => {
   if (getQuery(req, "therapists") === "true") {
     const therapists = await db.staffProfile.findMany({
       where: { clinicId: auth.clinicId, isTherapist: true },
-      select: { id: true, firstName: true, lastName: true, jobTitle: true },
+      select: { id: true, firstName: true, lastName: true, jobTitle: true, employmentStatus: true },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     });
     return json({ items: therapists });

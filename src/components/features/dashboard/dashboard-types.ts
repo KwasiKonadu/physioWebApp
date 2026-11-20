@@ -1,5 +1,5 @@
 // Dashboard: API payload type and date-range option.
-import type { TrendPoint } from "./DashboardCharts";
+import type { TrendPoint } from "./dashboard-viz";
 
 export interface DashboardData {
   metrics: {

@@ -83,7 +83,8 @@ export const GET = route(async (req) => {
     ...(Object.keys(episodeWhere).length ? { episode: episodeWhere } : {}),
   };
 
-  const [rows, total] = await Promise.all([
+  const wantStats = getQuery(req, "stats") === "true";
+  const [rows, total, statusGroups] = await Promise.all([
     db.treatmentPlan.findMany({
       where,
       orderBy: { updatedAt: "desc" },
@@ -104,9 +105,19 @@ export const GET = route(async (req) => {
       },
     }),
     db.treatmentPlan.count({ where }),
+    // clinic-wide counts by status, only when asked for (KPI cards) — replaces 4 count-only list calls
+    wantStats
+      ? db.treatmentPlan.groupBy({ by: ["status"], where: { clinicId: auth.clinicId }, _count: { _all: true } })
+      : Promise.resolve(null),
   ]);
 
-  return json({ items: rows.map(toPlanSummary), total, page, pageSize });
+  const stats = statusGroups
+    ? (() => {
+        const by = Object.fromEntries(statusGroups.map((g) => [g.status, g._count._all]));
+        return { total: statusGroups.reduce((s, g) => s + g._count._all, 0), active: by.ACTIVE ?? 0, draft: by.DRAFT ?? 0, review: by.UNDER_REVIEW ?? 0 };
+      })()
+    : undefined;
+  return json({ items: rows.map(toPlanSummary), total, page, pageSize, ...(stats ? { stats } : {}) });
 });
 
 // ---- POST /api/plans — create a plan version (DRAFT, or ACTIVE with immediate activation) ----

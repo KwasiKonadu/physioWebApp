@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { useAllStaff } from "@/components/features/staff/use-staff-options";
 import { formatDate } from "@/lib/format";
 import ManageRolesDialog from "./settings-roles-tab";
 import { DataTable } from "@/components/molecules/data-table";
@@ -78,11 +79,7 @@ export default function SettingsUsersTab({ highlightEmail }: Props) {
     queryKey: ["roles"],
     queryFn: () => apiFetch<RolesData>("/api/roles"),
   });
-  const { data: staffData } = useQuery({
-    queryKey: ["staff", "for-users"],
-    queryFn: () => apiFetch<{ items: StaffRow[] }>("/api/staff?pageSize=200"),
-    enabled: addOpen || !!editTarget,
-  });
+  const { data: staffData } = useAllStaff(addOpen || !!editTarget);
 
   const setInactive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>

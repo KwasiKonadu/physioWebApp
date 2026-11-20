@@ -9,6 +9,7 @@ import { LoginScreen } from "@/components/organisms/login-screen";
 import { SplashScreen } from "@/components/organisms/splash-screen";
 import { registerRouter, useAuthStore } from "@/stores/app-store";
 
+const SPLASH_MAX_MS = 1500;
 const RETURN_KEY = "returnTo"; // last page visited before the login screen
 
 function Gate({ children }: { children: React.ReactNode }) {
@@ -19,8 +20,9 @@ function Gate({ children }: { children: React.ReactNode }) {
     registerRouter((href) => router.push(href));
   }, [router]);
 
-  // splash after a fresh login: covers the shell (which loads underneath) until the page's data has
-  // loaded (no queries in flight for a short settle period), then fades out
+  // splash after a fresh login: covers the shell (which loads underneath) until the page's first data has
+  // loaded (no queries in flight for a short settle period), then fades out. Capped at SPLASH_MAX_MS so one
+  // slow endpoint never blocks the app — pages render their own skeletons underneath.
   const fetching = useIsFetching();
   const [splash, setSplash] = useState<"off" | "on" | "leaving">("off");
   const [minShown, setMinShown] = useState(false);
@@ -33,8 +35,8 @@ function Gate({ children }: { children: React.ReactNode }) {
   }
   useEffect(() => {
     if (splash !== "on") return;
-    const min = setTimeout(() => setMinShown(true), 700); // never flash by
-    const max = setTimeout(() => setSplash("leaving"), 8000); // never hang if a request stalls
+    const min = setTimeout(() => setMinShown(true), 500); // never flash by
+    const max = setTimeout(() => setSplash("leaving"), SPLASH_MAX_MS); // never hang if a request stalls
     return () => { clearTimeout(min); clearTimeout(max); };
   }, [splash]);
   useEffect(() => {

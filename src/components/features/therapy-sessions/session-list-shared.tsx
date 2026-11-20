@@ -2,7 +2,7 @@
 // Shared types, therapist lookup hook and small badges for the sessions list.
 
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api-client";
+import { useTherapistOptions } from "@/components/features/staff/use-therapists";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -65,34 +65,11 @@ export interface EpisodeOption {
 }
 
 // ---- Shared hooks ----
+const toSessionTherapists = (items: { id: string; firstName: string; lastName: string }[]): TherapistOption[] =>
+  items.map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}`.trim(), isTherapist: true })).filter((t) => t.id && t.name);
+
 export function useTherapists() {
-  return useQuery({
-    queryKey: ["sessions-therapists"],
-    queryFn: async (): Promise<TherapistOption[]> => {
-      try {
-        const data = await apiFetch<unknown>("/api/staff?pageSize=200");
-        const raw = Array.isArray(data)
-          ? data
-          : ((data as { items?: Record<string, unknown>[] })?.items ?? []);
-        const mapped = (raw as Record<string, unknown>[])
-          .map((s) => ({
-            id: String(s.id ?? ""),
-            name: [s.firstName, s.lastName].filter(Boolean).join(" "),
-            isTherapist:
-              s.isTherapist === true ||
-              s.staffRole === "PHYSIOTHERAPIST" ||
-              (s.isTherapist === undefined && s.staffRole === undefined),
-          }))
-          .filter((t) => t.id && t.name);
-        const therapists = mapped.filter((t) => t.isTherapist);
-        return therapists.length ? therapists : mapped;
-      } catch {
-        // Staff module may not be available — degrade gracefully
-        return [];
-      }
-    },
-    staleTime: 60_000,
-  });
+  return useTherapistOptions(toSessionTherapists);
 }
 
 export function PainBadge({ level }: { level: number | null }) {

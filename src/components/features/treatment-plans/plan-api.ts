@@ -11,9 +11,10 @@ export type PlanListParams = {
   episodeId?: string;
   patientId?: string;
   search?: string;
+  stats?: boolean;
 }
 
-function qs(params: Record<string, string | number | undefined>) {
+function qs(params: Record<string, string | number | boolean | undefined>) {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));

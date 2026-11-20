@@ -16,6 +16,14 @@ export function useDebouncedValue<T>(value: T, delay = 350): T {
   return debounced;
 }
 
+// ---- Clinic-wide invoice stats: one shared query for the invoices tab and the billing overview ----
+export function useInvoiceStats<S>() {
+  return useQuery({
+    queryKey: ["billing", "invoices", "stats"],
+    queryFn: () => apiFetch<{ total: number; stats: S }>("/api/invoices?pageSize=1&stats=only"),
+  });
+}
+
 // ---- Patient search (tolerant of the patients module's response shape) ----
 export function usePatientSearch(query: string, enabled = true) {
   return useQuery({

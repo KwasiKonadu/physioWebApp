@@ -42,19 +42,23 @@ export const GET = route(async (req) => {
   const day0 = new Date(); day0.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
+  // payments window = union of the selected period and the chart window
+  const payFrom = new Date(Math.min(start.getTime(), chartStart.getTime()));
+  const payTo = new Date(Math.max(end.getTime(), chartEnd.getTime()));
+
   const [
     totalPatients, newPatients, activeEpisodes, todaysAppointmentsCount,
-    completedSessions, reviewsDueEpisodes, outstandingInvoices, paymentsInRange,
-    paygRevenue,
-    todaysAppointments, upcoming, activeEpisodeList, overdueList, recentlyDischarged,
+    completedSessions, reviewsDueCount, reviewsDueEpisodes, outstandingAgg, periodPayments,
+    todaysAppointments, upcoming, activeEpisodeList, recentlyDischarged,
     recentPayments, recentRegistrations, recentSessions, recentAudit,
-    chartAppointments, chartRevenue, chartSessions, chartPatients,
+    chartAppointments, chartSessions, chartPatients,
   ] = await Promise.all([
     db.patient.count({ where: { clinicId: auth.clinicId } }),
     db.patient.count({ where: { clinicId: auth.clinicId, createdAt: { gte: start, lte: end } } }),
     db.treatmentEpisode.count({ where: { clinicId: auth.clinicId, status: { in: ["ACTIVE_TREATMENT", "AWAITING_PLAN", "UNDER_REVIEW", "ASSESSMENT_IN_PROGRESS"] } } }),
     db.appointment.count({ where: { clinicId: auth.clinicId, date: { gte: day0, lte: dayEnd }, status: { notIn: ["CANCELLED", "NO_SHOW"] } } }),
     db.therapySession.count({ where: { clinicId: auth.clinicId, status: "COMPLETED", date: { gte: start, lte: end } } }),
+    db.treatmentEpisode.count({ where: { clinicId: auth.clinicId, reviewDue: true } }),
     db.treatmentEpisode.findMany({
       where: { clinicId: auth.clinicId, reviewDue: true },
       take: 6,
@@ -64,16 +68,16 @@ export const GET = route(async (req) => {
         therapist: { select: { firstName: true, lastName: true } },
       },
     }),
-    db.invoice.findMany({
+    // open invoices: count + sums in the database instead of loading every unpaid row
+    db.invoice.aggregate({
       where: { clinicId: auth.clinicId, status: { in: ["UNPAID", "PARTIAL"] } },
-      select: { totalCents: true, paidCents: true },
+      _count: { _all: true },
+      _sum: { totalCents: true, paidCents: true },
     }),
-    db.payment.aggregate({ where: { clinicId: auth.clinicId, paidAt: { gte: start, lte: end } }, _sum: { amountCents: true } }),
-    // revenue by arrangement: payments joined via invoices
-    db.payment.groupBy({
-      by: ["invoiceId"],
-      where: { clinicId: auth.clinicId, paidAt: { gte: start, lte: end } },
-      _sum: { amountCents: true },
+    // ONE payments query covers the period total, the revenue-by-arrangement split AND the revenue chart
+    db.payment.findMany({
+      where: { clinicId: auth.clinicId, paidAt: { gte: payFrom, lte: payTo } },
+      select: { paidAt: true, amountCents: true, invoice: { select: { arrangement: true } } },
     }),
     db.appointment.findMany({
       where: { clinicId: auth.clinicId, date: { gte: day0, lte: dayEnd } },
@@ -102,11 +106,6 @@ export const GET = route(async (req) => {
         patient: { select: { id: true, firstName: true, lastName: true, patientCode: true } },
         therapist: { select: { firstName: true, lastName: true } },
       },
-    }),
-    db.treatmentEpisode.findMany({
-      where: { clinicId: auth.clinicId, reviewDue: true },
-      take: 5,
-      include: { patient: { select: { id: true, firstName: true, lastName: true, patientCode: true } } },
     }),
     db.treatmentEpisode.findMany({
       where: { clinicId: auth.clinicId, status: "DISCHARGED" },
@@ -142,17 +141,16 @@ export const GET = route(async (req) => {
       take: 6,
     }),
     // charts: appointments, revenue, sessions and registrations over the chart window
-    db.appointment.findMany({
+    // grouped in the database: one row per distinct (date, status) instead of one per appointment
+    db.appointment.groupBy({
+      by: ["date", "status"],
       where: { clinicId: auth.clinicId, date: { gte: chartStart, lte: chartEnd } },
-      select: { date: true, status: true },
+      _count: { _all: true },
     }),
-    db.payment.findMany({
-      where: { clinicId: auth.clinicId, paidAt: { gte: chartStart, lte: chartEnd } },
-      select: { paidAt: true, amountCents: true },
-    }),
-    db.therapySession.findMany({
+    db.therapySession.groupBy({
+      by: ["date"],
       where: { clinicId: auth.clinicId, status: "COMPLETED", date: { gte: chartStart, lte: chartEnd } },
-      select: { date: true },
+      _count: { _all: true },
     }),
     db.patient.findMany({
       where: { clinicId: auth.clinicId, createdAt: { gte: chartStart, lte: chartEnd } },
@@ -160,26 +158,20 @@ export const GET = route(async (req) => {
     }),
   ]);
 
-  // revenue split by arrangement
-  const paymentInvoiceIds = (paygRevenue as unknown) as { invoiceId: string; _sum: { amountCents: number | null } }[];
-  const invoiceIds = paymentInvoiceIds.map((p) => p.invoiceId);
-  const invoices = invoiceIds.length
-    ? await db.invoice.findMany({ where: { id: { in: invoiceIds } }, select: { id: true, arrangement: true } })
-    : [];
-  const arrangementMap = new Map(invoices.map((i) => [i.id, i.arrangement]));
-  let payg = 0, pkg = 0, ins = 0;
-  const payments = await db.payment.findMany({
-    where: { clinicId: auth.clinicId, paidAt: { gte: start, lte: end } },
-    select: { invoiceId: true, amountCents: true },
-  });
-  for (const p of payments) {
-    const arr = arrangementMap.get(p.invoiceId);
-    if (arr === "PACKAGE") pkg += p.amountCents;
-    else if (arr === "INSURANCE") ins += p.amountCents;
-    else payg += p.amountCents;
+  // period total + split by arrangement + chart series, all from the single payments query
+  let payg = 0, pkg = 0, ins = 0, periodTotal = 0;
+  const chartRevenue: { paidAt: Date; amountCents: number }[] = [];
+  for (const p of periodPayments) {
+    if (p.paidAt >= start && p.paidAt <= end) {
+      periodTotal += p.amountCents;
+      if (p.invoice.arrangement === "PACKAGE") pkg += p.amountCents;
+      else if (p.invoice.arrangement === "INSURANCE") ins += p.amountCents;
+      else payg += p.amountCents;
+    }
+    if (p.paidAt >= chartStart && p.paidAt <= chartEnd) chartRevenue.push(p);
   }
 
-  const outstanding = outstandingInvoices.reduce((s, i) => s + (i.totalCents - i.paidCents), 0);
+  const outstanding = (outstandingAgg._sum.totalCents ?? 0) - (outstandingAgg._sum.paidCents ?? 0);
 
   // per-day trend series over the chart window
   const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -196,16 +188,16 @@ export const GET = route(async (req) => {
   }
   for (const a of chartAppointments) {
     if (["CANCELLED", "NO_SHOW"].includes(a.status)) continue;
-    const i = idx.get(dayKey(new Date(a.date))); if (i !== undefined) trend[i].appointments++;
+    const i = idx.get(dayKey(new Date(a.date))); if (i !== undefined) trend[i].appointments += a._count._all;
   }
-  for (const x of chartSessions) { const i = idx.get(dayKey(new Date(x.date))); if (i !== undefined) trend[i].sessions++; }
+  for (const x of chartSessions) { const i = idx.get(dayKey(new Date(x.date))); if (i !== undefined) trend[i].sessions += x._count._all; }
   for (const x of chartPatients) { const i = idx.get(dayKey(new Date(x.createdAt))); if (i !== undefined) trend[i].newPatients++; }
   for (const p of chartRevenue) { const i = idx.get(dayKey(new Date(p.paidAt))); if (i !== undefined) trend[i].revenue += p.amountCents; }
   for (const t of trend) t.revenue = Math.round(t.revenue / 100);
 
   // appointment status breakdown over the chart window
   const statusCounts: Record<string, number> = {};
-  for (const a of chartAppointments) statusCounts[a.status] = (statusCounts[a.status] || 0) + 1;
+  for (const a of chartAppointments) statusCounts[a.status] = (statusCounts[a.status] || 0) + a._count._all;
   const appointmentStatus = Object.entries(statusCounts).map(([status, count]) => ({ status, count })).sort((x, y) => y.count - x.count);
 
   return json({
@@ -215,10 +207,10 @@ export const GET = route(async (req) => {
       activeEpisodes,
       todaysAppointments: todaysAppointmentsCount,
       completedSessions,
-      reviewsDue: reviewsDueEpisodes.length,
-      outstandingInvoices: outstandingInvoices.length,
+      reviewsDue: reviewsDueCount,
+      outstandingInvoices: outstandingAgg._count._all,
       outstandingAmountCents: outstanding,
-      revenueCollectedCents: paymentsInRange._sum.amountCents || 0,
+      revenueCollectedCents: periodTotal,
     },
     revenue: { paygCents: payg, packageCents: pkg, insuranceCents: ins },
     reviewsDue: reviewsDueEpisodes.map((e) => ({
@@ -242,7 +234,7 @@ export const GET = route(async (req) => {
       sinceReview: e.sessionsSinceReview, threshold: e.reviewThreshold,
       therapist: e.therapist ? `${e.therapist.firstName} ${e.therapist.lastName}` : "—",
     })),
-    overdueForReview: overdueList.map((e) => ({
+    overdueForReview: reviewsDueEpisodes.slice(0, 5).map((e) => ({
       id: e.id, patientId: e.patient.id, patientName: `${e.patient.firstName} ${e.patient.lastName}`,
       sessionsSinceReview: e.sessionsSinceReview, threshold: e.reviewThreshold,
     })),

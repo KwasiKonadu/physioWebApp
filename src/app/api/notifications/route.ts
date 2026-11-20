@@ -27,7 +27,11 @@ export const PATCH = route(async (req) => {
       data: { read: true },
     });
   } else if (body.id) {
-    await db.notification.update({ where: { id: body.id }, data: { read: true } });
+    // only this clinic's notifications, and only ones addressed to this user or to a role audience
+    await db.notification.updateMany({
+      where: { id: body.id, clinicId: auth.clinicId, OR: [{ userId: auth.userId }, { userId: null }] },
+      data: { read: true },
+    });
   }
   return json({ ok: true });
 });

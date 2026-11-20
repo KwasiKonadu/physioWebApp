@@ -39,17 +39,25 @@ async function loadSettings(clinicId: string): Promise<{
 export const GET = route(async (req) => {
   const auth = requireAuth(req);
 
-  const [clinic, branches, settings] = await Promise.all([
+  const [clinic, branches, settings, services, serviceCategories, packages, providers] = await Promise.all([
     db.clinic.findUnique({
       where: { id: auth.clinicId },
       select: { id: true, name: true, code: true, address: true, phone: true, email: true, timezone: true, currency: true },
     }),
     db.branch.findMany({ where: { clinicId: auth.clinicId }, orderBy: { name: "asc" } }),
     loadSettings(auth.clinicId),
+    // counts for the "Services, Packages & Insurance" summary card (saves 3 list requests)
+    db.service.count({ where: { clinicId: auth.clinicId } }),
+    db.service.findMany({ where: { clinicId: auth.clinicId }, select: { category: true }, distinct: ["category"] }),
+    db.packageDefinition.count({ where: { clinicId: auth.clinicId } }),
+    db.insuranceProvider.count({ where: { clinicId: auth.clinicId } }),
   ]);
   if (!clinic || clinic.id !== auth.clinicId) throw new ApiError(404, "Clinic not found");
 
-  return json({ clinic, branches, settings });
+  return json({
+    clinic, branches, settings,
+    billingCounts: { services, serviceCategories: serviceCategories.length, packages, providers },
+  });
 });
 
 const patchSchema = z.object({

@@ -40,7 +40,8 @@ export const GET = route(async (req) => {
     } : {}),
   };
 
-  const [rows, total] = await Promise.all([
+  const wantStats = getQuery(req, "stats") === "true";
+  const [rows, total, statusGroups] = await Promise.all([
     db.assessment.findMany({
       where,
       orderBy: { assessmentDate: "desc" },
@@ -52,11 +53,21 @@ export const GET = route(async (req) => {
       },
     }),
     db.assessment.count({ where }),
+    // clinic-wide counts by status, only when asked for (KPI cards) — replaces N count-only list calls
+    wantStats
+      ? db.assessment.groupBy({ by: ["status"], where: { clinicId: auth.clinicId }, _count: { _all: true } })
+      : Promise.resolve(null),
   ]);
 
   const names = await staffNames(auth.clinicId, rows.map((r) => r.therapistId));
   const items = rows.map((r) => ({ ...r, therapistName: names.get(r.therapistId) || null }));
-  return json({ items, total, page, pageSize });
+  const stats = statusGroups
+    ? (() => {
+        const by = Object.fromEntries(statusGroups.map((g) => [g.status, g._count._all]));
+        return { total: statusGroups.reduce((s, g) => s + g._count._all, 0), drafts: by.DRAFT ?? 0, completed: by.COMPLETED ?? 0 };
+      })()
+    : undefined;
+  return json({ items, total, page, pageSize, ...(stats ? { stats } : {}) });
 });
 
 // POST /api/assessments — create DRAFT or COMPLETED assessment with nested measurement rows

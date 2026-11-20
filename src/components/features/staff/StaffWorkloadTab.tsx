@@ -7,8 +7,8 @@ import { StatCard } from "@/components/molecules/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ReportBarChart } from "@/components/features/reports/ReportBarChart";
-import { ReportDonut } from "@/components/features/reports/ReportDonut";
+import { ReportBarChart } from "@/components/features/reports/report-charts-lazy";
+import { ReportDonut } from "@/components/features/reports/report-charts-lazy";
 import { StaffDetail, StatsResponse, PERIODS, Period } from "./staff-profile-model";
 
 export function StaffWorkloadTab({ data, stats, name, period, setPeriod, periodLabel, completionHint, noShowHint }: { data: StaffDetail; stats: StatsResponse | undefined; name: string; period: Period; setPeriod: (p: Period) => void; periodLabel: string; completionHint: string; noShowHint: string }) {

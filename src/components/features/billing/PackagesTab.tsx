@@ -1,7 +1,7 @@
 "use client";
 // ============ Packages tab: definitions catalogue + patient package sales & ledgers ============
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
@@ -45,6 +45,7 @@ export default function PackagesTab({ prefillPatientId }: { prefillPatientId?: s
   if (status !== "all") ppParams.set("status", status);
   const ppQ = useQuery({
     queryKey: ["billing", "patient-packages", ppParams.toString()],
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<ListResponse<PatientPackageItem> & { stats: { active: number; exhausted: number; expiringSoon: number } }>(`/api/patient-packages?${ppParams.toString()}`),
   });
 

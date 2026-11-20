@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api-client";
 import { PERMS, labelize } from "@/lib/constants";
 import { formatMoney, formatDate, ymd } from "@/lib/format";
 import { PageHeader } from "@/components/molecules/page-header";
+import { TopBarTitle } from "@/components/templates/topbar-slots";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { AtomIcon } from "@/components/atoms/icon";
@@ -97,6 +98,7 @@ export default function ReportsPage() {
 
   return (
     <div>
+      <TopBarTitle><h1 className="truncate text-lg font-semibold text-navy-800">Management Reports</h1></TopBarTitle>
       <PageHeader
         title="Reports"
         description="Operational, clinical and financial reporting"

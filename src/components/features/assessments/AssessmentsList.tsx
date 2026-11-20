@@ -2,7 +2,7 @@
 // Assessments list: search, status filter, stat cards and the assessments table.
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +29,7 @@ export function AssessmentsList({ canManage, onOpen }: {
 
   const listQ = useQuery({
     queryKey: ["assessments", "list", { dq, statusFilter, page, pageSize }],
+    placeholderData: keepPreviousData,
     queryFn: () => API.fetchAssessments({
       search: dq || undefined,
       status: statusFilter === "all" ? undefined : statusFilter,
@@ -37,23 +38,12 @@ export function AssessmentsList({ canManage, onOpen }: {
     }),
   });
 
-  const statsQ = useQuery({
-    queryKey: ["assessments", "stats"],
-    queryFn: async () => {
-      const [all, drafts, completed] = await Promise.all([
-        API.fetchAssessments({ pageSize: 1 }),
-        API.fetchAssessments({ status: "DRAFT", pageSize: 1 }),
-        API.fetchAssessments({ status: "COMPLETED", pageSize: 1 }),
-      ]);
-      return { total: all.total, drafts: drafts.total, completed: completed.total };
-    },
-    refetchInterval: 60_000,
-  });
-
+  // one request feeds both the drafts callout and the KPI cards (clinic-wide counts come back as `stats`)
   const draftsQ = useQuery({
     queryKey: ["assessments", "drafts"],
-    queryFn: () => API.fetchAssessments({ status: "DRAFT", page: 1, pageSize: 4 }),
+    queryFn: () => API.fetchAssessments({ status: "DRAFT", page: 1, pageSize: 4, stats: true }),
   });
+  const statsQ = { data: draftsQ.data?.stats, isLoading: draftsQ.isLoading };
 
   const items = listQ.data?.items || [];
   const total = listQ.data?.total || 0;

@@ -1,7 +1,7 @@
 "use client";
 // ============ Services tab: catalogue management (price book) ============
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AtomIcon } from "@/components/atoms/icon";
 import { DataTable } from "@/components/molecules/data-table";
@@ -182,22 +182,28 @@ export default function ServicesTab() {
   const listQ = useQuery({
     queryKey: ["billing", "services", params.toString()],
     queryFn: () => apiFetch<ListResponse<ServiceLite> & { categories?: string[] }>(`/api/services?${params.toString()}`),
+    placeholderData: keepPreviousData, // keeps the category filter populated while a new page loads
   });
 
-  const allQ = useQuery({
-    queryKey: ["billing", "services", "categories"],
-    queryFn: () => apiFetch<ListResponse<ServiceLite> & { categories?: string[] }>("/api/services?pageSize=200"),
-    staleTime: 60_000,
-  });
-  const categories = allQ.data?.categories || [];
+  // the list response already carries the clinic-wide category list — no second request needed
+  const categories = listQ.data?.categories || [];
 
   const toggleM = useMutation({
     mutationFn: (s: ServiceLite) => apiFetch(`/api/services/${s.id}`, { method: "PATCH", json: { active: !s.active } }),
-    onSuccess: () => {
-      toast.success("Service updated");
-      qc.invalidateQueries({ queryKey: ["billing"] });
+    // optimistic: flip the switch in every cached services page immediately; rolled back on error
+    onMutate: async (s: ServiceLite) => {
+      await qc.cancelQueries({ queryKey: ["billing", "services"] });
+      const snapshots = qc.getQueriesData<ListResponse<ServiceLite>>({ queryKey: ["billing", "services"] });
+      qc.setQueriesData<ListResponse<ServiceLite>>({ queryKey: ["billing", "services"] }, (old) =>
+        old ? { ...old, items: old.items.map((x) => (x.id === s.id ? { ...x, active: !s.active } : x)) } : old);
+      return { snapshots };
     },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => { toast.success("Service updated"); },
+    onError: (e: Error, _s, ctx) => {
+      ctx?.snapshots.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error(e.message);
+    },
+    onSettled: () => { qc.invalidateQueries({ queryKey: ["billing"] }); },
   });
 
   const rows = listQ.data?.items || [];

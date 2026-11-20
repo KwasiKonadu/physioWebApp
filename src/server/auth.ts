@@ -4,7 +4,14 @@ import { db } from "@/lib/db";
 import { ApiError } from "./api";
 import { PERMS } from "@/lib/constants";
 
-const SECRET = process.env.AUTH_SECRET || "gmrs-dev-secret-change-in-production";
+// Read lazily so `next build` doesn't need the secret; in production a missing secret is a hard error
+// (a well-known fallback would let anyone forge tokens). The fallback only exists for local development.
+function getSecret(): string {
+  const s = process.env.AUTH_SECRET;
+  if (s) return s;
+  if (process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
+  return "gmrs-dev-secret-change-in-production";
+}
 const ACCESS_TTL = 60 * 60 * 12; // 12h — demo friendly
 const REFRESH_TTL = 60 * 60 * 24 * 7; // 7d
 
@@ -30,7 +37,7 @@ export function signToken(payload: Omit<TokenPayload, "exp">, ttlSec: number): s
   const body: TokenPayload = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSec };
   const head = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const bodyStr = b64url(JSON.stringify(body));
-  const sig = b64url(createHmac("sha256", SECRET).update(`${head}.${bodyStr}`).digest());
+  const sig = b64url(createHmac("sha256", getSecret()).update(`${head}.${bodyStr}`).digest());
   return `${head}.${bodyStr}.${sig}`;
 }
 
@@ -38,7 +45,7 @@ export function verifyToken(token: string): TokenPayload {
   const parts = token.split(".");
   if (parts.length !== 3) throw new ApiError(401, "Invalid token");
   const [head, bodyStr, sig] = parts;
-  const expected = b64url(createHmac("sha256", SECRET).update(`${head}.${bodyStr}`).digest());
+  const expected = b64url(createHmac("sha256", getSecret()).update(`${head}.${bodyStr}`).digest());
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) throw new ApiError(401, "Invalid token signature");

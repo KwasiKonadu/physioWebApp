@@ -40,36 +40,55 @@ export const GET = route(async (req) => {
     }));
   }
 
+  // ?stats=false → list only (paging/filtering); ?stats=only → stats only (overview cards, no item list)
+  const statsMode = getQuery(req, "stats");
+  const withItems = statsMode !== "only";
+  const withStats = statsMode !== "false";
+
+  const [items, total, stats] = await Promise.all([
+    withItems
+      ? db.invoice.findMany({
+          where,
+          orderBy: { issuedAt: "desc" },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          include: {
+            patient: { select: { id: true, firstName: true, middleName: true, lastName: true, patientCode: true } },
+            episode: { select: { id: true, title: true, episodeNumber: true } },
+            _count: { select: { items: true } },
+            claim: { select: { id: true, claimNumber: true, status: true } },
+            payments: { select: { amountCents: true, method: true } },
+            refunds: { select: { amountCents: true } },
+          },
+        })
+      : Promise.resolve([]),
+    db.invoice.count({ where }),
+    withStats ? computeInvoiceStats(auth.clinicId) : Promise.resolve(null),
+  ]);
+
+  return json({ items, total, page, pageSize, ...(stats ? { stats: { count: total, ...stats } } : {}) });
+});
+
+// Clinic-wide invoice stats (independent of the list filters/page): outstanding, this month's payments by
+// arrangement, and the latest payments/refunds. Outstanding uses a database aggregate, not row loading.
+async function computeInvoiceStats(clinicId: string) {
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [items, total, outstandingRows, monthPayments, recentPayments, recentRefunds] = await Promise.all([
-    db.invoice.findMany({
-      where,
-      orderBy: { issuedAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        patient: { select: { id: true, firstName: true, middleName: true, lastName: true, patientCode: true } },
-        episode: { select: { id: true, title: true, episodeNumber: true } },
-        _count: { select: { items: true } },
-        claim: { select: { id: true, claimNumber: true, status: true } },
-        payments: { select: { amountCents: true, method: true } },
-        refunds: { select: { amountCents: true } },
-      },
+  const [outstandingAgg, monthPayments, recentPayments, recentRefunds] = await Promise.all([
+    db.invoice.aggregate({
+      where: { clinicId, status: { in: ["UNPAID", "PARTIAL"] } },
+      _count: { _all: true },
+      _sum: { totalCents: true, paidCents: true },
     }),
-    db.invoice.count({ where }),
-    db.invoice.findMany({
-      where: { clinicId: auth.clinicId, status: { in: ["UNPAID", "PARTIAL"] } },
-      select: { totalCents: true, paidCents: true },
+    // arrangement comes with the payment (join) — no second lookup by invoice id
+    db.payment.findMany({
+      where: { clinicId, paidAt: { gte: monthStart } },
+      select: { amountCents: true, invoice: { select: { arrangement: true } } },
     }),
     db.payment.findMany({
-      where: { clinicId: auth.clinicId, paidAt: { gte: monthStart } },
-      select: { invoiceId: true, amountCents: true },
-    }),
-    db.payment.findMany({
-      where: { clinicId: auth.clinicId },
+      where: { clinicId },
       orderBy: { paidAt: "desc" },
       take: 6,
       include: {
@@ -79,7 +98,7 @@ export const GET = route(async (req) => {
       },
     }),
     db.refund.findMany({
-      where: { clinicId: auth.clinicId },
+      where: { clinicId },
       orderBy: { refundedAt: "desc" },
       take: 5,
       include: {
@@ -90,56 +109,41 @@ export const GET = route(async (req) => {
     }),
   ]);
 
-  // revenue by arrangement (this month, from payments)
-  const monthInvoiceIds = [...new Set(monthPayments.map((p) => p.invoiceId))];
-  const arrangementRows = monthInvoiceIds.length
-    ? await db.invoice.findMany({ where: { id: { in: monthInvoiceIds } }, select: { id: true, arrangement: true } })
-    : [];
-  const arrangementMap = new Map(arrangementRows.map((i) => [i.id, i.arrangement]));
   const byArrangement: Record<string, number> = { PAYG: 0, PACKAGE: 0, INSURANCE: 0 };
+  let paidThisMonthCents = 0;
   for (const p of monthPayments) {
-    const arr = arrangementMap.get(p.invoiceId) || "PAYG";
+    const arr = p.invoice.arrangement || "PAYG";
     byArrangement[arr] = (byArrangement[arr] || 0) + p.amountCents;
+    paidThisMonthCents += p.amountCents;
   }
 
-  const outstandingCount = outstandingRows.length;
-  const outstandingCents = outstandingRows.reduce((s, i) => s + (i.totalCents - i.paidCents), 0);
-  const paidThisMonthCents = monthPayments.reduce((s, p) => s + p.amountCents, 0);
-
-  return json({
-    items,
-    total,
-    page,
-    pageSize,
-    stats: {
-      count: total,
-      outstandingCount,
-      outstandingCents,
-      paidThisMonthCents,
-      byArrangement,
-      recentPayments: recentPayments.map((p) => ({
-        id: p.id,
-        invoiceId: p.invoiceId,
-        invoiceNumber: p.invoice.invoiceNumber,
-        patient: `${p.invoice.patient.firstName} ${p.invoice.patient.lastName}`,
-        patientCode: p.invoice.patient.patientCode,
-        amountCents: p.amountCents,
-        method: p.method,
-        paidAt: p.paidAt,
-      })),
-      recentRefunds: recentRefunds.map((r) => ({
-        id: r.id,
-        invoiceId: r.invoiceId,
-        invoiceNumber: r.invoice.invoiceNumber,
-        patient: `${r.invoice.patient.firstName} ${r.invoice.patient.lastName}`,
-        patientCode: r.invoice.patient.patientCode,
-        amountCents: r.amountCents,
-        reason: r.reason,
-        refundedAt: r.refundedAt,
-      })),
-    },
-  });
-});
+  return {
+    outstandingCount: outstandingAgg._count._all,
+    outstandingCents: (outstandingAgg._sum.totalCents ?? 0) - (outstandingAgg._sum.paidCents ?? 0),
+    paidThisMonthCents,
+    byArrangement,
+    recentPayments: recentPayments.map((p) => ({
+      id: p.id,
+      invoiceId: p.invoiceId,
+      invoiceNumber: p.invoice.invoiceNumber,
+      patient: `${p.invoice.patient.firstName} ${p.invoice.patient.lastName}`,
+      patientCode: p.invoice.patient.patientCode,
+      amountCents: p.amountCents,
+      method: p.method,
+      paidAt: p.paidAt,
+    })),
+    recentRefunds: recentRefunds.map((r) => ({
+      id: r.id,
+      invoiceId: r.invoiceId,
+      invoiceNumber: r.invoice.invoiceNumber,
+      patient: `${r.invoice.patient.firstName} ${r.invoice.patient.lastName}`,
+      patientCode: r.invoice.patient.patientCode,
+      amountCents: r.amountCents,
+      reason: r.reason,
+      refundedAt: r.refundedAt,
+    })),
+  };
+}
 
 // ---- POST: create invoice (DRAFT or issue immediately) ----
 const createSchema = z.object({

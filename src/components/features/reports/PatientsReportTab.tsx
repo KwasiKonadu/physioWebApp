@@ -3,8 +3,8 @@
 
 import { labelize } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { ReportDonut } from "./ReportDonut";
-import { ReportBarChart } from "./ReportBarChart";
+import { ReportDonut } from "./report-charts-lazy";
+import { ReportBarChart } from "./report-charts-lazy";
 import { DataTable } from "@/components/molecules/data-table";
 import { StatCard, makeTrend } from "@/components/molecules/stat-card";
 import { SectionCard } from "@/components/molecules/section-card";

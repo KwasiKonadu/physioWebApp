@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import { PageHeader } from "@/components/molecules/page-header";
 import { StatCard } from "@/components/molecules/stat-card";
-import { VIZ } from "./DashboardCharts";
+import { VIZ } from "./dashboard-viz";
 import { PERMS } from "@/lib/constants";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
 import type { DashboardData, Range } from "./dashboard-types";

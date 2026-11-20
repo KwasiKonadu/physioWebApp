@@ -5,7 +5,7 @@ import { formatMoney, minutesToTime, formatDate } from "@/lib/format";
 import { SectionCard } from "@/components/molecules/section-card";
 import { EmptyState } from "@/components/molecules/empty-state";
 import { Button } from "@/components/ui/button";
-import { Donut, StatusBars } from "./DashboardCharts";
+import { Donut, StatusBars } from "./dashboard-charts-lazy";
 import { useUIStore } from "@/stores/app-store";
 import type { DashboardData } from "./dashboard-types";
 import { EmptyStateCompact } from "./DashboardParts";

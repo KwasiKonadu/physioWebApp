@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
+import { useTherapistOptions } from "@/components/features/staff/use-therapists";
 import { APPOINTMENT_STATUSES, labelize } from "@/lib/constants";
 
 export interface AppointmentPatientDto {
@@ -100,31 +101,7 @@ export function useAppointmentDetail(id: string | null) {
  * degrade gracefully to an empty list instead of breaking the page.
  */
 export function useTherapists() {
-  return useQuery<TherapistOption[]>({
-    queryKey: ["appointments-therapists"],
-    queryFn: async () => {
-      try {
-        const res = await apiFetch<unknown>("/api/staff?therapists=true");
-        const arr: Record<string, unknown>[] = Array.isArray(res)
-          ? res
-          : ((res as { items?: Record<string, unknown>[] })?.items ?? []);
-        // The endpoint already filters to isTherapist=true; accept rows regardless of
-        // which flag fields were selected so short selects still map correctly.
-        return arr
-          .filter((s) => s && s.id)
-          .map((s) => ({
-            id: String(s.id),
-            firstName: String(s.firstName ?? ""),
-            lastName: String(s.lastName ?? ""),
-            jobTitle: (s.jobTitle as string) ?? null,
-          }));
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
+  return useTherapistOptions();
 }
 
 // ---- Mutations ----

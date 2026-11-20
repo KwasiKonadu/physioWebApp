@@ -2,7 +2,7 @@
 // FEATURE: discharges module — stats, discharge records table, initiation workflow (episode → reason).
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate, fullName } from "@/lib/format";
@@ -38,6 +38,7 @@ export default function DischargesPage() {
 
   const listQuery = useQuery({
     queryKey: ["discharges", page, pageSize, statusFilter],
+    placeholderData: keepPreviousData,
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (statusFilter !== "ALL") params.set("status", statusFilter);

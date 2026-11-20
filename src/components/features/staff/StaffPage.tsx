@@ -2,7 +2,7 @@
 // FEATURE: Staff — directory, filters, stats, detail dialog, add/edit form
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, labelize } from "@/lib/constants";
 import { TopBarTitle } from "@/components/templates/topbar-slots";
@@ -98,6 +98,7 @@ export default function StaffPage() {
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["staff", "list", role, status, search, page, pageSize],
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<StaffListResponse>(`/api/staff?${params.toString()}`),
   });
 

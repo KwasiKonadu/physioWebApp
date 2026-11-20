@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { useTherapistOptions } from "@/components/features/staff/use-therapists";
 
 // ---- DTOs ----
 export interface PatientListItem {
@@ -261,29 +262,12 @@ export function useDuplicates(params: { phone: string; firstName: string; lastNa
   });
 }
 
-/** Lightweight therapist options. The staff API belongs to another module — degrade to [] on failure. */
+/** Lightweight therapist options (shared cache with every other module). */
+const toNameOptions = (items: { id: string; firstName: string; lastName: string }[]): Option[] =>
+  items.map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}`.trim() })).filter((t) => t.id && t.name);
+
 export function useTherapists() {
-  return useQuery({
-    queryKey: ["therapists-options"],
-    queryFn: async (): Promise<Option[]> => {
-      try {
-        const data = await apiFetch<{ items?: Record<string, unknown>[] } | Record<string, unknown>[]>("/api/staff?therapists=true");
-        const list = Array.isArray(data) ? data : (data.items ?? []);
-        return list
-          .map((s) => {
-            const id = typeof s?.id === "string" ? s.id : "";
-            const name =
-              [s?.firstName, s?.lastName].filter((v) => typeof v === "string" && v).join(" ") ||
-              (typeof s?.name === "string" ? s.name : "");
-            return { id, name };
-          })
-          .filter((t) => t.id && t.name);
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  return useTherapistOptions(toNameOptions);
 }
 
 /** Insurance provider options. Billing module owns that API — degrade to [] on failure. */
@@ -324,11 +308,9 @@ export interface PackageOption { id: string; name: string; description: string |
 /** Active package definitions offered at registration (billing module owns the API). */
 export function usePackageOptions(enabled: boolean) {
   return useQuery({
-    queryKey: ["package-options"],
+    queryKey: ["billing", "package-defs"], // same entry as the billing AssignPackageDialog
     enabled,
-    queryFn: async (): Promise<PackageOption[]> => {
-      const data = await apiFetch<{ items?: PackageOption[] }>("/api/packages?active=true&pageSize=100");
-      return data.items ?? [];
-    },
+    queryFn: () => apiFetch<{ items?: PackageOption[] }>("/api/packages?active=true&pageSize=100"),
+    select: (data): PackageOption[] => data.items ?? [],
   });
 }

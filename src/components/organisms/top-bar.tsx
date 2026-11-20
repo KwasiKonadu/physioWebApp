@@ -46,7 +46,15 @@ export function TopBar() {
 
   const markAll = useMutation({
     mutationFn: () => apiFetch("/api/notifications", { method: "PATCH", json: { all: true } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    // optimistic: the unread badge clears instantly; rolled back if the request fails
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const prev = queryClient.getQueryData<{ items: NotificationItem[] }>(["notifications"]);
+      if (prev) queryClient.setQueryData(["notifications"], { ...prev, items: prev.items.map((n) => ({ ...n, read: true })) });
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(["notifications"], ctx.prev); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   const logout = () => {

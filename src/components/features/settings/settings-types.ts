@@ -22,6 +22,7 @@ export interface SettingsData {
     currency: string;
     timezone: string;
   };
+  billingCounts?: { services: number; serviceCategories: number; packages: number; providers: number };
 }
 
 export type TabKey = "clinic" | "users" | "audit";

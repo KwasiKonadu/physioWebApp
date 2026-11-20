@@ -1,7 +1,7 @@
 "use client";
 // SETTINGS: Audit log tab — filters, expandable JSON detail rows, pagination
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { labelize } from "@/lib/constants";
 import { formatDateTime, relativeTime } from "@/lib/format";
@@ -77,6 +77,7 @@ export default function SettingsAuditTab() {
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["audit-logs", entityType, from, to, search, page, pageSize],
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<{ items: AuditRow[]; total: number; page: number; pageSize: number; entityTypes: string[] }>(
       `/api/audit-logs?${params.toString()}`
     ),

@@ -4,11 +4,8 @@
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { labelize } from "@/lib/constants";
 
-export const VIZ = { blue: "#7fa9ee", teal: "#306fdb", amber: "#e08a1e", grid: "#e8ecf1", axis: "#64748b" };
-
-export interface TrendPoint {
-  day: string; date: string; appointments: number; sessions: number; revenue: number; newPatients: number;
-}
+import { VIZ, type TrendPoint } from "./dashboard-viz";
+export { VIZ, type TrendPoint };
 
 function TooltipBox({ active, payload, label, format }: {
   active?: boolean; label?: string;

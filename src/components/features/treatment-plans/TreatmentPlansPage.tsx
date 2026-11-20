@@ -2,7 +2,7 @@
 // FEATURE: Treatment Plans module — plans list (filters, version expansion) → detail → wizard form
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,6 +166,7 @@ export default function TreatmentPlansPage() {
 
   const listQuery = useQuery({
     queryKey: ["plans", "list", { page, pageSize, status, search, ...scope }],
+    placeholderData: keepPreviousData,
     queryFn: () => plansApi.list({
       page, pageSize,
       status: status === "all" ? undefined : status,
@@ -177,15 +178,7 @@ export default function TreatmentPlansPage() {
 
   const statsQuery = useQuery({
     queryKey: ["plans", "stats"],
-    queryFn: async () => {
-      const [total, active, draft, review] = await Promise.all([
-        plansApi.list({ page: 1, pageSize: 1 }),
-        plansApi.list({ page: 1, pageSize: 1, status: "ACTIVE" }),
-        plansApi.list({ page: 1, pageSize: 1, status: "DRAFT" }),
-        plansApi.list({ page: 1, pageSize: 1, status: "UNDER_REVIEW" }),
-      ]);
-      return { total: total.total, active: active.total, draft: draft.total, review: review.total };
-    },
+    queryFn: async () => (await plansApi.list({ page: 1, pageSize: 1, stats: true })).stats,
   });
 
   const items = listQuery.data?.items || [];

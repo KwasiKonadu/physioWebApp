@@ -125,6 +125,7 @@ export interface PlanListResponse {
   total: number;
   page: number;
   pageSize: number;
+  stats?: { total: number; active: number; draft: number; review: number };
 }
 
 // ---- form-facing patient / episode lookups (patients module API) ----

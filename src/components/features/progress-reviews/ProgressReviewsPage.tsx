@@ -2,7 +2,7 @@
 // FEATURE: progress reviews module — due-now dashboard, review history table, early review initiation.
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { formatDate, fullName } from "@/lib/format";
@@ -43,6 +43,7 @@ export default function ProgressReviewsPage() {
 
   const listQuery = useQuery({
     queryKey: ["reviews", page, pageSize, statusFilter],
+    placeholderData: keepPreviousData,
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (statusFilter !== "ALL") params.set("status", statusFilter);

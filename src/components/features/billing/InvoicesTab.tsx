@@ -2,7 +2,7 @@
 // ============ Invoices tab: filters + list + new invoice builder + detail sheet ============
 import { patientShare } from "@/lib/invoice-share";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { DataTable } from "@/components/molecules/data-table";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { EmptyState } from "@/components/molecules/empty-state";
@@ -17,6 +17,7 @@ import { PERMS, INVOICE_STATUSES, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/c
 import { patientName, ArrangementBadge, type ListResponse, type InvoiceListItem } from "./billing-shared";
 import InvoiceDetailSheet from "./InvoiceDetail";
 import { NewInvoiceDialog } from "./NewInvoiceDialog";
+import { useInvoiceStats } from "./billing-hooks";
 
 interface InvoiceStatsPayload {
   stats: {
@@ -62,11 +63,14 @@ export default function InvoicesTab({ prefillPatientId }: { prefillPatientId?: s
 
   const listQ = useQuery({
     queryKey: ["billing", "invoices", params],
-    queryFn: () => apiFetch<ListResponse<InvoiceListItem> & InvoiceStatsPayload>(`/api/invoices?${params}`),
+    placeholderData: keepPreviousData,
+    // paging/filtering only — clinic-wide stats are fetched once below, not recomputed per page
+    queryFn: () => apiFetch<ListResponse<InvoiceListItem>>(`/api/invoices?${params}&stats=false`),
   });
+  const statsQ = useInvoiceStats<InvoiceStatsPayload["stats"]>();
 
   const rows = listQ.data?.items || [];
-  const outstanding = listQ.data?.stats;
+  const outstanding = statsQ.data?.stats;
 
   return (
     <div className="space-y-4">
