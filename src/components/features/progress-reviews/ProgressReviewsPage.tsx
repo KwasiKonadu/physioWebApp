@@ -25,6 +25,7 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { EpisodePickerDialog } from "./EpisodePickerDialog";
 import { DECISION_TONE } from "./types";
 import type { PickerEpisode, ReviewsListResponse } from "./types";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export default function ProgressReviewsPage() {
   const router = useRouter();
@@ -34,9 +35,9 @@ export default function ProgressReviewsPage() {
   const clearOpts = useUIStore((s) => s.clearOpts);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUrlState("rv_page", 1);
   const [pageSize] = useState(10);
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useUrlState("rv_status", "ALL");
   const [earlyOpen, setEarlyOpen] = useState(false);
   const [pendingEpisode, setPendingEpisode] = useState<PickerEpisode | null>(null);
   const [earlyReason, setEarlyReason] = useState("");

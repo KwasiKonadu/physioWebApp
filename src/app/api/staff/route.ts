@@ -90,7 +90,7 @@ export const GET = route(async (req) => {
       : {}),
   };
 
-  const [items, total, therapists, active, onLeave, branches, linkedUsers] = await Promise.all([
+  const [items, total, therapists, active, onLeave, branches] = await Promise.all([
     db.staffProfile.findMany({
       where,
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
@@ -102,11 +102,18 @@ export const GET = route(async (req) => {
     db.staffProfile.count({ where: { clinicId: auth.clinicId, employmentStatus: "ACTIVE" } }),
     db.staffProfile.count({ where: { clinicId: auth.clinicId, employmentStatus: "ON_LEAVE" } }),
     db.branch.findMany({ where: { clinicId: auth.clinicId }, select: { id: true, name: true } }),
-    db.user.findMany({
-      where: { clinicId: auth.clinicId },
-      select: { id: true, staffId: true, email: true, active: true },
-    }),
   ]);
+
+  // only the accounts linked to the staff on THIS page (not every user in the clinic); a user links either via
+  // user.staffId or staff.userId
+  const pageStaffIds = items.map((s) => s.id);
+  const pageUserIds = items.map((s) => s.userId).filter((u): u is string => !!u);
+  const linkedUsers = pageStaffIds.length
+    ? await db.user.findMany({
+        where: { clinicId: auth.clinicId, OR: [{ staffId: { in: pageStaffIds } }, ...(pageUserIds.length ? [{ id: { in: pageUserIds } }] : [])] },
+        select: { id: true, staffId: true, email: true, active: true },
+      })
+    : [];
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
   // user may link via staff.userId or user.staffId

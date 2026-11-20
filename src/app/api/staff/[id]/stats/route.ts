@@ -37,60 +37,42 @@ export const GET = route(async (req, ctx) => {
 
   const sixMonthsAgo = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 5, 1));
 
-  const [completedSessions, uniquePatientRows, activeEpisodes, appointmentsCompleted, noShows, upcomingAppointments, trendRows, apptMonthRows, apptPeriodRows, sessionPeriodRows] =
+  const where = { clinicId: auth.clinicId, therapistId: staff.id };
+  const [periodSessions, activeEpisodes, upcomingAppointments, trendRows, apptMonthGroups, apptPeriodGroups] =
     await Promise.all([
-      db.therapySession.count({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: "COMPLETED", date: { gte: from, lte: to } },
-      }),
+      // completed sessions in the selected period — loaded ONCE; the session count, unique patients and the
+      // weekday pattern are all derived from these rows (previously three separate queries)
       db.therapySession.findMany({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: "COMPLETED", date: { gte: from, lte: to } },
-        distinct: ["patientId"],
-        select: { patientId: true },
-      }),
-      db.treatmentEpisode.count({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: { in: OPEN_EPISODE_STATUSES } },
-      }),
-      db.appointment.count({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: "COMPLETED", date: { gte: from, lte: to } },
-      }),
-      db.appointment.count({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: "NO_SHOW", date: { gte: from, lte: to } },
-      }),
-      db.appointment.count({
-        where: {
-          clinicId: auth.clinicId,
-          therapistId: staff.id,
-          date: { gt: to },
-          status: { in: ["SCHEDULED", "CONFIRMED", "RESCHEDULED"] },
-        },
-      }),
-      db.therapySession.findMany({
-        where: {
-          clinicId: auth.clinicId,
-          therapistId: staff.id,
-          status: "COMPLETED",
-          date: { gte: sixMonthsAgo, lte: to },
-        },
+        where: { ...where, status: "COMPLETED", date: { gte: from, lte: to } },
         select: { date: true, patientId: true },
       }),
-      // appointments over the last 6 months (monthly booked / completed / no-show / cancelled)
-      db.appointment.findMany({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, date: { gte: sixMonthsAgo, lte: to } },
-        select: { date: true, status: true },
+      db.treatmentEpisode.count({ where: { ...where, status: { in: OPEN_EPISODE_STATUSES } } }),
+      db.appointment.count({
+        where: { ...where, date: { gt: to }, status: { in: ["SCHEDULED", "CONFIRMED", "RESCHEDULED"] } },
       }),
-      // appointments in the selected period (status mix)
-      db.appointment.findMany({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, date: { gte: from, lte: to } },
-        select: { status: true },
-      }),
-      // completed sessions in the selected period (weekday pattern)
       db.therapySession.findMany({
-        where: { clinicId: auth.clinicId, therapistId: staff.id, status: "COMPLETED", date: { gte: from, lte: to } },
-        select: { date: true },
+        where: { ...where, status: "COMPLETED", date: { gte: sixMonthsAgo, lte: to } },
+        select: { date: true, patientId: true },
+      }),
+      // appointments over the last 6 months, grouped in the database (monthly booked / completed / no-show / cancelled)
+      db.appointment.groupBy({
+        by: ["date", "status"],
+        where: { ...where, date: { gte: sixMonthsAgo, lte: to } },
+        _count: { _all: true },
+      }),
+      // appointment status mix in the selected period (also gives completed + no-show counts)
+      db.appointment.groupBy({
+        by: ["status"],
+        where: { ...where, date: { gte: from, lte: to } },
+        _count: { _all: true },
       }),
     ]);
 
-  const uniquePatients = uniquePatientRows.length;
+  const completedSessions = periodSessions.length;
+  const uniquePatients = new Set(periodSessions.map((r) => r.patientId)).size;
+  const periodStatus = new Map(apptPeriodGroups.map((g) => [g.status, g._count._all]));
+  const appointmentsCompleted = periodStatus.get("COMPLETED") || 0;
+  const noShows = periodStatus.get("NO_SHOW") || 0;
 
   // Remuneration (Business Rule 1)
   const rateCents = staff.remunerationRateCents ?? null;
@@ -123,21 +105,21 @@ export const GET = route(async (req, ctx) => {
     const d = new Date(row.date);
     monthMap.get(`${d.getFullYear()}-${d.getMonth()}`)?.patients.add(row.patientId);
   }
-  for (const a of apptMonthRows) {
+  for (const a of apptMonthGroups) {
     const d = new Date(a.date);
     const m = monthMap.get(`${d.getFullYear()}-${d.getMonth()}`);
     if (!m) continue;
-    m.booked += 1;
-    if (a.status === "COMPLETED") m.completed += 1;
-    else if (a.status === "NO_SHOW") m.noShows += 1;
-    else if (a.status === "CANCELLED") m.cancelled += 1;
+    const n = a._count._all;
+    m.booked += n;
+    if (a.status === "COMPLETED") m.completed += n;
+    else if (a.status === "NO_SHOW") m.noShows += n;
+    else if (a.status === "CANCELLED") m.cancelled += n;
   }
 
-  const statusCounts = new Map<string, number>();
-  for (const a of apptPeriodRows) statusCounts.set(a.status, (statusCounts.get(a.status) || 0) + 1);
+  const statusCounts = periodStatus;
 
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({ day, sessions: 0 }));
-  for (const r of sessionPeriodRows) weekdays[(new Date(r.date).getDay() + 6) % 7].sessions += 1;
+  for (const r of periodSessions) weekdays[(new Date(r.date).getDay() + 6) % 7].sessions += 1;
 
   return json({
     from: from.toISOString(),

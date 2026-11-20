@@ -4,8 +4,8 @@
 // expandable/collapsible; tooltips when collapsed; rounded floating appearance.
 import { useState } from "react";
 import { NAV_ITEMS, type ViewKey } from "@/lib/constants";
-import { usePathname } from "next/navigation";
-import { hasPermission, useAuthStore, useUIStore, viewFromPath } from "@/stores/app-store";
+import { usePathname, useRouter } from "next/navigation";
+import { hasPermission, useAuthStore, useUIStore, viewFromPath, VIEW_PATHS } from "@/stores/app-store";
 import { AtomIcon } from "@/components/atoms/icon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,9 @@ export function AppSidebar() {
   const activeView = viewFromPath(usePathname());
   const storedCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const navigate = useUIStore((s) => s.navigate);
+  const router = useRouter();
+  // these are buttons (not <Link>s), so warm the route's code on hover/focus ourselves
+  const prefetch = (key: ViewKey) => router.prefetch(VIEW_PATHS[key]);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const [hovered, setHovered] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -66,7 +69,8 @@ export function AppSidebar() {
                       aria-label={item.label}
                       aria-current={active ? "page" : undefined}
                       onClick={() => navigate(item.key)}
-                      onMouseEnter={() => setHovered(item.key)}
+                      onMouseEnter={() => { setHovered(item.key); prefetch(item.key); }}
+                      onFocus={() => prefetch(item.key)}
                       onMouseLeave={() => setHovered(null)}
                       className={cn(
                         "flex h-9 items-center justify-center rounded-lg transition-colors",
@@ -101,7 +105,8 @@ export function AppSidebar() {
                     key={item.key}
                     type="button"
                     onClick={() => navigate(item.key)}
-                    onMouseEnter={() => setHovered(item.key)}
+                    onMouseEnter={() => { setHovered(item.key); prefetch(item.key); }}
+                      onFocus={() => prefetch(item.key)}
                     onMouseLeave={() => setHovered(null)}
                     className={cn(
                       "flex h-9 w-full shrink-0 items-center rounded-lg rounded-l-none pl-0 pr-2 text-left text-[13px] transition-colors",

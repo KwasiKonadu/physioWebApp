@@ -19,18 +19,19 @@ import { severityBadge } from "./DiagnosisShared";
 import { AddDiagnosisDialog } from "./AddDiagnosisDialog";
 import { DiagnosisDetailDialog } from "./DiagnosisDetailDialog";
 import { ReviseDiagnosisDialog } from "./ReviseDiagnosisDialog";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export default function DiagnosesTab() {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useUrlState("dx_q", "");
   const dq = API.useDebounced(search, 300);
-  const [category, setCategory] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [category, setCategory] = useUrlState("dx_cat", "all");
+  const [status, setStatus] = useUrlState("dx_status", "all");
+  const [page, setPage] = useUrlState("dx_page", 1);
+  const [pageSize, setPageSize] = useUrlState("dx_size", 10);
 
   const [addOpen, setAddOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<API.DiagnosisListItem | null>(null);

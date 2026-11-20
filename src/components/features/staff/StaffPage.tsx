@@ -31,6 +31,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StaffLeaveTab } from "./StaffLeaveTab";
 import { StaffSalariesTab } from "./StaffSalariesTab";
 import StaffFormDialog, { type StaffFormTarget } from "./staff-form-dialog";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export interface StaffListItem {
   id: string;
@@ -69,12 +70,12 @@ export default function StaffPage() {
   const canManage = hasPermission(user, PERMS.staffManage);
 
   const [tab, setTab] = useState<StaffTab>("directory");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [role, setRole] = useState("ALL");
-  const [status, setStatus] = useState("ALL");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [searchInput, setSearchInput] = useUrlState("st_q", "");
+  const [search, setSearch] = useState(searchInput); // starts from the URL value
+  const [role, setRole] = useUrlState("st_role", "ALL");
+  const [status, setStatus] = useUrlState("st_status", "ALL");
+  const [page, setPage] = useUrlState("st_page", 1);
+  const [pageSize, setPageSize] = useUrlState("st_size", 10);
 
   const [view, setView] = usePersistentState<"table" | "grid">("gmrs-staff-view", "table", ["table", "grid"]);
   const router = useRouter();
@@ -185,6 +186,7 @@ export default function StaffPage() {
 
   const paginationEl = (
     <TablePagination
+      standalone
       page={page}
       pageSize={pageSize}
       total={data?.total || 0}
@@ -283,7 +285,7 @@ export default function StaffPage() {
               {items.map((row) => <StaffCard key={row.id} staff={row} onOpen={setDetailId} />)}
             </CardGrid>
           )}
-          <div className="mt-4 overflow-hidden rounded-lg border bg-card">{paginationEl}</div>
+          <div className="mt-4">{paginationEl}</div>
         </>
       ) : (
         <TooltipProvider>

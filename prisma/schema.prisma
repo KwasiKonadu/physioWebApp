@@ -2,7 +2,8 @@
 // Postgres (Supabase): no native enums (string fields + TS constants), money stored as integer pesewas (GHS cents)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

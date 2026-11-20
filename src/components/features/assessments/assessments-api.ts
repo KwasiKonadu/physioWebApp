@@ -137,7 +137,7 @@ export interface PatientBundle { patient: PatientLite; episodes: EpisodeLite[] }
 
 export async function fetchPatientBundle(patientId: string): Promise<PatientBundle | null> {
   try {
-    const res = await apiFetch<Record<string, unknown>>(`/api/patients/${patientId}`);
+    const res = await apiFetch<Record<string, unknown>>(`/api/patients/${patientId}?view=summary`);
     const root = (res ?? {}) as Record<string, unknown>;
     const maybePatient = (root.patient ?? root) as Record<string, unknown>;
     const rawEps = root.episodes ?? maybePatient?.episodes ?? [];

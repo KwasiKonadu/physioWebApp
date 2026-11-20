@@ -15,17 +15,18 @@ import { AtomIcon } from "@/components/atoms/icon";
 import { formatDate, fullName } from "@/lib/format";
 import * as API from "./assessments-api";
 import type { AssessmentFormTarget } from "./AssessmentForm";
+import { useUrlState } from "@/hooks/use-url-state";
 
 // ===================== assessments list =====================
 export function AssessmentsList({ canManage, onOpen }: {
   canManage: boolean;
   onOpen: (t: AssessmentFormTarget) => void;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useUrlState("as_q", "");
   const dq = API.useDebounced(search, 300);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useUrlState("as_status", "all");
+  const [page, setPage] = useUrlState("as_page", 1);
+  const [pageSize, setPageSize] = useUrlState("as_size", 10);
 
   const listQ = useQuery({
     queryKey: ["assessments", "list", { dq, statusFilter, page, pageSize }],

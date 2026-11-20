@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { AtomIcon } from "@/components/atoms/icon";
+import { useUrlState } from "@/hooks/use-url-state";
 
 interface AuditRow {
   id: string;
@@ -52,13 +53,13 @@ function pretty(v: unknown): string {
 }
 
 export default function SettingsAuditTab() {
-  const [entityType, setEntityType] = useState("ALL");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [entityType, setEntityType] = useUrlState("audit_type", "ALL");
+  const [from, setFrom] = useUrlState("audit_from", "");
+  const [to, setTo] = useUrlState("audit_to", "");
+  const [searchInput, setSearchInput] = useUrlState("audit_q", "");
+  const [search, setSearch] = useState(searchInput); // starts from the URL value
+  const [page, setPage] = useUrlState("audit_page", 1);
+  const [pageSize, setPageSize] = useUrlState("audit_size", 10);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {

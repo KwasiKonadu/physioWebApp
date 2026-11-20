@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PATIENT_STATUSES, labelize } from "@/lib/constants";
 import { formatDate, fullName, initials } from "@/lib/format";
+import { useUrlState } from "@/hooks/use-url-state";
 
 const PAYMENT_TONES: Record<string, string> = {
   PAYG: "bg-navy-50 text-navy-800 border-navy-200",
@@ -22,10 +23,10 @@ const PAYMENT_TONES: Record<string, string> = {
 
 export default function StaffPatientsTab({ staffId, staffName }: { staffId: string; staffName: string }) {
   const router = useRouter();
-  const [searchInput, setSearchInput] = useState("");
-  const [status, setStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [searchInput, setSearchInput] = useUrlState("sp_q", "");
+  const [status, setStatus] = useUrlState("sp_status", "all");
+  const [page, setPage] = useUrlState("sp_page", 1);
+  const [pageSize, setPageSize] = useUrlState("sp_size", 10);
   const search = useDebounced(searchInput, 300);
 
   const list = usePatientList({

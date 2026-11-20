@@ -1,7 +1,7 @@
 "use client";
 // ============ Patients module: shared types + query hooks ============
 import { useEffect, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useTherapistOptions } from "@/components/features/staff/use-therapists";
 
@@ -246,12 +246,15 @@ export function usePatientList(params: PatientListParams) {
   });
 }
 
-export function usePatient(patientId: string | null) {
-  return useQuery({
+export const patientQueryOptions = (patientId: string | null) =>
+  queryOptions({
     queryKey: ["patient", patientId],
     queryFn: () => apiFetch<PatientBundle>(`/api/patients/${patientId}`),
     enabled: !!patientId,
   });
+
+export function usePatient(patientId: string | null) {
+  return useQuery(patientQueryOptions(patientId));
 }
 
 export function useDuplicates(params: { phone: string; firstName: string; lastName: string; dob: string }, enabled: boolean) {

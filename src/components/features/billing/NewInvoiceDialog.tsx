@@ -65,7 +65,7 @@ export function NewInvoiceDialog({
     queryKey: ["billing", "patient-episodes", patient?.id],
     queryFn: async () => {
       try {
-        return await apiFetch<Record<string, unknown>>(`/api/patients/${patient!.id}`);
+        return await apiFetch<Record<string, unknown>>(`/api/patients/${patient!.id}?view=summary`);
       } catch {
         return null;
       }
@@ -77,7 +77,7 @@ export function NewInvoiceDialog({
   // prefill patient by id (from cross-module navigation)
   useEffect(() => {
     if (!open || !prefillPatientId || patient) return;
-    apiFetch<{ patient?: PatientLite } | PatientLite>(`/api/patients/${prefillPatientId}`)
+    apiFetch<{ patient?: PatientLite } | PatientLite>(`/api/patients/${prefillPatientId}?view=summary`)
       .then((data) => {
         const p = (data as { patient?: PatientLite }).patient || (data as PatientLite);
         if (p && p.id) setPatient(p);

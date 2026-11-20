@@ -76,7 +76,7 @@ export function BookingForm({ onDone, presetPatientId, presetWalkIn, defaultDate
     queryKey: ["booking-bundle", selectedPatientId],
     queryFn: async () => {
       try {
-        const res = await apiFetch<unknown>(`/api/patients/${selectedPatientId}`);
+        const res = await apiFetch<unknown>(`/api/patients/${selectedPatientId}?view=summary`);
         return extractBundle(res);
       } catch {
         return { patient: null, episodes: [] as EpisodeOption[] };

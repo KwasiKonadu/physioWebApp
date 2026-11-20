@@ -48,6 +48,7 @@ export const GET = route(async (req) => {
   const [items, total, stats] = await Promise.all([
     withItems
       ? db.invoice.findMany({
+          relationLoadStrategy: "join",
           where,
           orderBy: { issuedAt: "desc" },
           skip: (page - 1) * pageSize,
@@ -88,6 +89,7 @@ async function computeInvoiceStats(clinicId: string) {
       select: { amountCents: true, invoice: { select: { arrangement: true } } },
     }),
     db.payment.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId },
       orderBy: { paidAt: "desc" },
       take: 6,
@@ -98,6 +100,7 @@ async function computeInvoiceStats(clinicId: string) {
       },
     }),
     db.refund.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId },
       orderBy: { refundedAt: "desc" },
       take: 5,

@@ -4,18 +4,24 @@ import { z } from "zod";
 
 export const GET = route(async (req) => {
   const auth = requireAuth(req);
-  const items = await db.notification.findMany({
-    where: {
-      clinicId: auth.clinicId,
-      OR: [
-        { userId: auth.userId },
-        { userId: null, audienceRole: { in: ["ALL", auth.role.toUpperCase().replace(" ", "_")] } },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-    take: 40,
-  });
-  return json({ items });
+  const audience = {
+    clinicId: auth.clinicId,
+    OR: [
+      { userId: auth.userId },
+      { userId: null, audienceRole: { in: ["ALL", auth.role.toUpperCase().replace(" ", "_")] } },
+    ],
+  };
+  // only the fields the bell uses; the unread badge comes from a COUNT so it stays right beyond the 20 listed rows
+  const [items, unreadCount] = await Promise.all([
+    db.notification.findMany({
+      where: audience,
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, title: true, message: true, type: true, read: true, createdAt: true },
+    }),
+    db.notification.count({ where: { ...audience, read: false } }),
+  ]);
+  return json({ items, unreadCount });
 });
 
 export const PATCH = route(async (req) => {

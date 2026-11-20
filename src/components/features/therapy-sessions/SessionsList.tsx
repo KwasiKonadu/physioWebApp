@@ -23,6 +23,7 @@ import {
 
 import { SessionListItem, SessionsListResponse, useTherapists, PainBadge, ReviewProgress } from "./session-list-shared";
 import { NewSessionDialog } from "./NewSessionDialog";
+import { useUrlState } from "@/hooks/use-url-state";
 
 // ---- Sessions list ----
 export function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
@@ -34,13 +35,13 @@ export function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [status, setStatus] = useState("all");
-  const [therapistId, setTherapistId] = useState("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [status, setStatus] = useUrlState("ss_status", "all");
+  const [therapistId, setTherapistId] = useUrlState("ss_therapist", "all");
+  const [from, setFrom] = useUrlState("ss_from", "");
+  const [to, setTo] = useUrlState("ss_to", "");
+  const [search, setSearch] = useUrlState("ss_q", "");
+  const [page, setPage] = useUrlState("ss_page", 1);
+  const [pageSize, setPageSize] = useUrlState("ss_size", 10);
   const [createOpen, setCreateOpen] = useState(false);
 
   const therapistsQuery = useTherapists();

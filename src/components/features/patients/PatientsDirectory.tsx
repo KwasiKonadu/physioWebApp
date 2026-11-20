@@ -25,11 +25,12 @@ import {
 import { calcAge, formatDate, fullName, initials } from "@/lib/format";
 import { PERMS, PATIENT_STATUSES, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/constants";
 import { hasPermission, useAuthStore } from "@/stores/app-store";
-import { useDebounced, usePatientList, useTherapists, type PatientListItem } from "./hooks";
+import { patientQueryOptions, useDebounced, usePatientList, useTherapists, type PatientListItem } from "./hooks";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { PatientCard } from "./PatientCard";
 import { PatientRowActions } from "./PatientRowActions";
 import PatientRegistrationDialog from "./PatientRegistrationDialog";
+import { useUrlState } from "@/hooks/use-url-state";
 
 const PAYMENT_TONES: Record<string, string> = {
   PAYG: "bg-navy-50 text-navy-800 border-navy-200",
@@ -46,12 +47,12 @@ export default function PatientsDirectory({ onOpen }: Props) {
   const queryClient = useQueryClient();
   const canManage = hasPermission(user, PERMS.patientsManage);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [status, setStatus] = useState("all");
-  const [arrangement, setArrangement] = useState("all");
-  const [therapistId, setTherapistId] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [searchInput, setSearchInput] = useUrlState("q", "");
+  const [status, setStatus] = useUrlState("status", "all");
+  const [arrangement, setArrangement] = useUrlState("arr", "all");
+  const [therapistId, setTherapistId] = useUrlState("therapist", "all");
+  const [page, setPage] = useUrlState("page", 1);
+  const [pageSize, setPageSize] = useUrlState("size", 10);
   const [sort, setSort] = useState("createdAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -117,6 +118,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
 
   const paginationEl = (
     <TablePagination
+      standalone
       page={page}
       pageSize={pageSize}
       total={total}
@@ -234,7 +236,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
               {items.map((p: PatientListItem) => <PatientCard key={p.id} patient={p} onOpen={onOpen} />)}
             </CardGrid>
           )}
-          <div className="mt-4 overflow-hidden rounded-lg border bg-card">{paginationEl}</div>
+          <div className="mt-4">{paginationEl}</div>
         </>
       ) : (
         <DataTable
@@ -243,6 +245,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
           loading={list.isLoading}
           minWidth="min-w-220"
           onRowClick={(p) => onOpen(p.id)}
+          onRowHover={(p) => { void queryClient.prefetchQuery({ ...patientQueryOptions(p.id), staleTime: 30_000 }); }}
           sort={{ field: sort, order }}
           onSort={toggleSort}
           empty={emptyBlock}

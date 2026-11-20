@@ -69,7 +69,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
   // number of patients assigned to this therapist, for the tab label
   const patientCountQ = useQuery({
     queryKey: ["patients", "count-for-staff", staffId],
-    queryFn: () => apiFetch<{ total: number }>(`/api/patients?therapistId=${staffId}&pageSize=1`),
+    queryFn: () => apiFetch<{ total: number }>(`/api/patients?therapistId=${staffId}&countOnly=true`),
     enabled: !!s?.isTherapist,
   });
 

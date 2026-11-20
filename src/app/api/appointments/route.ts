@@ -92,6 +92,7 @@ export const GET = route(async (req) => {
   if (isListMode) {
     const [items, total] = await Promise.all([
       db.appointment.findMany({
+        relationLoadStrategy: "join",
         where,
         orderBy: [{ date: "asc" }, { startMin: "asc" }],
         skip: (page - 1) * pageSize,
@@ -111,6 +112,7 @@ export const GET = route(async (req) => {
 
   // calendar mode — return everything in range (capped)
   const items = await db.appointment.findMany({
+    relationLoadStrategy: "join",
     where,
     orderBy: [{ date: "asc" }, { startMin: "asc" }],
     take: 500,

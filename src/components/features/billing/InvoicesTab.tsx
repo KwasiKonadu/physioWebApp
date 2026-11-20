@@ -18,6 +18,7 @@ import { patientName, ArrangementBadge, type ListResponse, type InvoiceListItem 
 import InvoiceDetailSheet from "./InvoiceDetail";
 import { NewInvoiceDialog } from "./NewInvoiceDialog";
 import { useInvoiceStats } from "./billing-hooks";
+import { useUrlState } from "@/hooks/use-url-state";
 
 interface InvoiceStatsPayload {
   stats: {
@@ -32,13 +33,13 @@ export default function InvoicesTab({ prefillPatientId }: { prefillPatientId?: s
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.billingManage);
 
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("all");
-  const [arrangement, setArrangement] = useState<string>("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [page, setPage] = useUrlState("inv_page", 1);
+  const [pageSize, setPageSize] = useUrlState("inv_size", 10);
+  const [search, setSearch] = useUrlState("inv_q", "");
+  const [status, setStatus] = useUrlState("inv_status", "all");
+  const [arrangement, setArrangement] = useUrlState("inv_arr", "all");
+  const [from, setFrom] = useUrlState("inv_from", "");
+  const [to, setTo] = useUrlState("inv_to", "");
   const [newOpen, setNewOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 

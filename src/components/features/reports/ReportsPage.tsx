@@ -53,19 +53,19 @@ export default function ReportsPage() {
 
   const range = useMemo(() => rangeFor(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
+  // same report for the previous period of equal length, used for the change chips on the stat cards —
+  // fetched in the SAME request (the server runs both in parallel)
+  const prevRange = useMemo(() => previousRange(range), [range]);
+  const withPrev = preset !== "custom" || (!!customFrom && !!customTo);
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["reports", type, range.from, range.to],
-    queryFn: () => apiFetch<{ type: string; from: string; to: string; report: ReportData }>(`/api/reports?type=${type}&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`),
+    queryKey: ["reports", type, range.from, range.to, withPrev ? prevRange.from : "", withPrev ? prevRange.to : ""],
+    queryFn: () => apiFetch<{ type: string; from: string; to: string; report: ReportData; prevReport?: ReportData }>(
+      `/api/reports?type=${type}&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}` +
+      (withPrev ? `&prevFrom=${encodeURIComponent(prevRange.from)}&prevTo=${encodeURIComponent(prevRange.to)}` : "")
+    ),
     enabled: canView,
   });
-
-  // same report for the previous period of equal length, used for the change chips on the stat cards
-  const prevRange = useMemo(() => previousRange(range), [range]);
-  const { data: prevData } = useQuery({
-    queryKey: ["reports", type, prevRange.from, prevRange.to],
-    queryFn: () => apiFetch<{ type: string; from: string; to: string; report: ReportData }>(`/api/reports?type=${type}&from=${encodeURIComponent(prevRange.from)}&to=${encodeURIComponent(prevRange.to)}`),
-    enabled: canView && (preset !== "custom" || (!!customFrom && !!customTo)),
-  });
+  const prevData = data?.prevReport ? { report: data.prevReport } : undefined;
   const prevLabel = `${formatDate(prevRange.from, { day: "numeric", month: "short" })} – ${formatDate(prevRange.to, { day: "numeric", month: "short" })}`;
 
   const csvPrefix = `gmrs-${type}-${ymd(new Date())}`;

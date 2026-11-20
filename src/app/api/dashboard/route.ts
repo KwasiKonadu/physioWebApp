@@ -1,5 +1,6 @@
-import { requireAuth } from "@/server/api-exports";
+import { requirePermission } from "@/server/api-exports";
 import { route, json, getQuery } from "@/server/api-exports";
+import { PERMS } from "@/lib/constants";
 import { db } from "@/server/api-exports";
 
 function rangeToDates(range: string, from?: string | null, to?: string | null): { start: Date; end: Date } {
@@ -24,7 +25,8 @@ function rangeToDates(range: string, from?: string | null, to?: string | null): 
 }
 
 export const GET = route(async (req) => {
-  const auth = requireAuth(req);
+  // same permission that shows the Dashboard link in the sidebar
+  const auth = requirePermission(req, PERMS.dashboardView);
   const range = getQuery(req, "range") || "today";
   const from = getQuery(req, "from");
   const to = getQuery(req, "to");
@@ -60,6 +62,7 @@ export const GET = route(async (req) => {
     db.therapySession.count({ where: { clinicId: auth.clinicId, status: "COMPLETED", date: { gte: start, lte: end } } }),
     db.treatmentEpisode.count({ where: { clinicId: auth.clinicId, reviewDue: true } }),
     db.treatmentEpisode.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, reviewDue: true },
       take: 6,
       orderBy: { openedDate: "asc" },
@@ -80,6 +83,7 @@ export const GET = route(async (req) => {
       select: { paidAt: true, amountCents: true, invoice: { select: { arrangement: true } } },
     }),
     db.appointment.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, date: { gte: day0, lte: dayEnd } },
       orderBy: { startMin: "asc" },
       take: 10,
@@ -90,6 +94,7 @@ export const GET = route(async (req) => {
       },
     }),
     db.appointment.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, date: { gt: dayEnd }, status: { in: ["SCHEDULED", "CONFIRMED"] } },
       orderBy: [{ date: "asc" }, { startMin: "asc" }],
       take: 6,
@@ -99,6 +104,7 @@ export const GET = route(async (req) => {
       },
     }),
     db.treatmentEpisode.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, status: { in: ["ACTIVE_TREATMENT", "AWAITING_PLAN", "UNDER_REVIEW"] } },
       orderBy: { updatedAt: "desc" },
       take: 5,
@@ -108,12 +114,14 @@ export const GET = route(async (req) => {
       },
     }),
     db.treatmentEpisode.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, status: "DISCHARGED" },
       orderBy: { closedDate: "desc" },
       take: 4,
       include: { patient: { select: { id: true, firstName: true, lastName: true, patientCode: true } } },
     }),
     db.payment.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId },
       orderBy: { paidAt: "desc" },
       take: 5,
@@ -126,6 +134,7 @@ export const GET = route(async (req) => {
       select: { id: true, firstName: true, lastName: true, patientCode: true, createdAt: true },
     }),
     db.therapySession.findMany({
+      relationLoadStrategy: "join",
       where: { clinicId: auth.clinicId, status: "COMPLETED" },
       orderBy: { completedAt: "desc" },
       take: 4,

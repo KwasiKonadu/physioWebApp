@@ -66,8 +66,9 @@ export const GET = route(async (req) => {
   const day0 = new Date(); day0.setHours(0, 0, 0, 0);
   const dayEnd = new Date(); dayEnd.setHours(23, 59, 59, 999);
 
-  const [items, total, completed, planned, today] = await Promise.all([
+  const [items, total, statusGroups, today] = await Promise.all([
     db.therapySession.findMany({
+      relationLoadStrategy: "join",
       where,
       orderBy: [{ date: "desc" }, { timeMin: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * pageSize,
@@ -75,13 +76,16 @@ export const GET = route(async (req) => {
       include: listInclude,
     }),
     db.therapySession.count({ where }),
-    // Header stat cards — always measured over the filtered base (ignoring the status filter)
-    db.therapySession.count({ where: { ...base, ...dateFilter, status: "COMPLETED" } }),
-    db.therapySession.count({ where: { ...base, ...dateFilter, status: { in: ["PLANNED", "IN_PROGRESS"] } } }),
+    // Header stat cards — always measured over the filtered base (ignoring the status filter); one grouped query
+    db.therapySession.groupBy({ by: ["status"], where: { ...base, ...dateFilter }, _count: { _all: true } }),
     db.therapySession.count({
       where: { ...base, date: { gte: day0, lte: dayEnd }, status: { notIn: ["CANCELLED", "NO_SHOW"] } },
     }),
   ]);
+
+  const inStatus = (...st: string[]) => statusGroups.filter((g) => st.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
+  const completed = inStatus("COMPLETED");
+  const planned = inStatus("PLANNED", "IN_PROGRESS");
 
   return json({ items, total, page, pageSize, stats: { completed, planned, today } });
 });

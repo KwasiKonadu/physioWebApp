@@ -70,9 +70,9 @@
   --navy-100: #dbe7fa;
   --navy-200: #bcd3f6;
   --navy-300: #92b5f0;
-  --workspace: #faf9f7;
+  --workspace: #fdfdfc;
   /* shadcn tokens — blue primary, warm off-white workspace */
-  --background: #faf9f7;
+  --background: #fdfdfc;
   --foreground: oklch(0.24 0.03 250);
   --card: #ffffff;
   --card-foreground: oklch(0.24 0.03 250);

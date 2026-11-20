@@ -86,6 +86,7 @@ export const GET = route(async (req) => {
   const wantStats = getQuery(req, "stats") === "true";
   const [rows, total, statusGroups] = await Promise.all([
     db.treatmentPlan.findMany({
+      relationLoadStrategy: "join",
       where,
       orderBy: { updatedAt: "desc" },
       skip: (page - 1) * pageSize,

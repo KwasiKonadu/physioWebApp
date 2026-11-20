@@ -2,7 +2,7 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
-  db, route, json, parseBody, ApiError, audit,
+  db, route, json, parseBody, getQuery, ApiError, audit,
   requireAuth, requirePermission, parseJson,
 } from "@/server/api-exports";
 import {
@@ -79,9 +79,10 @@ async function loadBundle(id: string, clinicId: string) {
       db.therapySession.count({ where: { patientId: id } }),
       db.therapySession.count({ where: { patientId: id, status: "COMPLETED" } }),
       db.assessment.count({ where: { episode: { patientId: id } } }),
-      db.invoice.findMany({
+      db.invoice.aggregate({
         where: { patientId: id, status: { in: ["UNPAID", "PARTIAL"] } },
-        select: { totalCents: true, paidCents: true },
+        _count: { _all: true },
+        _sum: { totalCents: true, paidCents: true },
       }),
       db.payment.findFirst({
         where: { invoice: { patientId: id } },
@@ -128,8 +129,8 @@ async function loadBundle(id: string, clinicId: string) {
     patientPackages,
     invoices,
     billing: {
-      outstandingCents: openInvoices.reduce((n, i) => n + Math.max(0, i.totalCents - i.paidCents), 0),
-      unpaidInvoices: openInvoices.length,
+      outstandingCents: Math.max(0, (openInvoices._sum.totalCents ?? 0) - (openInvoices._sum.paidCents ?? 0)),
+      unpaidInvoices: openInvoices._count._all,
       lastPayment,
     },
     stats: {
@@ -145,10 +146,42 @@ async function loadBundle(id: string, clinicId: string) {
   };
 }
 
-// ---- GET ----
+/**
+ * Lightweight patient lookup for forms (booking, plans, assessments, invoices): identity, insurance
+ * memberships and episodes only — 2 queries instead of the 10 behind the full profile bundle.
+ */
+async function loadSummary(id: string, clinicId: string) {
+  const [patient, episodes] = await Promise.all([
+    db.patient.findFirst({
+      where: { id, clinicId },
+      select: {
+        id: true, patientCode: true, firstName: true, middleName: true, lastName: true, phone: true,
+        currentStatus: true, paymentArrangement: true,
+        insurances: {
+          orderBy: { createdAt: "desc" },
+          include: { provider: { select: { id: true, name: true, code: true, coveragePercent: true } } },
+        },
+      },
+    }),
+    db.treatmentEpisode.findMany({
+      where: { patientId: id, clinicId },
+      orderBy: { openedDate: "desc" },
+      select: {
+        id: true, title: true, status: true, episodeNumber: true, openedDate: true,
+        therapist: { select: { id: true, firstName: true, lastName: true } },
+      },
+    }),
+  ]);
+  if (!patient) throw new ApiError(404, "Patient not found");
+  const { insurances, ...rest } = patient;
+  return { patient: rest, insurances, episodes };
+}
+
+// ---- GET (?view=summary for the lightweight form lookup, otherwise the full profile bundle) ----
 export const GET = route(async (req, ctx) => {
   const auth = requireAuth(req);
   const { id } = await ctx.params;
+  if (getQuery(req, "view") === "summary") return json(await loadSummary(id, auth.clinicId));
   const bundle = await loadBundle(id, auth.clinicId);
   return json(bundle);
 });

@@ -66,7 +66,7 @@ export function PlanForm({
   const patientInfoQ = useQuery({
     queryKey: ["plans", "patient-info", selectedPatientId],
     queryFn: async () => {
-      const res = await apiFetch<Record<string, unknown>>(`/api/patients/${selectedPatientId}`);
+      const res = await apiFetch<Record<string, unknown>>(`/api/patients/${selectedPatientId}?view=summary`);
       return (res?.patient ?? res) as { firstName?: string; lastName?: string; middleName?: string | null; patientCode?: string };
     },
     enabled: mode === "create" && !!selectedPatientId && !pickedPatient,

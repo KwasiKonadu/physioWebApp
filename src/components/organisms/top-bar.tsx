@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS, PERMS } from "@/lib/constants";
 import { useTopBarSlots } from "@/components/templates/topbar-slots";
 
+interface NotificationsResponse { items: NotificationItem[]; unreadCount: number }
+
 interface NotificationItem {
   id: string;
   title: string;
@@ -40,8 +42,8 @@ export function TopBar() {
 
   const notifications = useQuery({
     queryKey: ["notifications"],
-    queryFn: () => apiFetch<{ items: NotificationItem[] }>("/api/notifications"),
-    refetchInterval: 30_000,
+    queryFn: () => apiFetch<NotificationsResponse>("/api/notifications"),
+    refetchInterval: 60_000, // paused automatically while the tab is hidden
   });
 
   const markAll = useMutation({
@@ -49,8 +51,8 @@ export function TopBar() {
     // optimistic: the unread badge clears instantly; rolled back if the request fails
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["notifications"] });
-      const prev = queryClient.getQueryData<{ items: NotificationItem[] }>(["notifications"]);
-      if (prev) queryClient.setQueryData(["notifications"], { ...prev, items: prev.items.map((n) => ({ ...n, read: true })) });
+      const prev = queryClient.getQueryData<NotificationsResponse>(["notifications"]);
+      if (prev) queryClient.setQueryData(["notifications"], { items: prev.items.map((n) => ({ ...n, read: true })), unreadCount: 0 });
       return { prev };
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(["notifications"], ctx.prev); },
@@ -74,7 +76,7 @@ export function TopBar() {
     else toast.error("Your login isn't linked to a staff profile");
   };
 
-  const unread = (notifications.data?.items || []).filter((n) => !n.read).length;
+  const unread = notifications.data?.unreadCount ?? 0;
 
   return (
     <header className="sticky top-0 z-20 flex h-24 flex-col border-b border-slate-200 bg-white">

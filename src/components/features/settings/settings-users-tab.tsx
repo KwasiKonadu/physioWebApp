@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Field } from "@/components/molecules/field";
 import { PasswordInput } from "@/components/molecules/password-input";
+import { useUrlState } from "@/hooks/use-url-state";
 
 interface UserRow {
   id: string;
@@ -58,8 +59,8 @@ interface Props {
 
 export default function SettingsUsersTab({ highlightEmail }: Props) {
   const qc = useQueryClient();
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useUrlState("usr_q", "");
+  const [search, setSearch] = useState(searchInput); // starts from the URL value
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<UserRow | null>(null);
   const [rolesOpen, setRolesOpen] = useState(false);

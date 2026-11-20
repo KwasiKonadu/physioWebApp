@@ -23,6 +23,7 @@ import { formatDate, fullName, relativeTime } from "@/lib/format";
 import { hasPermission, useAuthStore, useUIStore } from "@/stores/app-store";
 import { plansApi } from "./plan-api";
 import type { PlanListItemDto } from "./types";
+import { useUrlState } from "@/hooks/use-url-state";
 
 // ---- inline version-history peek (shared "plans.detail" query cache) ----
 function VersionPeek({ planId, onOpen }: { planId: string; onOpen: (id: string) => void }) {
@@ -133,13 +134,13 @@ export default function TreatmentPlansPage() {
     const qs = q.toString();
     router.push(qs ? `/treatment-plans/new?${qs}` : "/treatment-plans/new");
   };
-  const [status, setStatus] = useState("all");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [status, setStatus] = useUrlState("pl_status", "all");
+  const [searchInput, setSearchInput] = useUrlState("pl_q", "");
+  const [search, setSearch] = useState(searchInput); // starts from the URL value
   const [scope, setScope] = useState<{ episodeId?: string; patientId?: string }>({});
   const [preselect, setPreselect] = useState<{ patientId?: string; episodeId?: string }>({});
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useUrlState("pl_page", 1);
+  const [pageSize, setPageSize] = useUrlState("pl_size", 10);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   // debounce search input

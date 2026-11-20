@@ -156,9 +156,13 @@ export const GET = route(async (req) => {
   }
   if (and.length > 0) where.AND = and;
 
+  // ?countOnly=true → just the number (e.g. "patients assigned to this therapist"), no rows
+  if (getQuery(req, "countOnly") === "true") return json({ total: await db.patient.count({ where }) });
+
   const [total, rows] = await Promise.all([
     db.patient.count({ where }),
     db.patient.findMany({
+      relationLoadStrategy: "join",
       where,
       orderBy: { [sortField]: order } as Prisma.PatientOrderByWithRelationInput,
       skip: (page - 1) * pageSize,

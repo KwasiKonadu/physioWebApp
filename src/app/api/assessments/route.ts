@@ -43,6 +43,7 @@ export const GET = route(async (req) => {
   const wantStats = getQuery(req, "stats") === "true";
   const [rows, total, statusGroups] = await Promise.all([
     db.assessment.findMany({
+      relationLoadStrategy: "join",
       where,
       orderBy: { assessmentDate: "desc" },
       skip: (page - 1) * pageSize,

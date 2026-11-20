@@ -49,13 +49,13 @@ function monthBuckets(now: Date, months = 6): { key: string; label: string }[] {
   return out;
 }
 
-function countByMonth<T>(rows: T[], getDate: (r: T) => Date, now: Date): { month: string; count: number }[] {
+function countByMonth<T>(rows: T[], getDate: (r: T) => Date, now: Date, getCount: (r: T) => number = () => 1): { month: string; count: number }[] {
   const buckets = monthBuckets(now);
   const map = new Map(buckets.map((b) => [b.key, 0]));
   for (const r of rows) {
     const d = getDate(r);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
-    if (map.has(key)) map.set(key, (map.get(key) || 0) + 1);
+    if (map.has(key)) map.set(key, (map.get(key) || 0) + getCount(r));
   }
   return buckets.map((b) => ({ month: b.label, count: map.get(b.key) || 0 }));
 }
@@ -89,8 +89,9 @@ async function patientsReport(clinicId: string, start: Date, end: Date, now: Dat
         take: 50,
         select: { id: true, closedDate: true, totalCompletedSessions: true, title: true, patient: { select: patientCols }, therapist: { select: therapistCols } },
       }),
-      db.patientReferral.findMany({ where: { patient: { clinicId } }, select: { source: true } }),
-      db.treatmentEpisode.groupBy({ by: ["patientId"], where: { clinicId }, _count: { patientId: true } }),
+      db.patientReferral.groupBy({ by: ["source"], where: { patient: { clinicId } }, _count: { _all: true } }),
+      // only patients with more than one episode come back (HAVING), not one row per patient
+      db.treatmentEpisode.groupBy({ by: ["patientId"], where: { clinicId }, having: { patientId: { _count: { gt: 1 } } }, _count: { patientId: true } }),
       db.therapySession.findMany({
         where: { clinicId, date: { lt: start }, status: "COMPLETED" },
         distinct: ["patientId"],
@@ -112,7 +113,9 @@ async function patientsReport(clinicId: string, start: Date, end: Date, now: Dat
       activeEpisodes,
       dischargedCount: dischargedEpisodes.length,
     },
-    referralSources: tally(referrals, (r) => r.source).map((r) => ({ source: r.key, count: r.count })),
+    referralSources: referrals
+      .map((r) => ({ source: r.source, count: r._count._all }))
+      .sort((a, b) => b.count - a.count),
     registrationsByMonth: countByMonth(registrationRows, (r) => new Date(r.createdAt), now),
     discharged: dischargedEpisodes.map((e) => ({
       id: e.id,
@@ -127,34 +130,43 @@ async function patientsReport(clinicId: string, start: Date, end: Date, now: Dat
 }
 
 async function appointmentsReport(clinicId: string, start: Date, end: Date, now: Date) {
-  const [appts, dayRows] = await Promise.all([
-    db.appointment.findMany({
+  const dayFrom = new Date(new Date(now).setDate(now.getDate() - 13));
+  dayFrom.setHours(0, 0, 0, 0);
+  // counts are grouped in the database; no per-appointment rows are loaded
+  const [apptGroups, dayGroups] = await Promise.all([
+    db.appointment.groupBy({
+      by: ["status", "therapistId"],
       where: { clinicId, date: { gte: start, lte: end } },
-      select: { status: true, therapistId: true },
+      _count: { _all: true },
     }),
-    db.appointment.findMany({
-      where: { clinicId, date: { gte: new Date(new Date(now).setDate(now.getDate() - 13)) } },
-      select: { date: true, status: true },
+    db.appointment.groupBy({
+      by: ["date", "status"],
+      where: { clinicId, date: { gte: dayFrom } },
+      _count: { _all: true },
     }),
   ]);
 
-  const byStatus = tally(appts, (a) => a.status);
-  const get = (s: string) => byStatus.find((b) => b.key === s)?.count || 0;
+  const statusMap = new Map<string, number>();
+  const perTherapist = new Map<string, { completed: number; cancelled: number; noShow: number }>();
+  let total = 0;
+  for (const g of apptGroups) {
+    const n = g._count._all;
+    total += n;
+    statusMap.set(g.status, (statusMap.get(g.status) || 0) + n);
+    const row = perTherapist.get(g.therapistId) || { completed: 0, cancelled: 0, noShow: 0 };
+    if (g.status === "COMPLETED") row.completed += n;
+    else if (g.status === "CANCELLED") row.cancelled += n;
+    else if (g.status === "NO_SHOW") row.noShow += n;
+    perTherapist.set(g.therapistId, row);
+  }
+  const byStatus = [...statusMap.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
+  const get = (st: string) => statusMap.get(st) || 0;
 
-  // per-therapist breakdown
-  const therapistIds = [...new Set(appts.map((a) => a.therapistId))];
+  const therapistIds = [...perTherapist.keys()];
   const therapists = therapistIds.length
     ? await db.staffProfile.findMany({ where: { id: { in: therapistIds } }, select: { id: true, firstName: true, lastName: true } })
     : [];
   const tNames = new Map(therapists.map((t) => [t.id, pname(t)]));
-  const perTherapist = new Map<string, { completed: number; cancelled: number; noShow: number }>();
-  for (const a of appts) {
-    const row = perTherapist.get(a.therapistId) || { completed: 0, cancelled: 0, noShow: 0 };
-    if (a.status === "COMPLETED") row.completed++;
-    else if (a.status === "CANCELLED") row.cancelled++;
-    else if (a.status === "NO_SHOW") row.noShow++;
-    perTherapist.set(a.therapistId, row);
-  }
   const byTherapist = [...perTherapist.entries()]
     .map(([id, v]) => ({ id, therapist: tNames.get(id) || "Unknown", ...v }))
     .sort((a, b) => b.completed - a.completed);
@@ -167,20 +179,20 @@ async function appointmentsReport(clinicId: string, start: Date, end: Date, now:
     d.setHours(0, 0, 0, 0);
     const dEnd = new Date(d);
     dEnd.setHours(23, 59, 59, 999);
-    const inDay = dayRows.filter((a) => {
-      const t = new Date(a.date).getTime();
-      return t >= d.getTime() && t <= dEnd.getTime();
-    });
-    days.push({
-      day: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-      total: inDay.length,
-      completed: inDay.filter((a) => a.status === "COMPLETED").length,
-    });
+    let dayTotal = 0, dayCompleted = 0;
+    for (const g of dayGroups) {
+      const t = new Date(g.date).getTime();
+      if (t >= d.getTime() && t <= dEnd.getTime()) {
+        dayTotal += g._count._all;
+        if (g.status === "COMPLETED") dayCompleted += g._count._all;
+      }
+    }
+    days.push({ day: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }), total: dayTotal, completed: dayCompleted });
   }
 
   return {
     stats: {
-      total: appts.length,
+      total,
       completed: get("COMPLETED"),
       cancelled: get("CANCELLED"),
       noShows: get("NO_SHOW"),
@@ -196,7 +208,7 @@ async function appointmentsReport(clinicId: string, start: Date, end: Date, now:
 async function clinicalReport(clinicId: string, start: Date, end: Date, now: Date) {
   const sixMonthsAgo = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 5, 1));
 
-  const [completedSessions, activeEpisodes, reviewDueEpisodes, monthSessionRows, discharges, closedEpisodes, allEpisodeRows] =
+  const [completedSessions, activeEpisodes, reviewDueEpisodes, monthSessionGroups, discharges, closedAgg, allAgg] =
     await Promise.all([
       db.therapySession.count({ where: { clinicId, status: "COMPLETED", date: { gte: start, lte: end } } }),
       db.treatmentEpisode.count({ where: { clinicId, status: { in: OPEN_EPISODE_STATUSES } } }),
@@ -209,26 +221,26 @@ async function clinicalReport(clinicId: string, start: Date, end: Date, now: Dat
           patient: { select: patientCols }, therapist: { select: therapistCols },
         },
       }),
-      db.therapySession.findMany({
+      db.therapySession.groupBy({
+        by: ["date"],
         where: { clinicId, status: "COMPLETED", date: { gte: sixMonthsAgo, lte: end } },
-        select: { date: true },
+        _count: { _all: true },
       }),
       db.discharge.findMany({
         where: { clinicId, status: "COMPLETED", dischargeDate: { gte: start, lte: end } },
         select: { id: true, reason: true, objectiveOutcomes: true, therapistId: true, patient: { select: patientCols } },
       }),
-      db.treatmentEpisode.findMany({
+      db.treatmentEpisode.aggregate({
         where: { clinicId, status: "DISCHARGED", closedDate: { gte: start, lte: end } },
-        select: { totalCompletedSessions: true },
+        _avg: { totalCompletedSessions: true },
+        _count: { _all: true },
       }),
-      db.treatmentEpisode.findMany({ where: { clinicId }, select: { totalCompletedSessions: true } }),
+      db.treatmentEpisode.aggregate({ where: { clinicId }, _avg: { totalCompletedSessions: true }, _count: { _all: true } }),
     ]);
 
-  const avgSource = closedEpisodes.length
-    ? closedEpisodes
-    : allEpisodeRows;
-  const averageSessionsPerEpisode = avgSource.length
-    ? Math.round((avgSource.reduce((s, e) => s + e.totalCompletedSessions, 0) / avgSource.length) * 10) / 10
+  const avgSource = closedAgg._count._all ? closedAgg : allAgg;
+  const averageSessionsPerEpisode = avgSource._count._all
+    ? Math.round((avgSource._avg.totalCompletedSessions ?? 0) * 10) / 10
     : 0;
 
   const byReason = tally(discharges, (d) => d.reason).map((r) => ({ reason: r.key, count: r.count }));
@@ -249,7 +261,7 @@ async function clinicalReport(clinicId: string, start: Date, end: Date, now: Dat
       discharges: discharges.length,
       averageSessionsPerEpisode,
     },
-    sessionsByMonth: countByMonth(monthSessionRows, (r) => new Date(r.date), now),
+    sessionsByMonth: countByMonth(monthSessionGroups, (r) => new Date(r.date), now, (r) => r._count._all),
     reviewsDueList: reviewDueEpisodes.map((e) => ({
       id: e.id,
       patientName: pname(e.patient),
@@ -278,10 +290,17 @@ async function clinicalReport(clinicId: string, start: Date, end: Date, now: Dat
 }
 
 async function financialReport(clinicId: string, start: Date, end: Date) {
-  const [payments, outstanding, refunds, claims, packages] = await Promise.all([
+  const [payments, outstandingAgg, outstanding, refundAgg, claimGroups, packageAgg] = await Promise.all([
+    // arrangement comes with each payment (join) — no second lookup by invoice id
     db.payment.findMany({
       where: { clinicId, paidAt: { gte: start, lte: end } },
-      select: { invoiceId: true, amountCents: true, method: true },
+      select: { amountCents: true, method: true, invoice: { select: { arrangement: true } } },
+    }),
+    // true totals from the database (the list below is capped at 200 rows)
+    db.invoice.aggregate({
+      where: { clinicId, status: { in: ["UNPAID", "PARTIAL"] } },
+      _count: { _all: true },
+      _sum: { totalCents: true, paidCents: true },
     }),
     db.invoice.findMany({
       where: { clinicId, status: { in: ["UNPAID", "PARTIAL"] } },
@@ -292,24 +311,18 @@ async function financialReport(clinicId: string, start: Date, end: Date) {
         dueDate: true, issuedAt: true, arrangement: true, patient: { select: patientCols },
       },
     }),
-    db.refund.findMany({ where: { clinicId, refundedAt: { gte: start, lte: end } }, select: { amountCents: true } }),
-    db.insuranceClaim.findMany({ where: { clinicId }, select: { status: true, claimedCents: true, approvedCents: true } }),
-    db.patientPackage.findMany({
+    db.refund.aggregate({ where: { clinicId, refundedAt: { gte: start, lte: end } }, _sum: { amountCents: true } }),
+    db.insuranceClaim.groupBy({ by: ["status"], where: { clinicId }, _sum: { claimedCents: true, approvedCents: true }, _count: { _all: true } }),
+    db.patientPackage.aggregate({
       where: { clinicId, status: { in: ["ACTIVE", "EXHAUSTED"] } },
-      select: { usedSessions: true, totalSessions: true },
+      _sum: { usedSessions: true, totalSessions: true },
     }),
   ]);
 
   // revenue split by invoice arrangement
-  const invoiceIds = [...new Set(payments.map((p) => p.invoiceId))];
-  const invoices = invoiceIds.length
-    ? await db.invoice.findMany({ where: { id: { in: invoiceIds } }, select: { id: true, arrangement: true } })
-    : [];
-  const arrangementMap = new Map(invoices.map((i) => [i.id, i.arrangement]));
-
   let paygCents = 0, packageCents = 0, insuranceCents = 0;
   for (const p of payments) {
-    const arr = arrangementMap.get(p.invoiceId);
+    const arr = p.invoice.arrangement;
     if (arr === "PACKAGE") packageCents += p.amountCents;
     else if (arr === "INSURANCE") insuranceCents += p.amountCents;
     else paygCents += p.amountCents;
@@ -326,22 +339,21 @@ async function financialReport(clinicId: string, start: Date, end: Date) {
   const outstandingRows = outstanding
     .map((i) => ({ ...i, outstandingCents: Math.max(0, i.totalCents - i.paidCents) }))
     .sort((a, b) => b.outstandingCents - a.outstandingCents);
-  const outstandingCents = outstandingRows.reduce((s, i) => s + i.outstandingCents, 0);
+  const outstandingCents = Math.max(0, (outstandingAgg._sum.totalCents ?? 0) - (outstandingAgg._sum.paidCents ?? 0));
+  const refundsCents = refundAgg._sum.amountCents ?? 0;
 
-  const refundsCents = refunds.reduce((s, r) => s + r.amountCents, 0);
-
-  const openClaims = claims.filter((c) => c.status === "SUBMITTED");
+  const open = claimGroups.find((c) => c.status === "SUBMITTED");
   const claimsSummary = {
-    open: openClaims.length,
-    submittedCents: openClaims.reduce((s, c) => s + c.claimedCents, 0),
-    approvedCents: claims
+    open: open?._count._all ?? 0,
+    submittedCents: open?._sum.claimedCents ?? 0,
+    approvedCents: claimGroups
       .filter((c) => ["APPROVED", "PARTIALLY_APPROVED", "PAID"].includes(c.status))
-      .reduce((s, c) => s + c.approvedCents, 0),
-    outstandingCents: openClaims.reduce((s, c) => s + Math.max(0, c.claimedCents - c.approvedCents), 0),
+      .reduce((s, c) => s + (c._sum.approvedCents ?? 0), 0),
+    outstandingCents: Math.max(0, (open?._sum.claimedCents ?? 0) - (open?._sum.approvedCents ?? 0)),
   };
 
-  const usedSessions = packages.reduce((s, p) => s + p.usedSessions, 0);
-  const totalSessions = packages.reduce((s, p) => s + p.totalSessions, 0);
+  const usedSessions = packageAgg._sum.usedSessions ?? 0;
+  const totalSessions = packageAgg._sum.totalSessions ?? 0;
   const packageUtilisation = {
     usedSessions,
     totalSessions,
@@ -352,7 +364,7 @@ async function financialReport(clinicId: string, start: Date, end: Date) {
     stats: {
       totalRevenueCents: payments.reduce((s, p) => s + p.amountCents, 0),
       outstandingCents,
-      outstandingCount: outstandingRows.length,
+      outstandingCount: outstandingAgg._count._all,
       refundsCents,
     },
     revenueByMethod,
@@ -381,9 +393,11 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
       select: { id: true, firstName: true, lastName: true, jobTitle: true, remunerationMethod: true, remunerationRateCents: true },
       orderBy: [{ firstName: "asc" }],
     }),
-    db.therapySession.findMany({
+    // one row per (therapist, patient) pair with its session count, instead of one row per session
+    db.therapySession.groupBy({
+      by: ["therapistId", "patientId"],
       where: { clinicId, status: "COMPLETED", date: { gte: start, lte: end } },
-      select: { therapistId: true, patientId: true },
+      _count: { _all: true },
     }),
     db.treatmentEpisode.findMany({
       where: { clinicId, status: { in: OPEN_EPISODE_STATUSES }, therapistId: { not: null } },
@@ -400,7 +414,7 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
   const per = new Map<string, { completedSessions: number; patients: Set<string> }>();
   for (const s of sessions) {
     const row = per.get(s.therapistId) || { completedSessions: 0, patients: new Set<string>() };
-    row.completedSessions += 1;
+    row.completedSessions += s._count._all;
     row.patients.add(s.patientId);
     per.set(s.therapistId, row);
   }
@@ -433,7 +447,7 @@ async function staffReport(clinicId: string, start: Date, end: Date) {
   return {
     stats: {
       therapists: therapists.length,
-      totalCompletedSessions: sessions.length,
+      totalCompletedSessions: sessions.reduce((n, s) => n + s._count._all, 0),
       uniquePatientsSeen: new Set(sessions.map((s) => s.patientId)).size,
       estimatedRemunerationCents: rows.reduce((s, r) => s + (r.computedCents || 0), 0) + salariesCents,
       staffSalariesCents: salariesCents,
@@ -454,12 +468,21 @@ export const GET = route(async (req) => {
   const { start, end } = resolveRange(getQuery(req, "from"), getQuery(req, "to"));
   const now = new Date();
 
-  let report: unknown;
-  if (type === "patients") report = await patientsReport(auth.clinicId, start, end, now);
-  else if (type === "appointments") report = await appointmentsReport(auth.clinicId, start, end, now);
-  else if (type === "clinical") report = await clinicalReport(auth.clinicId, start, end, now);
-  else if (type === "financial") report = await financialReport(auth.clinicId, start, end);
-  else report = await staffReport(auth.clinicId, start, end);
+  const run = (s: Date, e: Date): Promise<unknown> => {
+    if (type === "patients") return patientsReport(auth.clinicId, s, e, now);
+    if (type === "appointments") return appointmentsReport(auth.clinicId, s, e, now);
+    if (type === "clinical") return clinicalReport(auth.clinicId, s, e, now);
+    if (type === "financial") return financialReport(auth.clinicId, s, e);
+    return staffReport(auth.clinicId, s, e);
+  };
 
-  return json({ type, from: start.toISOString(), to: end.toISOString(), report });
+  // optional previous period (for the change chips) — computed in parallel in the same request
+  const prevStart = parseQueryDate(getQuery(req, "prevFrom"));
+  const prevEnd = parseQueryDate(getQuery(req, "prevTo"), true);
+  const [report, prevReport] = await Promise.all([
+    run(start, end),
+    prevStart && prevEnd ? run(prevStart, prevEnd) : Promise.resolve(undefined),
+  ]);
+
+  return json({ type, from: start.toISOString(), to: end.toISOString(), report, ...(prevReport !== undefined ? { prevReport } : {}) });
 });

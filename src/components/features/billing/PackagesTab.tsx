@@ -22,6 +22,7 @@ import { patientName, type ListResponse, type PackageDef, type PatientPackageIte
 import { PackageDefDialog } from "./PackageDefDialog";
 import { AssignPackageDialog } from "./AssignPackageDialog";
 import { LedgerDialog } from "./LedgerDialog";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export default function PackagesTab({ prefillPatientId }: { prefillPatientId?: string | null }) {
   const qc = useQueryClient();
@@ -32,9 +33,9 @@ export default function PackagesTab({ prefillPatientId }: { prefillPatientId?: s
   const [editingDef, setEditingDef] = useState<PackageDef | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [ledgerId, setLedgerId] = useState<string | null>(null);
-  const [status, setStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [status, setStatus] = useUrlState("pk_status", "all");
+  const [page, setPage] = useUrlState("pk_page", 1);
+  const [pageSize, setPageSize] = useUrlState("pk_size", 10);
 
   const defsQ = useQuery({
     queryKey: ["billing", "package-defs", "all"],

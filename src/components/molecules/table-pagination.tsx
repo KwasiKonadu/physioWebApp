@@ -1,6 +1,7 @@
 "use client";
 // MOLECULE: table pagination footer (client-side or server-driven)
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AtomIcon } from "@/components/atoms/icon";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -12,21 +13,26 @@ interface TablePaginationProps {
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  /** toolbar-style standalone bar (used under card grids) instead of a table footer */
+  standalone?: boolean;
 }
 
-export function TablePagination({ page, pageSize, total, onPageChange, onPageSizeChange }: TablePaginationProps) {
+export function TablePagination({ page, pageSize, total, onPageChange, onPageSizeChange, standalone }: TablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-4 py-2.5">
+    <div className={cn(
+      "flex flex-wrap items-center justify-between gap-3",
+      standalone ? "rounded-lg border bg-white p-1.5 pl-3" : "border-t border-slate-200 bg-slate-50/80 px-4 py-2.5"
+    )}>
       <p className="text-xs text-slate-500">
         Showing <span className="font-semibold text-slate-800">{from}–{to}</span> of <span className="font-semibold text-slate-800">{total}</span>
       </p>
       <div className="flex items-center gap-2">
         {onPageSizeChange ? (
           <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
-            <SelectTrigger className="h-8 w-27.5 bg-white text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8! w-27.5 bg-white text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               {[10, 20, 50].map((s) => (
                 <SelectItem key={s} value={String(s)}>{s} / page</SelectItem>

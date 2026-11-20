@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStaffOptions } from "./use-staff-options";
+import { useUrlState } from "@/hooks/use-url-state";
 
 interface LeaveItem {
   id: string; staffId: string; staffName: string; staffCode: string; jobTitle: string;
@@ -34,9 +35,9 @@ const EMPTY = { staffId: "", type: "ANNUAL", startDate: "", endDate: "", reason:
 
 export function StaffLeaveTab({ canManage, staffId }: { canManage: boolean; /** scope the list to one person (their profile page) */ staffId?: string }) {
   const qc = useQueryClient();
-  const [status, setStatus] = useState("ALL");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [status, setStatus] = useUrlState("lv_status", "ALL");
+  const [page, setPage] = useUrlState("lv_page", 1);
+  const [pageSize, setPageSize] = useUrlState("lv_size", 10);
   const [open, setOpen] = useState(false);
   // "self": the logged-in employee applying; "other": a manager filing for someone else
   const [mode, setMode] = useState<"self" | "other">("self");

@@ -20,6 +20,7 @@ import { StatusBadge } from "@/components/atoms/status-badge";
 import { AtomIcon } from "@/components/atoms/icon";
 import { EpisodePickerDialog } from "../progress-reviews/EpisodePickerDialog";
 import type { DischargesListResponse, PickerEpisode } from "../progress-reviews/types";
+import { useUrlState } from "@/hooks/use-url-state";
 
 export default function DischargesPage() {
   const router = useRouter();
@@ -29,9 +30,9 @@ export default function DischargesPage() {
   const clearOpts = useUIStore((s) => s.clearOpts);
   const canManage = hasPermission(user, PERMS.clinicalManage);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUrlState("dc_page", 1);
   const [pageSize] = useState(10);
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useUrlState("dc_status", "ALL");
   const [initiateOpen, setInitiateOpen] = useState(false);
   const [pendingEpisode, setPendingEpisode] = useState<PickerEpisode | null>(null);
   const [reason, setReason] = useState("");

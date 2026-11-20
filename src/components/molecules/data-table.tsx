@@ -38,6 +38,8 @@ interface DataTableProps<T> {
   /** shown in place of the rows when there are none (and not loading) */
   empty?: React.ReactNode;
   onRowClick?: (row: T) => void;
+  /** fired when the pointer enters a row — use it to prefetch the row's detail data */
+  onRowHover?: (row: T) => void;
   rowClassName?: (row: T) => string | undefined;
   /** content for a full-width detail row shown under a row (return null/undefined for none) */
   expandedRow?: (row: T) => React.ReactNode;
@@ -69,7 +71,7 @@ const HIDE: Record<string, string> = {
 const ALIGN = { left: "", center: "text-center", right: "text-right" } as const;
 
 export function DataTable<T>({
-  rows, columns, rowKey, loading, loadingRows = 6, empty, onRowClick, rowClassName, expandedRow, sort, onSort, pagination,
+  rows, columns, rowKey, loading, loadingRows = 6, empty, onRowClick, onRowHover, rowClassName, expandedRow, sort, onSort, pagination,
   minWidth = "min-w-180", maxHeight = "max-h-150", bare, compact, bordered, className,
 }: DataTableProps<T>) {
   const colClass = (c: DataColumn<T>) => cn(c.hideBelow && HIDE[c.hideBelow], ALIGN[c.align ?? "left"], c.className);
@@ -113,6 +115,7 @@ export function DataTable<T>({
                     <TableRow
                       className={cn(onRowClick && "cursor-pointer", rowClassName?.(row))}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
+                      onMouseEnter={onRowHover ? () => onRowHover(row) : undefined}
                     >
                       {columns.map((c) => (
                         <TableCell key={c.id} className={colClass(c)}>{c.cell(row, i)}</TableCell>

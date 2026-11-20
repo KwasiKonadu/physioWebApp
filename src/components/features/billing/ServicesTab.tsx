@@ -21,6 +21,7 @@ import { useAuthStore, hasPermission } from "@/stores/app-store";
 import { PERMS, PAYMENT_ARRANGEMENTS, labelize } from "@/lib/constants";
 import { inputToCents, type ListResponse, type ServiceLite } from "./billing-shared";
 import { Field } from "@/components/molecules/field";
+import { useUrlState } from "@/hooks/use-url-state";
 
 const ARRANGEMENT_LABELS: Record<string, string> = { PAYG: "PayG", PACKAGE: "Pkg", INSURANCE: "Ins" };
 
@@ -168,10 +169,10 @@ export default function ServicesTab() {
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, PERMS.packagesManage) || hasPermission(user, PERMS.settingsManage);
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useUrlState("sv_q", "");
+  const [category, setCategory] = useUrlState("sv_cat", "all");
+  const [page, setPage] = useUrlState("sv_page", 1);
+  const [pageSize, setPageSize] = useUrlState("sv_size", 10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceLite | null>(null);
 
