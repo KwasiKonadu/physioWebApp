@@ -68,6 +68,7 @@ export const VIEW_PATHS: Record<ViewKey, string> = {
   "progress-reviews": "/progress-reviews",
   discharges: "/discharges",
   billing: "/billing",
+  inventory: "/inventory",
   reports: "/reports",
   staff: "/staff",
   settings: "/settings",

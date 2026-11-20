@@ -190,7 +190,7 @@ export default function InsuranceTab() {
           </div>
 
           <div>
-            <div className="mb-3">
+            <div className="mb-1.5">
               <DataToolbar
                 onRefresh={() => qc.invalidateQueries({ queryKey: ["billing", "claims"] })}
                 refreshing={claimsQ.isFetching}

@@ -93,7 +93,7 @@ export default function DischargesPage() {
         <StatCard label="Completed" value={stats ? stats.completed : "—"} icon="CheckCircle2" tone="emerald" loading={listQuery.isLoading} hint="Signed — episodes closed" />
       </div>
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           filters={
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>

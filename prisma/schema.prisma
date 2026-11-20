@@ -101,6 +101,7 @@ model RefreshToken {
 // ===================== PATIENT MANAGEMENT =====================
 
 model Patient {
+  sales          Sale[]
   id             String    @id @default(cuid())
   clinicId       String
   branchId       String?
@@ -977,6 +978,97 @@ model LeaveRequest {
 
   @@index([clinicId, status])
   @@index([staffId, startDate])
+}
+
+// ===================== INVENTORY & SALES =====================
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  clinicId       String
+  name           String
+  sku            String?
+  category       String   @default("Other")
+  unit           String   @default("pcs")
+  quantity       Int      @default(0)
+  // flagged as low stock when quantity <= reorderLevel
+  reorderLevel   Int      @default(5)
+  unitCostCents  Int      @default(0)
+  // 0 = fall back to the unit cost when selling
+  sellPriceCents Int      @default(0)
+  supplier       String?
+  location       String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  movements StockMovement[]
+  saleLines SaleLine[]
+
+  @@index([clinicId, name])
+  @@index([clinicId, category])
+}
+
+// Append-only stock ledger. TYPE: IN | OUT | ADJUST. `change` is signed.
+model StockMovement {
+  id            String   @id @default(cuid())
+  clinicId      String
+  itemId        String
+  itemName      String
+  type          String
+  change        Int
+  quantityAfter Int
+  reason        String?
+  saleId        String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, createdAt])
+  @@index([itemId, createdAt])
+}
+
+model Sale {
+  id            String    @id @default(cuid())
+  clinicId      String
+  saleNumber    String    @unique
+  // null patientId = walk-in customer
+  patientId     String?
+  customerName  String?
+  // CASH | MOBILE_MONEY | CARD | BANK_TRANSFER
+  paymentMethod String
+  totalCents    Int
+  note          String?
+  voided        Boolean   @default(false)
+  voidedAt      DateTime?
+  voidedById    String?
+  soldById      String?
+  soldByName    String?
+  createdAt     DateTime  @default(now())
+
+  patient Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  lines   SaleLine[]
+
+  @@index([clinicId, createdAt])
+  @@index([patientId])
+}
+
+model SaleLine {
+  id             String  @id @default(cuid())
+  saleId         String
+  // item may later be deleted from the catalogue; the line keeps its snapshot
+  itemId         String?
+  name           String
+  unit           String
+  quantity       Int
+  unitPriceCents Int
+
+  sale Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  item InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@index([itemId])
 }
 
 // ===================== GENERAL =====================

@@ -20,7 +20,7 @@ export function DataToolbar({ search, filters, onRefresh, refreshing, children }
   return (
     <div
       data-slot="data-toolbar"
-      className="flex w-full flex-col gap-2 rounded-lg border bg-white p-1.5 sm:flex-row sm:flex-wrap sm:items-center [&_input]:h-8! [&_button:not([data-slot=tabs-trigger]):not([aria-pressed])]:h-8! [&_button]:text-xs [&_input]:text-xs [&_button[aria-label=Refresh]]:w-8"
+      className="flex w-full flex-col gap-2 min-h-11.5 rounded-lg border bg-white p-1.5 sm:flex-row sm:flex-wrap sm:items-center [&_input]:h-8! [&_button:not([data-slot=tabs-trigger]):not([aria-pressed])]:h-8! [&_button]:text-xs [&_input]:text-xs [&_button[aria-label=Refresh]]:w-8"
     >
       {search ? (
         <div className="relative w-full sm:w-72">

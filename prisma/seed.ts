@@ -93,14 +93,15 @@ async function main() {
     clinicalView: "clinical.view", clinicalManage: "clinical.manage",
     billingView: "billing.view", billingManage: "billing.manage", billingRefund: "billing.refund",
     packagesManage: "packages.manage", insuranceManage: "insurance.manage",
+    inventoryView: "inventory.view", inventoryManage: "inventory.manage",
     staffView: "staff.view", staffManage: "staff.manage", leaveApply: "leave.apply", reportsView: "reports.view", settingsManage: "settings.manage",
   };
   const allPerms = Object.values(P);
 
   const roleAdmin = await db.role.create({ data: { clinicId: clinic.id, name: "Clinic Administrator", description: "Full access to clinic configuration, staff and records", permissions: JSON.stringify(allPerms), system: true } });
-  const roleReception = await db.role.create({ data: { clinicId: clinic.id, name: "Receptionist", description: "Front desk: registration, appointments, basic billing", permissions: JSON.stringify([P.dashboardView, P.patientsView, P.patientsManage, P.appointmentsView, P.appointmentsManage, P.billingView, P.billingManage, P.leaveApply]), system: true } });
+  const roleReception = await db.role.create({ data: { clinicId: clinic.id, name: "Receptionist", description: "Front desk: registration, appointments, basic billing", permissions: JSON.stringify([P.dashboardView, P.patientsView, P.patientsManage, P.appointmentsView, P.appointmentsManage, P.billingView, P.billingManage, P.inventoryView, P.inventoryManage, P.leaveApply]), system: true } });
   const roleTherapist = await db.role.create({ data: { clinicId: clinic.id, name: "Physiotherapist", description: "Clinical care for assigned patients", permissions: JSON.stringify([P.dashboardView, P.patientsView, P.appointmentsView, P.appointmentsManage, P.clinicalView, P.clinicalManage, P.reportsView, P.leaveApply]), system: true } });
-  const roleManagement = await db.role.create({ data: { clinicId: clinic.id, name: "Management", description: "Operational oversight, reports and finance", permissions: JSON.stringify([P.dashboardView, P.patientsView, P.appointmentsView, P.clinicalView, P.billingView, P.staffView, P.reportsView, P.leaveApply]), system: true } });
+  const roleManagement = await db.role.create({ data: { clinicId: clinic.id, name: "Management", description: "Operational oversight, reports and finance", permissions: JSON.stringify([P.dashboardView, P.patientsView, P.appointmentsView, P.clinicalView, P.billingView, P.inventoryView, P.staffView, P.reportsView, P.leaveApply]), system: true } });
 
   // ---- Staff ----
   const mkStaff = (code: string, firstName: string, lastName: string, jobTitle: string, staffRole: string, opts: Record<string, unknown> = {}) =>

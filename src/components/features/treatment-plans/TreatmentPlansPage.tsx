@@ -203,7 +203,7 @@ export default function TreatmentPlansPage() {
         <StatCard label="Under review" value={statsQuery.data?.review ?? "—"} icon="SearchCheck" tone="sky" loading={statsQuery.isLoading} onClick={() => setStatus("UNDER_REVIEW")} />
       </div>
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search patient name or code…" }}
           filters={

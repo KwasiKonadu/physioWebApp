@@ -56,7 +56,7 @@ export default function DiagnosesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search diagnosis, patient, episode…" }}
           filters={(

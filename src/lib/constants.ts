@@ -22,6 +22,8 @@ export const PERMS = {
   billingRefund: "billing.refund",
   packagesManage: "packages.manage",
   insuranceManage: "insurance.manage",
+  inventoryView: "inventory.view",
+  inventoryManage: "inventory.manage",
   staffView: "staff.view",
   staffManage: "staff.manage",
   leaveApply: "leave.apply",
@@ -51,6 +53,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMS.dashboardView, PERMS.patientsView, PERMS.patientsManage,
     PERMS.appointmentsView, PERMS.appointmentsManage,
     PERMS.billingView, PERMS.billingManage,
+    PERMS.inventoryView, PERMS.inventoryManage,
     PERMS.leaveApply,
   ],
   [ROLE_NAMES.physiotherapist]: [
@@ -62,7 +65,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   [ROLE_NAMES.management]: [
     PERMS.dashboardView, PERMS.patientsView,
     PERMS.appointmentsView, PERMS.clinicalView,
-    PERMS.billingView, PERMS.staffView, PERMS.reportsView, PERMS.leaveApply,
+    PERMS.billingView, PERMS.inventoryView, PERMS.staffView, PERMS.reportsView, PERMS.leaveApply,
   ],
 };
 
@@ -124,7 +127,7 @@ export const REMUNERATION_METHODS = ["FIXED", "PER_PATIENT", "PER_SESSION"] as c
 export type ViewKey =
   | "dashboard" | "patients" | "appointments" | "assessments"
   | "treatment-plans" | "therapy-sessions" | "progress-reviews"
-  | "discharges" | "billing" | "reports" | "staff" | "settings";
+  | "discharges" | "billing" | "inventory" | "reports" | "staff" | "settings";
 
 export const NAV_ITEMS: { key: ViewKey; label: string; icon: string; permission: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard", permission: PERMS.dashboardView },
@@ -136,6 +139,7 @@ export const NAV_ITEMS: { key: ViewKey; label: string; icon: string; permission:
   { key: "progress-reviews", label: "Progress Reviews", icon: "TrendingUp", permission: PERMS.clinicalView },
   { key: "discharges", label: "Discharges", icon: "LogOut", permission: PERMS.clinicalView },
   { key: "billing", label: "Billing & Payments", icon: "Receipt", permission: PERMS.billingView },
+  { key: "inventory", label: "Inventory", icon: "Package", permission: PERMS.inventoryView },
   { key: "reports", label: "Reports", icon: "BarChart3", permission: PERMS.reportsView },
   { key: "staff", label: "Staff", icon: "BadgeCheck", permission: PERMS.staffView },
   { key: "settings", label: "Settings", icon: "Settings", permission: PERMS.settingsManage },

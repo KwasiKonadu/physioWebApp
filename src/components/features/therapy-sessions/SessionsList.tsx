@@ -99,7 +99,7 @@ export function SessionsList({ onOpen, episodeFilter, onClearEpisodeFilter }: {
         </div>
       ) : null}
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search patient name / code…" }}
           onRefresh={() => qc.invalidateQueries({ queryKey: ["sessions"] })}

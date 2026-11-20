@@ -139,7 +139,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
         icon="Users"
       />
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{
             value: searchInput,
@@ -236,7 +236,7 @@ export default function PatientsDirectory({ onOpen }: Props) {
               {items.map((p: PatientListItem) => <PatientCard key={p.id} patient={p} onOpen={onOpen} />)}
             </CardGrid>
           )}
-          <div className="mt-4">{paginationEl}</div>
+          <div className="mt-1.5">{paginationEl}</div>
         </>
       ) : (
         <DataTable

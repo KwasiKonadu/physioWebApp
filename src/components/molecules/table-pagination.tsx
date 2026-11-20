@@ -24,7 +24,7 @@ export function TablePagination({ page, pageSize, total, onPageChange, onPageSiz
   return (
     <div className={cn(
       "flex flex-wrap items-center justify-between gap-3",
-      standalone ? "rounded-lg border bg-white p-1.5 pl-3" : "border-t border-slate-200 bg-slate-50/80 px-4 py-2.5"
+      standalone ? "min-h-11.5 rounded-lg border bg-white p-1.5 pl-3" : "border-t border-slate-200 bg-slate-50/80 px-4 py-2.5"
     )}>
       <p className="text-xs text-slate-500">
         Showing <span className="font-semibold text-slate-800">{from}–{to}</span> of <span className="font-semibold text-slate-800">{total}</span>

@@ -114,7 +114,7 @@ export default function ReportsPage() {
         }
       />
 
-      <div className="mb-4">
+      <div className="mb-1.5">
         <DataToolbar
           filters={
             <>

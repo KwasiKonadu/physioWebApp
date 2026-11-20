@@ -88,7 +88,7 @@ export function AssessmentsList({ canManage, onOpen }: {
         </div>
       ) : null}
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{ value: search, onChange: (v) => { setSearch(v); setPage(1); }, placeholder: "Search patient, code, complaint…" }}
           filters={(

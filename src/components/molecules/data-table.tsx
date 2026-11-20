@@ -77,11 +77,11 @@ export function DataTable<T>({
   const colClass = (c: DataColumn<T>) => cn(c.hideBelow && HIDE[c.hideBelow], ALIGN[c.align ?? "left"], c.className);
 
   return (
-    <div className={cn(!bare && "overflow-hidden rounded-lg border bg-card", bare && bordered && "overflow-hidden rounded-lg border", className)}>
+    <div className={cn(bare && bordered && "overflow-hidden rounded-lg border", className)}>
       {/* the outer div is the scroll container so the header can stick (the base Table has its own x-scroller) */}
       <div className={cn("overflow-auto custom-scrollbar **:data-[slot=table-container]:overflow-visible", compact && "[&_td]:text-xs [&_th]:text-xs [&_th]:whitespace-nowrap", maxHeight)}>
-        <Table className={minWidth}>
-          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+        <Table className={cn(minWidth, !bare && "dt-split")}>
+          <TableHeader className={cn("sticky top-0 z-10", bare ? "bg-muted/80 backdrop-blur" : "bg-transparent")}>
             <TableRow>
               {columns.map((c) => (
                 <TableHead key={c.id} className={colClass(c)}>
@@ -101,7 +101,8 @@ export function DataTable<T>({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          {!bare ? <tbody aria-hidden="true"><tr className="dt-gap"><td colSpan={columns.length} /></tr></tbody> : null}
+          <TableBody className={cn(!bare && "dt-body")}>
             {loading
               ? Array.from({ length: loadingRows }).map((_, i) => (
                   <TableRow key={i}>
@@ -130,9 +131,9 @@ export function DataTable<T>({
                 ))}
           </TableBody>
         </Table>
-        {!loading && rows.length === 0 && empty ? <div className="p-4">{empty}</div> : null}
+        {!loading && rows.length === 0 && empty ? <div className={cn("p-4", !bare && "rounded-lg border bg-white")}>{empty}</div> : null}
       </div>
-      {pagination ? <TablePagination {...pagination} /> : null}
+      {pagination ? <div className={cn(!bare && "mt-1.5")}><TablePagination {...pagination} standalone={!bare} /></div> : null}
     </div>
   );
 }

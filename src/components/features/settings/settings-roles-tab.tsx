@@ -54,6 +54,10 @@ const PERM_GROUPS: { label: string; perms: { key: string; label: string }[] }[] 
     ],
   },
   {
+    label: "Inventory",
+    perms: [{ key: "inventory.view", label: "View inventory" }, { key: "inventory.manage", label: "Manage stock & record sales" }],
+  },
+  {
     label: "Staff",
     perms: [{ key: "staff.view", label: "View staff" }, { key: "staff.manage", label: "Manage staff" }, { key: "leave.apply", label: "Apply for own leave" }],
   },

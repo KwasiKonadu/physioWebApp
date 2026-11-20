@@ -158,7 +158,7 @@ export default function ProgressReviewsPage() {
       </SectionCard>
 
       {/* Review history */}
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={undefined}
           filters={

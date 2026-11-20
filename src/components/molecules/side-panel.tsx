@@ -35,7 +35,12 @@ interface SidePanelProps {
 export function SidePanel({ open, onOpenChange, title, description, headerExtra, size = "md", className, children }: SidePanelProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn("w-full gap-0 p-0", SIZE[size], className)}>
+      <SheetContent
+        side="right"
+        className={cn("w-full gap-0 p-0", SIZE[size], className)}
+        // don't focus (and select) the first field when the panel opens — dropdown fields would pop open and inputs get highlighted
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="shrink-0 border-b border-slate-200 px-5 py-4 pr-12">
           <SheetTitle className="flex flex-wrap items-center gap-2 text-base">
             {title}

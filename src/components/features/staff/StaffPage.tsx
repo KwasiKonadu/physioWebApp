@@ -223,7 +223,7 @@ export default function StaffPage() {
         <StatCard label="On leave" value={summary?.onLeave ?? 0} icon="CalendarOff" tone="amber" loading={!data} />
       </div>
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           search={{
             value: searchInput,
@@ -285,7 +285,7 @@ export default function StaffPage() {
               {items.map((row) => <StaffCard key={row.id} staff={row} onOpen={setDetailId} />)}
             </CardGrid>
           )}
-          <div className="mt-4">{paginationEl}</div>
+          <div className="mt-1.5">{paginationEl}</div>
         </>
       ) : (
         <TooltipProvider>

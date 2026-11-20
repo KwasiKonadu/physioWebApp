@@ -123,7 +123,7 @@ export default function PackagesTab({ prefillPatientId }: { prefillPatientId?: s
         )}
       </SectionCard>
 
-      <div className="mb-3">
+      <div className="mb-1.5">
         <DataToolbar
           onRefresh={() => qc.invalidateQueries({ queryKey: ["billing", "patient-packages"] })}
           refreshing={ppQ.isFetching}

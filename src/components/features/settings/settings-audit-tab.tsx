@@ -88,7 +88,7 @@ export default function SettingsAuditTab() {
 
   return (
     <>
-    <div className="mb-3">
+    <div className="mb-1.5">
       <DataToolbar
         search={{ value: searchInput, onChange: setSearchInput, placeholder: "Search user or action…" }}
         onRefresh={() => void refetch()}

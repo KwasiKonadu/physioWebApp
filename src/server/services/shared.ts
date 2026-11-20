@@ -27,6 +27,11 @@ export async function nextInvoiceNumber(clinicId: string): Promise<string> {
   return `INV-${new Date().getFullYear()}-${String(n).padStart(5, "0")}`;
 }
 
+export async function nextSaleNumber(clinicId: string): Promise<string> {
+  const n = await nextCounter(clinicId, "saleNumber");
+  return `S-${String(n).padStart(5, "0")}`;
+}
+
 export async function nextClaimNumber(clinicId: string): Promise<string> {
   const n = await nextCounter(clinicId, "claimNumber");
   return `CLM-${new Date().getFullYear()}-${String(n).padStart(5, "0")}`;
