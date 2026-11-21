@@ -12,7 +12,9 @@ export const STAFF_ROLE_TONES: Record<string, string> = {
   PHYSIOTHERAPIST: "bg-navy-50 text-navy-800 border-navy-200",
   RECEPTIONIST: "bg-sky-50 text-sky-700 border-sky-200",
   MANAGEMENT: "bg-amber-50 text-amber-700 border-amber-200",
+  CUSTOM: "bg-slate-50 text-slate-700 border-slate-200",
 };
+export const staffRoleTone = (code?: string | null) => STAFF_ROLE_TONES[code || ""] || STAFF_ROLE_TONES.CUSTOM;
 
 export function StaffCard({ staff: s, onOpen }: { staff: StaffListItem; onOpen: (id: string) => void }) {
   const initials = `${s.firstName[0] ?? ""}${s.lastName[0] ?? ""}`.toUpperCase();
@@ -30,7 +32,7 @@ export function StaffCard({ staff: s, onOpen }: { staff: StaffListItem; onOpen: 
         { icon: "CalendarDays", text: s.employmentDate ? formatDate(s.employmentDate) : "—" },
         { icon: s.hasAccount ? "Link2" : "Link2Off", text: account },
       ]}
-      footer={<Badge variant="outline" className={STAFF_ROLE_TONES[s.staffRole] || ""}>{labelize(s.staffRole)}</Badge>}
+      footer={<Badge variant="outline" className={staffRoleTone(s.staffRole)}>{s.roleName || labelize(s.staffRole)}</Badge>}
       onOpen={() => onOpen(s.id)}
     />
   );

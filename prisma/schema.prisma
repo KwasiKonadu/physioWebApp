@@ -81,6 +81,7 @@ model Role {
 
   clinic Clinic @relation(fields: [clinicId], references: [id])
   users  User[]
+  staffProfiles StaffProfile[]
 
   @@unique([clinicId, name])
 }
@@ -928,7 +929,9 @@ model StaffProfile {
   phone       String?
   jobTitle    String
   department  String?
-  // ROLE: ADMIN | RECEPTIONIST | PHYSIOTHERAPIST | MANAGEMENT
+  // Source of truth for the staff role (managed in Settings → Manage roles). Null only for legacy rows before backfill.
+  roleId      String?
+  // Legacy/derived code: ADMIN | PHYSIOTHERAPIST | RECEPTIONIST | MANAGEMENT | CUSTOM (kept in sync from the role)
   staffRole   String
   employmentDate DateTime?
   // STATUS: ACTIVE | ON_LEAVE | TERMINATED
@@ -947,6 +950,7 @@ model StaffProfile {
   updatedAt   DateTime @updatedAt
 
   clinic        Clinic        @relation("ClinicStaff", fields: [clinicId], references: [id])
+  role          Role?         @relation(fields: [roleId], references: [id])
   patientPatients Patient[]   @relation("PatientTherapist")
   episodeEpisodes TreatmentEpisode[] @relation("EpisodeTherapist")
   appointments  Appointment[] @relation("AppointmentTherapist")
@@ -954,6 +958,7 @@ model StaffProfile {
   leaveRequests LeaveRequest[]
 
   @@index([clinicId, staffRole])
+  @@index([roleId])
 }
 
 model LeaveRequest {

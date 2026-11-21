@@ -36,36 +36,29 @@ export const ALL_PERMS = Object.values(PERMS);
 // ---- Roles ----
 export const ROLE_NAMES = {
   admin: "Clinic Administrator",
-  receptionist: "Receptionist",
   physiotherapist: "Physiotherapist",
-  management: "Management",
 } as const;
 
-export const STAFF_ROLES = ["ADMIN", "RECEPTIONIST", "PHYSIOTHERAPIST", "MANAGEMENT"] as const;
+// Legacy staff-role codes, kept only so older rows/filters keep working. Roles now live in the Role table
+// (Settings → Manage roles); only Admin and Physiotherapist are built-in system roles.
+export const LEGACY_STAFF_ROLE_BY_NAME: Record<string, string> = {
+  [ROLE_NAMES.admin]: "ADMIN",
+  [ROLE_NAMES.physiotherapist]: "PHYSIOTHERAPIST",
+  Receptionist: "RECEPTIONIST",
+  Management: "MANAGEMENT",
+};
+
 export const LEAVE_TYPES = ["ANNUAL", "SICK", "OFF_DUTY"] as const;
 export const LEAVE_TYPE_LABELS: Record<string, string> = { ANNUAL: "Annual leave", SICK: "Sick day", OFF_DUTY: "Off duty" };
 export const LEAVE_STATUSES = ["PENDING", "APPROVED", "REJECTED", "CANCELLED"] as const;
-export type StaffRole = (typeof STAFF_ROLES)[number];
 
-export const ROLE_PERMISSIONS: Record<string, string[]> = {
+export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   [ROLE_NAMES.admin]: ALL_PERMS,
-  [ROLE_NAMES.receptionist]: [
-    PERMS.dashboardView, PERMS.patientsView, PERMS.patientsManage,
-    PERMS.appointmentsView, PERMS.appointmentsManage,
-    PERMS.billingView, PERMS.billingManage,
-    PERMS.inventoryView, PERMS.inventoryManage,
-    PERMS.leaveApply,
-  ],
   [ROLE_NAMES.physiotherapist]: [
     PERMS.dashboardView, PERMS.patientsView,
     PERMS.appointmentsView, PERMS.appointmentsManage,
     PERMS.clinicalView, PERMS.clinicalManage,
     PERMS.reportsView, PERMS.leaveApply,
-  ],
-  [ROLE_NAMES.management]: [
-    PERMS.dashboardView, PERMS.patientsView,
-    PERMS.appointmentsView, PERMS.clinicalView,
-    PERMS.billingView, PERMS.inventoryView, PERMS.staffView, PERMS.reportsView, PERMS.leaveApply,
   ],
 };
 

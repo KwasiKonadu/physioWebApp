@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/molecules/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SidePanel, SidePanelBody, SidePanelFooter } from "@/components/molecules/side-panel";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -26,6 +28,7 @@ interface RoleRow {
   permissions: string[];
   system: boolean;
   userCount: number;
+  staffCount?: number;
 }
 
 // Permission groups for the checkbox grid
@@ -80,21 +83,34 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
   const [draft, setDraft] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // creating a new custom role (name + permissions) in the same side panel
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // the picker follows the parent's `open`; selecting a role hands over to the panel
   const [prevOpen, setPrevOpen] = useState(false);
   if (open !== prevOpen) {
     setPrevOpen(open);
     setPickerOpen(open);
-    if (open) setRoleId(null);
+    if (open) { setRoleId(null); setCreating(false); }
   }
 
   const role = roles.find((r) => r.id === roleId) ?? null;
-  const dirty = !!role && (draft.length !== role.permissions.length || draft.some((p) => !role.permissions.includes(p)));
+  const dirty = creating ? newName.trim().length >= 2 : !!role && (draft.length !== role.permissions.length || draft.some((p) => !role.permissions.includes(p)));
 
   const pick = (r: RoleRow) => {
     setRoleId(r.id);
     setDraft(r.permissions);
+    setPickerOpen(false);
+  };
+
+  const startCreate = () => {
+    setCreating(true);
+    setNewName("");
+    setNewDesc("");
+    setDraft(["dashboard.view"]);
     setPickerOpen(false);
   };
 
@@ -103,11 +119,43 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
 
   const closePanel = () => {
     setRoleId(null);
+    setCreating(false);
+    setDeleteOpen(false);
     setConfirmOpen(false);
     onClose();
   };
 
+  const remove = async () => {
+    if (!role) return;
+    setSaving(true);
+    try {
+      await apiFetch(`/api/roles/${role.id}`, { method: "DELETE" });
+      toast.success(`Role "${role.name}" deleted`);
+      await qc.invalidateQueries({ queryKey: ["roles"] });
+      closePanel();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete role");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const save = async () => {
+    if (creating) {
+      setSaving(true);
+      try {
+        await apiFetch("/api/roles", { method: "POST", json: { name: newName.trim(), description: newDesc.trim(), permissions: draft } });
+        toast.success(`Role "${newName.trim()}" created`);
+        await qc.invalidateQueries({ queryKey: ["roles"] });
+        closePanel();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to create role");
+        setConfirmOpen(false);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     if (!role) return;
     setSaving(true);
     try {
@@ -162,7 +210,10 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
               ))}
             </ul>
           )}
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" onClick={startCreate}>
+              <AtomIcon name="Plus" className="mr-1.5 h-4 w-4" /> Create role
+            </Button>
             <Button variant="outline" onClick={() => { setPickerOpen(false); onClose(); }}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
@@ -170,16 +221,28 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
 
       {/* step 2 — edit that role in the side panel */}
       <SidePanel
-        open={!!role}
+        open={!!role || creating}
         onOpenChange={(v) => (!v ? closePanel() : null)}
         size="lg"
-        title={role ? `Edit role — ${role.name}` : "Edit role"}
-        description={role?.description || "Switch permissions on or off. Changes apply to everyone with this role once saved."}
-        headerExtra={role?.system ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-700">System</Badge> : null}
+        title={creating ? "Create role" : role ? `Edit role — ${role.name}` : "Edit role"}
+        description={creating ? "Name the role and choose what it can do. It will appear in the staff role list." : role?.description || "Switch permissions on or off. Changes apply to everyone with this role once saved."}
+        headerExtra={role?.system && !creating ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-700">System</Badge> : null}
       >
         <SidePanelBody className="space-y-5">
+          {creating ? (
+            <div className="grid grid-cols-1 gap-3 *:min-w-0">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-role-name">Role name</Label>
+                <Input id="new-role-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Receptionist" maxLength={60} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-role-desc">Description (optional)</Label>
+                <Input id="new-role-desc" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="What this role is for" maxLength={200} />
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{role?.userCount ?? 0} users</Badge>
+            <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{creating ? 0 : role?.userCount ?? 0} users</Badge>
             <Badge variant="outline" className="bg-navy-50 text-navy-800">{draft.length} permissions on</Badge>
             {dirty ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Unsaved changes</Badge> : null}
           </div>
@@ -211,12 +274,36 @@ export default function ManageRolesDialog({ open, onClose }: { open: boolean; on
           ))}
         </SidePanelBody>
         <SidePanelFooter className="justify-end">
+          {role && !creating && !role.system ? (
+            <Button
+              variant="outline"
+              className="mr-auto text-destructive hover:text-destructive"
+              disabled={saving || role.userCount > 0 || (role.staffCount ?? 0) > 0}
+              title={role.userCount > 0 || (role.staffCount ?? 0) > 0 ? "Reassign its users and staff before deleting" : undefined}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete role
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={closePanel}>Cancel</Button>
-          <Button onClick={() => setConfirmOpen(true)} disabled={!dirty || saving}>Save permissions</Button>
+          <Button onClick={() => (creating ? void save() : setConfirmOpen(true))} disabled={!dirty || saving}>{creating ? (saving ? "Creating…" : "Create role") : "Save permissions"}</Button>
         </SidePanelFooter>
       </SidePanel>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{role?.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>This role has no users or staff assigned. It will be removed from the staff role list. This is recorded in the audit log.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void remove(); }} disabled={saving}>{saving ? "Deleting…" : "Delete role"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmOpen && !creating} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save permissions for “{role?.name}”?</AlertDialogTitle>

@@ -46,3 +46,30 @@ export const PATCH = route(async (req, ctx) => {
     system: updated.system,
   });
 });
+
+export const DELETE = route(async (req, ctx) => {
+  const auth = requirePermission(req, PERMS.settingsManage);
+  const { id } = await ctx.params;
+
+  const role = await db.role.findUnique({
+    where: { id },
+    include: { _count: { select: { users: true, staffProfiles: true } } },
+  });
+  if (!role || role.clinicId !== auth.clinicId) throw new ApiError(404, "Role not found");
+  if (role.system) throw new ApiError(400, "System roles cannot be deleted");
+  if (role._count.users > 0 || role._count.staffProfiles > 0) {
+    throw new ApiError(409, "This role is still assigned to staff or users — reassign them first");
+  }
+
+  await db.role.delete({ where: { id: role.id } });
+  await audit({
+    clinicId: auth.clinicId,
+    userId: auth.userId,
+    userName: auth.name,
+    action: "ROLE_DELETED",
+    entityType: "Role",
+    entityId: role.id,
+    previousValues: { name: role.name },
+  });
+  return json({ ok: true });
+});

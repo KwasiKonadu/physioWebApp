@@ -20,7 +20,7 @@ import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/co
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StaffFormDialog, { type StaffFormTarget } from "./staff-form-dialog";
-import { STAFF_ROLE_TONES } from "./StaffCard";
+import { staffRoleTone } from "./StaffCard";
 import StaffPatientsTab from "./StaffPatientsTab";
 import { StaffDetail, StatsResponse, PERIODS, Period, periodRange } from "./staff-profile-model";
 import { StaffOverviewTab } from "./StaffOverviewTab";
@@ -169,7 +169,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
     if (!s) return;
     setEditTarget({
       id: s.id, firstName: s.firstName, lastName: s.lastName, email: s.email, phone: s.phone, jobTitle: s.jobTitle,
-      department: s.department, staffRole: s.staffRole, employmentDate: s.employmentDate, employmentStatus: s.employmentStatus,
+      department: s.department, roleId: s.roleId, employmentDate: s.employmentDate, employmentStatus: s.employmentStatus,
       branchId: s.branchId,
       professionalDesignation: s.professionalDesignation, specialization: s.specialization,
       qualifications: s.qualifications || [], availability: s.availability || [],
@@ -229,7 +229,7 @@ export default function StaffProfile({ staffId, onBack }: { staffId: string; onB
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       <StatusBadge status={s.employmentStatus} />
-                      <Badge variant="outline" className={STAFF_ROLE_TONES[s.staffRole] || ""}>{labelize(s.staffRole)}</Badge>
+                      <Badge variant="outline" className={staffRoleTone(s.staffRole)}>{s.roleName || labelize(s.staffRole)}</Badge>
                       {s.isTherapist ? <Badge variant="outline" className="border-navy-200 bg-navy-50 text-navy-800">Therapist</Badge> : null}
                       <Badge variant="outline" className={data.account ? (data.account.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700") : "border-slate-200 bg-slate-100 text-slate-600"}>
                         {data.account ? (data.account.active ? "Login active" : "Login deactivated") : "No login"}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, labelize } from "@/lib/constants";
+import { PERMS, EMPLOYMENT_STATUSES, labelize } from "@/lib/constants";
 import { TopBarTitle } from "@/components/templates/topbar-slots";
 import { PageHeader } from "@/components/molecules/page-header";
 import { StatCard } from "@/components/molecules/stat-card";
@@ -13,7 +13,7 @@ import { CardGrid } from "@/components/molecules/card-grid";
 import { ViewToggle } from "@/components/molecules/view-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import { StaffCard, STAFF_ROLE_TONES } from "./StaffCard";
+import { StaffCard, staffRoleTone } from "./StaffCard";
 import { DataToolbar } from "@/components/molecules/data-toolbar";
 import { TablePagination } from "@/components/molecules/table-pagination";
 import { EmptyState } from "@/components/molecules/empty-state";
@@ -44,6 +44,8 @@ export interface StaffListItem {
   jobTitle: string;
   department: string | null;
   staffRole: string;
+  roleId: string | null;
+  roleName: string | null;
   employmentStatus: string;
   employmentDate: string | null;
   isTherapist: boolean;
@@ -73,6 +75,10 @@ export default function StaffPage() {
   const [searchInput, setSearchInput] = useUrlState("st_q", "");
   const [search, setSearch] = useState(searchInput); // starts from the URL value
   const [role, setRole] = useUrlState("st_role", "ALL");
+  const rolesQ = useQuery({
+    queryKey: ["roles", "options"],
+    queryFn: () => apiFetch<{ items: { id: string; name: string }[] }>("/api/roles?options=true"),
+  });
   const [status, setStatus] = useUrlState("st_status", "ALL");
   const [page, setPage] = useUrlState("st_page", 1);
   const [pageSize, setPageSize] = useUrlState("st_size", 10);
@@ -114,7 +120,7 @@ export default function StaffPage() {
     phone: row.phone,
     jobTitle: row.jobTitle,
     department: row.department,
-    staffRole: row.staffRole,
+    roleId: row.roleId,
     employmentDate: row.employmentDate,
     employmentStatus: row.employmentStatus,
     branchId: row.branchId,
@@ -132,7 +138,7 @@ export default function StaffPage() {
       const detail = await apiFetch<{
         staff: {
           id: string; firstName: string; lastName: string; email: string | null; phone: string | null;
-          jobTitle: string; department: string | null; staffRole: string; employmentDate: string | null;
+          jobTitle: string; department: string | null; roleId: string | null; employmentDate: string | null;
           employmentStatus: string; branchId: string | null; professionalDesignation: string | null; specialization: string | null;
           qualifications: string[]; availability: { day: string; start?: string; end?: string }[];
           remunerationMethod: string; remunerationRateCents: number | null;
@@ -146,7 +152,7 @@ export default function StaffPage() {
         phone: detail.staff.phone,
         jobTitle: detail.staff.jobTitle,
         department: detail.staff.department,
-        staffRole: detail.staff.staffRole,
+        roleId: detail.staff.roleId,
         employmentDate: detail.staff.employmentDate,
         employmentStatus: detail.staff.employmentStatus,
         branchId: detail.staff.branchId,
@@ -240,8 +246,8 @@ export default function StaffPage() {
                 <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Role" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All roles</SelectItem>
-                  {STAFF_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{labelize(r)}</SelectItem>
+                  {(rolesQ.data?.items || []).map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -316,7 +322,7 @@ export default function StaffPage() {
                 ),
               },
               { id: "job", header: "Job title", cell: (r) => <span className="text-sm">{r.jobTitle}</span> },
-              { id: "role", header: "Role", cell: (r) => <Badge variant="outline" className={STAFF_ROLE_TONES[r.staffRole]}>{labelize(r.staffRole)}</Badge> },
+              { id: "role", header: "Role", cell: (r) => <Badge variant="outline" className={staffRoleTone(r.staffRole)}>{r.roleName || labelize(r.staffRole)}</Badge> },
               { id: "dept", header: "Department", cell: (r) => <span className="text-sm text-muted-foreground">{r.department || "—"}</span> },
               { id: "phone", header: "Phone", cell: (r) => <span className="text-sm text-muted-foreground">{r.phone || "—"}</span> },
               { id: "status", header: "Status", cell: (r) => <StatusBadge status={r.employmentStatus} /> },

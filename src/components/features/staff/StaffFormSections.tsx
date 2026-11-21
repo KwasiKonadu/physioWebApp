@@ -1,7 +1,7 @@
 "use client";
 // Sections of the staff add / edit form.
 import { type FieldPath, type PathValue } from "react-hook-form";
-import { STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS, labelize } from "@/lib/constants";
+import { EMPLOYMENT_STATUSES, REMUNERATION_METHODS, labelize } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { PasswordInput } from "@/components/molecules/password-input";
 
 type Watch = <P extends FieldPath<FormValues>>(name: P) => PathValue<FormValues, P>;
 
-export function StaffBasicsSection({ register, errors, setValue, watch, staffRole, branchOptions }: { register: UseFormRegister<FormValues>; errors: FieldErrors<FormValues>; setValue: UseFormSetValue<FormValues>; watch: Watch; staffRole: FormValues["staffRole"]; branchOptions: { id: string; name: string; active: boolean }[] }) {
+export function StaffBasicsSection({ register, errors, setValue, watch, roleOptions, branchOptions }: { register: UseFormRegister<FormValues>; errors: FieldErrors<FormValues>; setValue: UseFormSetValue<FormValues>; watch: Watch; roleOptions: { id: string; name: string; isTherapist: boolean }[]; branchOptions: { id: string; name: string; active: boolean }[] }) {
   return (
     <>
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 *:min-w-0">
@@ -40,12 +40,18 @@ export function StaffBasicsSection({ register, errors, setValue, watch, staffRol
       <Field label="Department">
         <Input {...register("department")} placeholder="Clinical" />
       </Field>
-      <Field label="Staff role">
-        <Select value={staffRole} onValueChange={(v) => setValue("staffRole", v as FormValues["staffRole"])}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+      <Field label="Staff role" error={errors.roleId?.message}>
+        <Select
+          value={watch("roleId")}
+          onValueChange={(v) => {
+            setValue("roleId", v, { shouldValidate: true });
+            setValue("isTherapistRole", !!roleOptions.find((r) => r.id === v)?.isTherapist);
+          }}
+        >
+          <SelectTrigger className="w-full"><SelectValue placeholder="Select a role" /></SelectTrigger>
           <SelectContent>
-            {STAFF_ROLES.map((r) => (
-              <SelectItem key={r} value={r}>{labelize(r)}</SelectItem>
+            {roleOptions.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

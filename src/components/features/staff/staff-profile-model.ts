@@ -4,7 +4,7 @@ export interface StaffDetail {
   staff: {
     id: string; staffCode: string; firstName: string; lastName: string;
     email: string | null; phone: string | null; jobTitle: string; department: string | null;
-    staffRole: string; employmentStatus: string; employmentDate: string | null;
+    staffRole: string; roleId: string | null; roleName: string | null; employmentStatus: string; employmentDate: string | null;
     professionalDesignation: string | null; specialization: string | null;
     qualifications: string[]; availability: { day: string; start?: string; end?: string }[];
     remunerationMethod: string; remunerationRateCents: number | null; isTherapist: boolean;

@@ -4,7 +4,8 @@ import {
   db, route, json, parseBody, getQuery, getQueryInt,
   ApiError, audit, parseJson, requireAuth, requirePermission, nextStaffCode, hashPassword,
 } from "@/server/api-exports";
-import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS, ROLE_NAMES } from "@/lib/constants";
+import { PERMS, EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
+import { resolveStaffRole } from "@/server/staff-role";
 
 const availabilitySchema = z.array(
   z.object({
@@ -21,7 +22,7 @@ const createSchema = z.object({
   phone: z.string().optional().or(z.literal("")).transform((v) => v || null),
   jobTitle: z.string().min(1, "Job title is required"),
   department: z.string().optional().or(z.literal("")).transform((v) => v || null),
-  staffRole: z.enum(STAFF_ROLES),
+  roleId: z.string().min(1, "Role is required"),
   employmentDate: z.string().optional().or(z.literal("")).transform((v) => v || null),
   employmentStatus: z.enum(EMPLOYMENT_STATUSES).default("ACTIVE"),
   branchId: z.string().optional().nullable(),
@@ -34,14 +35,6 @@ const createSchema = z.object({
   createUser: z.boolean().default(false),
   createPassword: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
-
-// staffRole → system role name (for auto-created user accounts)
-const ROLE_FOR_STAFF: Record<string, string> = {
-  ADMIN: ROLE_NAMES.admin,
-  RECEPTIONIST: ROLE_NAMES.receptionist,
-  PHYSIOTHERAPIST: ROLE_NAMES.physiotherapist,
-  MANAGEMENT: ROLE_NAMES.management,
-};
 
 function parseDateOnly(v: string | null): Date | null {
   if (!v) return null;
@@ -72,7 +65,7 @@ export const GET = route(async (req) => {
 
   const where = {
     clinicId: auth.clinicId,
-    ...(role ? { staffRole: role } : {}),
+    ...(role ? { roleId: role } : {}),
     ...(status ? { employmentStatus: status } : {}),
     ...(search
       ? {
@@ -93,6 +86,7 @@ export const GET = route(async (req) => {
   const [items, total, therapists, active, onLeave, branches] = await Promise.all([
     db.staffProfile.findMany({
       where,
+      include: { role: { select: { id: true, name: true } } },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -137,6 +131,8 @@ export const GET = route(async (req) => {
         jobTitle: s.jobTitle,
         department: s.department,
         staffRole: s.staffRole,
+        roleId: s.roleId,
+        roleName: s.role?.name ?? null,
         employmentStatus: s.employmentStatus,
         employmentDate: s.employmentDate,
         isTherapist: s.isTherapist,
@@ -168,6 +164,7 @@ export const POST = route(async (req) => {
     if (existing) throw new ApiError(409, "A user with this email already exists");
   }
 
+  const { role, isTherapist, staffRole } = await resolveStaffRole(auth.clinicId, body.roleId);
   const staffCode = await nextStaffCode(auth.clinicId);
 
   const staff = await db.staffProfile.create({
@@ -180,7 +177,8 @@ export const POST = route(async (req) => {
       phone: body.phone,
       jobTitle: body.jobTitle.trim(),
       department: body.department,
-      staffRole: body.staffRole,
+      roleId: role.id,
+      staffRole,
       employmentDate: body.employmentDate ? parseDateOnly(body.employmentDate) : null,
       employmentStatus: body.employmentStatus,
       branchId: body.branchId || null,
@@ -189,19 +187,14 @@ export const POST = route(async (req) => {
       qualifications: JSON.stringify(body.qualifications),
       availability: JSON.stringify(body.availability),
       // everyone can have a pay rate; only therapists can be paid per session / per patient (others are salaried)
-      remunerationMethod: body.staffRole === "PHYSIOTHERAPIST" ? body.remunerationMethod : "FIXED",
+      remunerationMethod: isTherapist ? body.remunerationMethod : "FIXED",
       remunerationRateCents: body.remunerationRateCents || null,
-      isTherapist: body.staffRole === "PHYSIOTHERAPIST",
+      isTherapist,
     },
   });
 
-  // Optionally provision a login account with a mapped system role
+  // Optionally provision a login account with the same role
   if (body.createUser && body.email && body.createPassword) {
-    const roleName = ROLE_FOR_STAFF[body.staffRole];
-    const role = roleName
-      ? await db.role.findUnique({ where: { clinicId_name: { clinicId: auth.clinicId, name: roleName } } })
-      : null;
-    if (!role) throw new ApiError(400, `No role found for staff role ${body.staffRole}`);
     const user = await db.user.create({
       data: {
         clinicId: auth.clinicId,
@@ -234,7 +227,7 @@ export const POST = route(async (req) => {
     entityId: staff.id,
     newValues: {
       staffCode, firstName: staff.firstName, lastName: staff.lastName, jobTitle: staff.jobTitle,
-      staffRole: staff.staffRole, employmentStatus: staff.employmentStatus,
+      roleId: role.id, roleName: role.name, employmentStatus: staff.employmentStatus,
       remunerationMethod: staff.remunerationMethod, remunerationRateCents: staff.remunerationRateCents,
     },
   });

@@ -9,7 +9,7 @@ import { StatCard } from "@/components/molecules/stat-card";
 import { StatusBadge } from "@/components/atoms/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { TabsContent } from "@/components/ui/tabs";
-import { STAFF_ROLE_TONES } from "./StaffCard";
+import { staffRoleTone } from "./StaffCard";
 import { StaffDetail, StatsResponse } from "./staff-profile-model";
 
 export function StaffOverviewTab({ data, s, stats, name }: { data: StaffDetail; s: StaffDetail["staff"]; stats: StatsResponse | undefined; name: string }) {
@@ -23,7 +23,7 @@ export function StaffOverviewTab({ data, s, stats, name }: { data: StaffDetail; 
             <StatCard label="Unique patients" value={data.stats.uniquePatients} icon="Users" tone="sky" hint="all time" />
           </>
         ) : (
-          <StatCard label="Role" value={labelize(s.staffRole)} icon="BadgeCheck" tone="navy" />
+          <StatCard label="Role" value={s.roleName || labelize(s.staffRole)} icon="BadgeCheck" tone="navy" />
         )}
         <StatCard label="Employed since" value={s.employmentDate ? formatDate(s.employmentDate) : "—"} icon="CalendarDays" tone="emerald" />
       </div>
@@ -35,7 +35,7 @@ export function StaffOverviewTab({ data, s, stats, name }: { data: StaffDetail; 
             <DetailRow label="Staff ID" value={<span className="font-mono text-xs">{s.staffCode}</span>} />
             <DetailRow label="Job title" value={s.jobTitle} />
             <DetailRow label="Department" value={s.department} />
-            <DetailRow label="Role" value={<Badge variant="outline" className={STAFF_ROLE_TONES[s.staffRole] || ""}>{labelize(s.staffRole)}</Badge>} />
+            <DetailRow label="Role" value={<Badge variant="outline" className={staffRoleTone(s.staffRole)}>{s.roleName || labelize(s.staffRole)}</Badge>} />
             <DetailRow label="Status" value={<StatusBadge status={s.employmentStatus} />} />
             <DetailRow label="Branch" value={data.branchName} />
             <DetailRow label="Employed since" value={s.employmentDate ? formatDate(s.employmentDate) : undefined} />

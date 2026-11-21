@@ -50,7 +50,7 @@ export function StaffSalariesTab() {
               <p className="truncate text-xs text-muted-foreground">{r.jobTitle}</p>
             </div>
           ) },
-          { id: "role", header: "Role", hideBelow: "md", cell: (r) => <span className="text-sm text-muted-foreground">{labelize(r.staffRole)}</span> },
+          { id: "role", header: "Role", hideBelow: "md", cell: (r) => <span className="text-sm text-muted-foreground">{r.roleName || labelize(r.staffRole)}</span> },
           { id: "method", header: "Pay method", cell: (r) => <span className="text-sm">{METHOD_LABEL[r.remunerationMethod] ?? labelize(r.remunerationMethod)}</span> },
           { id: "rate", header: "Rate", align: "right", cell: (r) => r.remunerationRateCents ? (
             <span className="text-sm font-medium">

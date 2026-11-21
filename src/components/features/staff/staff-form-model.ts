@@ -1,6 +1,6 @@
 // Staff form: target shape, validation schema and form values.
 import { z } from "zod";
-import { STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
+import { EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
 
 export interface StaffFormTarget {
   id: string;
@@ -10,7 +10,7 @@ export interface StaffFormTarget {
   phone: string | null;
   jobTitle: string;
   department: string | null;
-  staffRole: string;
+  roleId: string | null;
   employmentDate: string | null;
   employmentStatus: string;
   branchId?: string | null;
@@ -30,7 +30,9 @@ export const schema = z
     phone: z.string(),
     jobTitle: z.string().min(1, "Job title is required"),
     department: z.string(),
-    staffRole: z.enum(STAFF_ROLES),
+    roleId: z.string().min(1, "Role is required"),
+    // true when the chosen role is the built-in Physiotherapist role (set from the role list, not typed in)
+    isTherapistRole: z.boolean(),
     employmentDate: z.string(),
     employmentStatus: z.enum(EMPLOYMENT_STATUSES),
     branchId: z.string(),
@@ -53,7 +55,7 @@ export const schema = z
     if (v.createUser && (!v.createPassword || v.createPassword.length < 8)) {
       ctx.addIssue({ code: "custom", path: ["createPassword"], message: "Password must be at least 8 characters" });
     }
-    if (v.staffRole === "PHYSIOTHERAPIST" && v.remunerationMethod !== "FIXED") {
+    if (v.isTherapistRole && v.remunerationMethod !== "FIXED") {
       const rate = parseFloat(v.remunerationRate);
       if (!rate || rate <= 0) {
         ctx.addIssue({ code: "custom", path: ["remunerationRate"], message: "Rate is required for this method" });

@@ -40,6 +40,20 @@ async function main() {
     },
   });
 
+  // built-in Physiotherapist role — picking it on a staff profile is what marks them as a therapist
+  await db.role.upsert({
+    where: { clinicId_name: { clinicId: clinic.id, name: "Physiotherapist" } },
+    update: {},
+    create: {
+      clinicId: clinic.id, name: "Physiotherapist", description: "Clinical care for assigned patients",
+      permissions: JSON.stringify([
+        "dashboard.view", "patients.view", "appointments.view", "appointments.manage",
+        "clinical.view", "clinical.manage", "reports.view", "leave.apply",
+      ]),
+      system: true,
+    },
+  });
+
   const normalized = email.trim().toLowerCase();
   const user = await db.user.upsert({
     where: { email: normalized },

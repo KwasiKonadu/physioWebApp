@@ -5,7 +5,8 @@ import {
   requireAuth, requirePermission,
 } from "@/server/api-exports";
 import { staffIdForUser } from "@/server/leave";
-import { PERMS, STAFF_ROLES, EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
+import { resolveStaffRole } from "@/server/staff-role";
+import { PERMS, EMPLOYMENT_STATUSES, REMUNERATION_METHODS } from "@/lib/constants";
 
 const OPEN_EPISODE_STATUSES = ["AWAITING_ASSESSMENT", "ASSESSMENT_IN_PROGRESS", "AWAITING_PLAN", "ACTIVE_TREATMENT", "ON_HOLD", "UNDER_REVIEW"];
 
@@ -24,7 +25,7 @@ const patchSchema = z.object({
   phone: z.string().optional(),
   jobTitle: z.string().min(1).optional(),
   department: z.string().optional(),
-  staffRole: z.enum(STAFF_ROLES).optional(),
+  roleId: z.string().min(1).optional(),
   employmentDate: z.string().optional().nullable(),
   employmentStatus: z.enum(EMPLOYMENT_STATUSES).optional(),
   branchId: z.string().optional().nullable(),
@@ -41,15 +42,17 @@ function serialize(s: {
   availability: string | null;
   [key: string]: unknown;
 }) {
+  const { role, ...rest } = s as typeof s & { role?: { name: string } | null };
   return {
-    ...s,
+    ...rest,
+    roleName: role?.name ?? null,
     qualifications: parseJson<string[]>(s.qualifications, []),
     availability: parseJson<unknown[]>(s.availability, []),
   };
 }
 
 async function getStaffOr404(id: string, clinicId: string) {
-  const staff = await db.staffProfile.findUnique({ where: { id } });
+  const staff = await db.staffProfile.findUnique({ where: { id }, include: { role: { select: { id: true, name: true } } } });
   if (!staff || staff.clinicId !== clinicId) throw new ApiError(404, "Staff member not found");
   return staff;
 }
@@ -114,10 +117,12 @@ export const PATCH = route(async (req, ctx) => {
   if (body.phone !== undefined) { data.phone = body.phone || null; track("phone", staff.phone, data.phone); }
   if (body.jobTitle !== undefined) { data.jobTitle = body.jobTitle.trim(); track("jobTitle", staff.jobTitle, data.jobTitle); }
   if (body.department !== undefined) { data.department = body.department || null; track("department", staff.department, data.department); }
-  if (body.staffRole !== undefined) {
-    data.staffRole = body.staffRole;
-    data.isTherapist = body.staffRole === "PHYSIOTHERAPIST";
-    track("staffRole", staff.staffRole, data.staffRole);
+  if (body.roleId !== undefined) {
+    const r = await resolveStaffRole(auth.clinicId, body.roleId);
+    data.roleId = r.role.id;
+    data.staffRole = r.staffRole;
+    data.isTherapist = r.isTherapist;
+    track("roleId", staff.roleId, r.role.id);
   }
   if (body.employmentDate !== undefined) {
     data.employmentDate = body.employmentDate ? new Date(body.employmentDate) : null;
@@ -147,7 +152,7 @@ export const PATCH = route(async (req, ctx) => {
 
   if (Object.keys(data).length === 0) throw new ApiError(400, "No changes provided");
 
-  const updated = await db.staffProfile.update({ where: { id: staff.id }, data: data as never });
+  const updated = await db.staffProfile.update({ where: { id: staff.id }, data: data as never, include: { role: { select: { id: true, name: true } } } });
 
   await audit({
     clinicId: auth.clinicId,

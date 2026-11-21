@@ -39,6 +39,13 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
   // active branches, plus the staff member's current one even if it has since been switched off
   const branchOptions = (branchesQ.data?.items || []).filter((b) => b.active || b.id === target?.branchId);
 
+  const rolesQ = useQuery({
+    queryKey: ["roles", "options"],
+    queryFn: () => apiFetch<{ items: { id: string; name: string; system: boolean; isTherapist: boolean }[] }>("/api/roles?options=true"),
+    enabled: open,
+  });
+  const roleOptions = rolesQ.data?.items || [];
+
   const defaults = useMemo<FormValues>(
     () => ({
       firstName: target?.firstName || "",
@@ -47,7 +54,8 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
       phone: target?.phone || "",
       jobTitle: target?.jobTitle || "",
       department: target?.department || "",
-      staffRole: (target?.staffRole as FormValues["staffRole"]) || "PHYSIOTHERAPIST",
+      roleId: target?.roleId || "",
+      isTherapistRole: false,
       employmentDate: target?.employmentDate ? new Date(target.employmentDate).toISOString().slice(0, 10) : "",
       employmentStatus: (target?.employmentStatus as FormValues["employmentStatus"]) || "ACTIVE",
       branchId: target?.branchId || "NONE",
@@ -80,10 +88,22 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
     if (open) reset(defaults);
   }, [open, defaults, reset]);
 
-  const staffRole = watch("staffRole");
+  const roleId = watch("roleId");
+  // new staff default to the Physiotherapist role once the role list has loaded
+  useEffect(() => {
+    if (!open || isEdit || roleId || roleOptions.length === 0) return;
+    const physio = roleOptions.find((r) => r.isTherapist) || roleOptions[0];
+    setValue("roleId", physio.id);
+    setValue("isTherapistRole", physio.isTherapist);
+  }, [open, isEdit, roleId, roleOptions, setValue]);
+  // editing: derive the therapist flag from the loaded role list
+  useEffect(() => {
+    if (!open || !roleId || roleOptions.length === 0) return;
+    setValue("isTherapistRole", !!roleOptions.find((r) => r.id === roleId)?.isTherapist);
+  }, [open, roleId, roleOptions, setValue]);
   const remunerationMethod = watch("remunerationMethod");
   const createUser = watch("createUser");
-  const isTherapist = staffRole === "PHYSIOTHERAPIST";
+  const isTherapist = !!roleOptions.find((r) => r.id === roleId)?.isTherapist;
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +123,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
         phone: values.phone || null,
         jobTitle: values.jobTitle,
         department: values.department || null,
-        staffRole: values.staffRole,
+        roleId: values.roleId,
         employmentDate: values.employmentDate || null,
         employmentStatus: values.employmentStatus,
         branchId: values.branchId === "NONE" ? null : values.branchId,
@@ -155,7 +175,7 @@ export default function StaffFormDialog({ open, target, onClose }: Props) {
     >
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <SidePanelBody className="space-y-4">
-          <StaffBasicsSection register={register} errors={errors} setValue={setValue} watch={watch} staffRole={staffRole} branchOptions={branchOptions} />
+          <StaffBasicsSection register={register} errors={errors} setValue={setValue} watch={watch} roleOptions={roleOptions} branchOptions={branchOptions} />
 
           <StaffClinicalSection register={register} setValue={setValue} watch={watch} qualArray={qualArray} availArray={availArray} isTherapist={isTherapist} />
 

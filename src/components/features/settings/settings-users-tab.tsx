@@ -42,16 +42,8 @@ interface RolesData {
 }
 interface StaffRow {
   id: string; firstName: string; lastName: string; staffCode: string; jobTitle: string;
-  name?: string; email?: string | null; staffRole?: string; hasAccount?: boolean;
+  name?: string; email?: string | null; roleId?: string | null; hasAccount?: boolean;
 }
-
-// system role created for each staff role (see ROLE_NAMES)
-const STAFF_ROLE_TO_ROLE_NAME: Record<string, string> = {
-  ADMIN: "Clinic Administrator",
-  RECEPTIONIST: "Receptionist",
-  PHYSIOTHERAPIST: "Physiotherapist",
-  MANAGEMENT: "Management",
-};
 
 interface Props {
   highlightEmail: string | null;
@@ -193,8 +185,8 @@ function AddUserDialog({ open, onClose, roles, staff }: {
     if (!st) return;
     setName(st.name || `${st.firstName} ${st.lastName}`);
     setEmail(st.email || "");
-    const roleName = st.staffRole ? STAFF_ROLE_TO_ROLE_NAME[st.staffRole] : undefined;
-    const match = roles.find((r) => r.name === roleName);
+    // the staff member's role is the login role
+    const match = roles.find((r) => r.id === st.roleId);
     if (match) setRoleId(match.id);
   };
 
